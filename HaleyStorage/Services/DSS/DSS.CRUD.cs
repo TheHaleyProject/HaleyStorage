@@ -13,6 +13,7 @@ namespace Haley.Services {
                 Status = false,
                 RawName = input.FileOriginalName
             };
+
             try {
                 if (!WriteMode) {
                     result.Message = "Application is in Read-Only mode.";

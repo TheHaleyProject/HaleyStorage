@@ -240,6 +240,8 @@ namespace Haley.Services {
                 input.SetTargetName(targetFileName);
             }
 
+            if (forupload && !IsFormatAllowed(targetExtension)) throw new ArgumentException("Uploading of this file format is not allowed");
+
             if (string.IsNullOrWhiteSpace(input.TargetName) && !string.IsNullOrWhiteSpace(targetFileName)) input.SetTargetName(targetFileName);
             
             //If we are trying to upload

@@ -15,6 +15,9 @@ namespace Haley.Services {
         const string MODULEMETAFILE = ".module" + METAFILE;
         const string WORKSPACEMETAFILE = ".ws" + METAFILE;
         const string DEFAULTPWD = "admin";
+        List<string> AllowedFormats = new List<string>();
+        List<string> RestrictedFormats = new List<string>();
+
         public IDSSConfig Config { get; set; } = new DSSConfig();
         public DiskStorageService(bool write_mode = true, ILogger logger = null, bool throwExceptions = false) : this(null, null, write_mode,logger,throwExceptions) {
         }
@@ -57,9 +60,18 @@ namespace Haley.Services {
             if (dirInfo != null && dirInfo!.TryGetValue("path", out var storageObj)) storagePath = storageObj.ToString();
 
             var dss = new DiskStorageService(agw, adapter_key, storagePath, writemode,throwExceptions:throwExceptions);
-            var ossConfig = cfgRoot.GetSection("Seed:OSSConfig")?.Get<DSSConfig>();
+            var ossConfig = cfgRoot.GetSection($@"Seed:{OSSConstants.OSS_CONFIG}")?.Get<DSSConfig>();
             if (ossConfig != null) dss.SetConfig(ossConfig);
             dss.RegisterFromSource().Wait();
+
+            var allowedFormats = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.Allowed}"];
+            if (!string.IsNullOrWhiteSpace(allowedFormats)) {
+                dss.AddAllowedFormatRange(allowedFormats.Split(',')?.ToList());
+            }
+            var restrictedFormats = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.Restricted}"];
+            if (!string.IsNullOrWhiteSpace(restrictedFormats)) {
+                dss.AddRestrictedFormatRange(restrictedFormats.Split(',')?.ToList());
+            }
             data = (logPath, responseMode);
             return dss;
         }
