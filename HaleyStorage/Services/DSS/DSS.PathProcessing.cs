@@ -201,16 +201,15 @@ namespace Haley.Services {
             IOSSWrite inputW = input as IOSSWrite;
             bool forupload = inputW != null;
 
-            var workspaceCuid = OSSUtils.GenerateCuid(input, OSSComponent.WorkSpace);
             //If a component information is not avaialble for the workspace, we should not proceed.
-            if (!Indexer.TryGetComponentInfo<OSSWorkspace>(workspaceCuid, out OSSWorkspace wInfo) && forupload) {
-                throw new Exception($@"Unable to find the workspace information for the given input. Workspace name : {input.Workspace.Name} - Cuid : {workspaceCuid}.");
+            if (!Indexer.TryGetComponentInfo<OSSWorkspace>(input.Workspace.Cuid, out OSSWorkspace wInfo) && forupload) {
+                throw new Exception($@"Unable to find the workspace information for the given input. Workspace name : {input.Workspace.Name} - Cuid : {input.Workspace.Cuid}.");
             }
             
             //If the workspace is managed, then we have the possibility to get the path from the database or from generation as well.
             if ((!forupload || ! string.IsNullOrWhiteSpace(input.File?.Cuid)) && (wInfo?.ContentControl != OSSControlMode.None || input.File != null)) {
                 if (PopulateFromSavedPath(input, forupload, wInfo)) return;
-                if (await GetPathFromIndexer(input, forupload,workspaceCuid)) return; //Path is retrieved.
+                if (await GetPathFromIndexer(input, forupload, input.Workspace.Cuid)) return; //Path is retrieved.
             }
 
             string targetFileName = string.Empty;
@@ -284,12 +283,13 @@ namespace Haley.Services {
 
         public (string basePath, string targetPath) ProcessAndBuildStoragePath(IOSSRead input, bool allowRootAccess = false) {
             var bpath = FetchBasePath(input);
+            //For the Virtual or default workspaces, the CUID could end up being wrong. So, ensure and set it here.
+            input.Workspace.ForceSetCuid(OSSUtils.GenerateCuid(input, OSSComponent.WorkSpace)); //CUID might be wrong before this. Let us force set it.
             if (input is IOSSReadFile fileRead) ProcessFileRoute(fileRead).Wait();
             if (input.Folder != null) {
                 //Find out if the workspace is managed or not. So that, we can set the folder as Virtual
-                var workspaceCuid = OSSUtils.GenerateCuid(input, OSSComponent.WorkSpace);
                 //If a component information is not avaialble for the workspace, we should not proceed.
-                if (Indexer.TryGetComponentInfo<OSSWorkspace>(workspaceCuid, out OSSWorkspace wInfo)) {
+                if (Indexer.TryGetComponentInfo<OSSWorkspace>(input.Workspace.Cuid, out OSSWorkspace wInfo)) {
                     if (wInfo.ContentControl != OSSControlMode.None) input.Folder.IsVirutal = true;
                 }
             }

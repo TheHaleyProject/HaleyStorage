@@ -72,6 +72,10 @@ namespace Haley.Internal {
                 public const string INSERT = $@"insert ignore into directory (workspace,parent,name,display_name) values ({WSPACE},{PARENT},{NAME},{DNAME});";
                 public const string GET = $@"select dir.id from directory as dir where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={NAME};";
                 public const string GET_BY_CUID = $@"select dir.id from directory as dir where dir.cuid = {CUID};";
+                public const string GET_BY_DOC_VERSION_CUID = $@"SELECT dir.display_name,dir.cuid,dir.name FROM doc_version AS dv
+                    JOIN document AS d ON d.id = dv.parent
+                    JOIN directory AS dir ON dir.id = d.parent
+                    WHERE dv.cuid= {CUID}";
             }
             public class EXTENSION {
                 public const string EXISTS = $@"select ext.id from extension as ext where ext.name = {NAME};";

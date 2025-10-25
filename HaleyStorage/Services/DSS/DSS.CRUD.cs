@@ -89,7 +89,7 @@ namespace Haley.Services {
                 result.Status = fsOperation;
                 if (input.File != null) result.SetResult(input.File);
             } catch (Exception ex) {
-                result.Message = ex.StackTrace;
+                result.Message = ex.Message + Environment.NewLine + ex.StackTrace;
                 result.Status = false;
             } finally {
                 IFeedback upInfo = null;
@@ -196,9 +196,9 @@ namespace Haley.Services {
             return new FileInfo(path).Length;
         }
 
-        public async Task<IFeedback<string>> GetParent(IOSSRead input) {
-            var path = ProcessAndBuildStoragePath(input, true).targetPath;
-            return new Feedback<string>() { Status = true, Result = string.Empty };
+        public async Task<IFeedback<string>> GetParent(IOSSReadFile input) {
+            input.Workspace.ForceSetCuid(OSSUtils.GenerateCuid(input,OSSComponent.WorkSpace));
+            return await Indexer?.GetParentName(input);
         }
 
         public Task<IOSSDirResponse> GetDirectoryInfo(IOSSRead input) {

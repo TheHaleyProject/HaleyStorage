@@ -42,7 +42,7 @@ namespace Haley.Services {
             _isInitialized = true;
         }
 
-        public static IDiskStorageService Create(IAdapterGateway agw, string adapter_key,out (string logpath,string respMode) data) {
+        public static IDiskStorageService Create(IAdapterGateway agw, string adapter_key, out (string logpath,string respMode) data, bool throwExceptions = false) {
             data = (null, null);
             var cfgRoot = ResourceUtils.GenerateConfigurationRoot();
             var dirPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? OSSConstants.CONFIG_DIR_WIN : OSSConstants.CONFIG_DIR_LINUX;
@@ -56,7 +56,7 @@ namespace Haley.Services {
             if (dirInfo != null && dirInfo!.TryGetValue("log", out var logObj)) logPath = logObj.ToString();
             if (dirInfo != null && dirInfo!.TryGetValue("path", out var storageObj)) storagePath = storageObj.ToString();
 
-            var dss = new DiskStorageService(agw, adapter_key, storagePath, writemode);
+            var dss = new DiskStorageService(agw, adapter_key, storagePath, writemode,throwExceptions:throwExceptions);
             var ossConfig = cfgRoot.GetSection("Seed:OSSConfig")?.Get<DSSConfig>();
             if (ossConfig != null) dss.SetConfig(ossConfig);
             dss.RegisterFromSource().Wait();

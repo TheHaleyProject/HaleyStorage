@@ -74,21 +74,25 @@ namespace Haley.Utils {
             }
         }
 
-        public async Task<IFeedback<string>> GetParentName(IOSSRead request) {
+        public async Task<IFeedback<string>> GetParentName(IOSSReadFile request) {
             var fb = new Feedback<string>();
             try {
-                //if (request == null) return fb.SetMessage("Input request cannot be empty");
-                //if (request.) return fb.SetMessage("Input request cannot be empty");
-                //if (string.IsNullOrWhiteSpace(wsCuid)) return new Feedback() { Message = "Workspace CUID cannot be empty." };
-                //var wsInfo = await _agw.Scalar(new AdapterArgs(_key) { Query = WORKSPACE.EXISTS_BY_CUID }, (CUID, wsCuid));
-                //if (wsInfo != null && long.TryParse(wsInfo.ToString(), out var wsId)) {
-                //    return await GetDocVersionInfo(moduleCuid, wsId, file_name, dir_name, dir_parent_id);
-                //}
-                //return new Feedback() { Message = "Unable to fetch the information for the given inputs." };
-                return fb.SetStatus(true);
+                if (request == null) return fb.SetMessage("Input request cannot be empty");
+                if (string.IsNullOrWhiteSpace(request.Workspace?.Cuid)) return fb.SetMessage("Workspace CUID cannot be empty to find the parent name");
+                if (string.IsNullOrWhiteSpace(request.Module?.Cuid)) return fb.SetMessage($@"Module CUID is mandatory to fetch parent info");
+                if (string.IsNullOrWhiteSpace(request.File?.Cuid)) return fb.SetMessage($@"File CUID is mandatory to fetch parent info");
+                var moduleCuid = request.Module.Cuid;
+
+                if (!_agw.ContainsKey(moduleCuid)) return fb.SetMessage($@"No adapter found for the key {moduleCuid}");
+
+                var docInfo = await _agw.Read(new AdapterArgs(moduleCuid) { Query = INSTANCE.DIRECTORY.GET_BY_DOC_VERSION_CUID , Filter = ResultFilter.FirstDictionary}, (CUID, request.File.Cuid));
+                if (docInfo == null || !(docInfo is Dictionary<string, object> dic)) return fb.SetMessage($@"Unable to fetch the parent information for {request.File.Cuid}");
+                if (!dic.ContainsKey("display_name")) return fb.SetMessage($@"Unable to fetch the parent display name for {request.File.Cuid}");
+                return fb.SetStatus(true).SetResult(dic["display_name"]?.ToString());
             } catch (Exception ex) {
-                _logger?.LogError(ex.StackTrace);
-                return fb.SetStatus(false).SetMessage(ex.Message);
+                var msg = ex.Message + Environment.NewLine + ex.StackTrace;
+                _logger?.LogError(msg);
+                return fb.SetStatus(false).SetMessage(msg);
             }
         }
 

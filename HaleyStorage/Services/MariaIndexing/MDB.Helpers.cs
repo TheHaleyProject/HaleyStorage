@@ -32,7 +32,7 @@ namespace Haley.Utils {
         }
 
         async Task<(bool status, long id)> EnsureWorkSpace(IOSSRead request) {
-            if (!_cache.ContainsKey(request.Workspace.Cuid)) return (false, 0);
+            if (!_cache.ContainsKey(request.Workspace.Cuid)) throw new ArgumentNullException($@"Unable to find any workspace for {request?.Workspace?.Cuid}");
             var dbid = request.Module.Cuid;
             var wspace = _cache[request.Workspace.Cuid];
             //Check if workspace exists in the database.
@@ -217,7 +217,7 @@ namespace Haley.Utils {
 
                 return result;
             } catch (Exception ex) {
-                _logger?.LogError(ex.StackTrace);
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
                 var dbid = request.Module.Cuid;
                 var handlerKey = GetHandlerKey(request.CallID, dbid);
                 if (!string.IsNullOrWhiteSpace(handlerKey) && _handlers.ContainsKey(handlerKey)) {
