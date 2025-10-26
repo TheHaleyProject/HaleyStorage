@@ -13,7 +13,7 @@ namespace Haley.Models {
     public class OSSWriteRequest : OSSReadFile, IOSSWrite {
         public string FileOriginalName { get; set; } //actual file name.
         public OSSResolveMode ResolveMode { get; set; } = OSSResolveMode.ReturnError;
-        public int BufferSize { get; set; } = 8192;
+        public int BufferSize { get; set; } = 1024 * 80; //Default to 80KB
         public string Id { get; set; }
         public Stream FileStream { get; set; }
 

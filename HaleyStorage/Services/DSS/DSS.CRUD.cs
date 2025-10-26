@@ -50,7 +50,7 @@ namespace Haley.Services {
                 //    }
                 //}
 
-                if (input.BufferSize < 4096) input.BufferSize = 4096; //Default CopyTo from System.IO has 80KB buffersize. We setit as 4KB for fast storage.
+                if (input.BufferSize < (1024 *80)) input.BufferSize = (1024*80); //Let us keep the minimum buffer size to 80KB
 
                 if (input.FileStream == null) throw new ArgumentException($@"File stream is null. Nothing to save.");
                 //input.FileStream.Position = 0; //Precaution

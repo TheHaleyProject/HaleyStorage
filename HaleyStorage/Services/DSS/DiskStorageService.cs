@@ -64,14 +64,17 @@ namespace Haley.Services {
             if (ossConfig != null) dss.SetConfig(ossConfig);
             dss.RegisterFromSource().Wait();
 
-            var allowedFormats = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.Allowed}"];
+            var allowedFormats = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.ALLOWED}"];
             if (!string.IsNullOrWhiteSpace(allowedFormats)) {
                 dss.AddAllowedFormatRange(allowedFormats.Split(',')?.ToList());
             }
-            var restrictedFormats = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.Restricted}"];
+            var restrictedFormats = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.RESTRICTED}"];
             if (!string.IsNullOrWhiteSpace(restrictedFormats)) {
                 dss.AddRestrictedFormatRange(restrictedFormats.Split(',')?.ToList());
             }
+            var throwEx = cfgRoot[$@"Seed:{OSSConstants.THROW_EX}"];
+            if (bool.TryParse(throwEx?.ToString(), out bool tex)) dss.ThrowExceptions = tex;
+
             data = (logPath, responseMode);
             return dss;
         }
