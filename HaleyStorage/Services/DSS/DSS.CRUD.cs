@@ -89,6 +89,12 @@ namespace Haley.Services {
                 }
                 result.Status = fsOperation;
                 if (input.File != null) result.SetResult(input.File);
+
+                //Set the uploaded file size.
+                if (result.Status) {
+                    result.Size = input.FileStream.Length;
+                    result.SizeHR = result.Size.ToFileSize(false);
+                }
             } catch (Exception ex) {
                 result.Message = ex.Message + Environment.NewLine + ex.StackTrace;
                 result.Status = false;

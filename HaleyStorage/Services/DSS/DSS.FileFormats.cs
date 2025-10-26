@@ -10,6 +10,7 @@ namespace Haley.Services {
             if (string.IsNullOrWhiteSpace(format)) return false;
             result = format.TrimStart('.');
             result = result.ToLower();
+            result = result.Trim(); //remove all the leading and trailing spaces.
             return true; ;
         }
 
