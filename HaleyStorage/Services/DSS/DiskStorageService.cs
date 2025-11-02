@@ -4,6 +4,7 @@ using Haley.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using System.Runtime.InteropServices;
+using Haley.Enums;
 
 namespace Haley.Services {
     public partial class DiskStorageService : IDiskStorageService {
@@ -15,8 +16,10 @@ namespace Haley.Services {
         const string MODULEMETAFILE = ".module" + METAFILE;
         const string WORKSPACEMETAFILE = ".ws" + METAFILE;
         const string DEFAULTPWD = "admin";
-        List<string> AllowedFormats = new List<string>();
-        List<string> RestrictedFormats = new List<string>();
+        List<string> AllowedExtensions = new List<string>();
+        List<string> RestrictedExtensions = new List<string>();
+        List<string> AllowedMimeTypes = new List<string>();
+        List<string> RestrictedMimeTypes = new List<string>();
 
         public IDSSConfig Config { get; set; } = new DSSConfig();
         public DiskStorageService(bool write_mode = true, ILogger logger = null, bool throwExceptions = false) : this(null, null, write_mode,logger,throwExceptions) {
@@ -64,14 +67,17 @@ namespace Haley.Services {
             if (ossConfig != null) dss.SetConfig(ossConfig);
             dss.RegisterFromSource().Wait();
 
+            //FILE FORMATS HANDLING
             var allowedFormats = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.ALLOWED}"];
-            if (!string.IsNullOrWhiteSpace(allowedFormats)) {
-                dss.AddAllowedFormatRange(allowedFormats.Split(',')?.ToList());
-            }
+            if (!string.IsNullOrWhiteSpace(allowedFormats)) dss.AddFormatRange(allowedFormats.Split(',')?.ToList(), OSSFormatType.Extension);
+            var allowedMimes = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.ALLOWED_MIMETYPE}"];
+            if (!string.IsNullOrWhiteSpace(allowedMimes)) dss.AddFormatRange(allowedMimes.Split(',')?.ToList(), OSSFormatType.MimeType);
+
             var restrictedFormats = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.RESTRICTED}"];
-            if (!string.IsNullOrWhiteSpace(restrictedFormats)) {
-                dss.AddRestrictedFormatRange(restrictedFormats.Split(',')?.ToList());
-            }
+            if (!string.IsNullOrWhiteSpace(restrictedFormats)) dss.AddFormatRange(restrictedFormats.Split(',')?.ToList(),OSSFormatType.Extension,true);
+            var restrictedMimes = cfgRoot[$@"Seed:{OSSConstants.OSS_FILEFORMATS}:{OSSConstants.RESTRICTED_MIMETYPE}"];
+            if (!string.IsNullOrWhiteSpace(restrictedMimes)) dss.AddFormatRange(restrictedMimes.Split(',')?.ToList(), OSSFormatType.MimeType,true);
+
             var throwEx = cfgRoot[$@"Seed:{OSSConstants.THROW_EX}"];
             if (bool.TryParse(throwEx?.ToString(), out bool tex)) dss.ThrowExceptions = tex;
 

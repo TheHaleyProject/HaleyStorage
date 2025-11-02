@@ -1,4 +1,5 @@
 ﻿using Haley.Abstractions;
+using Haley.Enums;
 using Haley.Models;
 using Haley.Utils;
 using System.Reflection.Metadata.Ecma335;
@@ -14,40 +15,49 @@ namespace Haley.Services {
             return true; ;
         }
 
-        IOSSFormatManagement AddFormat(string format, List<string> source) {
-            if (!TrySanitizeFormat(format, out var sanitized)) return this;
-            if (!source.Contains(sanitized)) source.Add(sanitized);
-            return this;
+        List<string> GetSource (OSSFormatType type, bool restricted) {
+            switch (type) {
+                case OSSFormatType.Extension:
+                return restricted ? RestrictedExtensions : AllowedExtensions;
+                case OSSFormatType.MimeType:
+                return restricted ? RestrictedMimeTypes : AllowedMimeTypes;
+                default:
+                throw new ArgumentNullException(nameof(type));
+            }
         }
 
-        IOSSFormatManagement AddFormatRange(List<string> formats, List<string> source) {
+        IOSSFormatManagement ModifyFormat(string format, OSSFormatType type, bool isAdd, bool restricted) {
+            if (!TrySanitizeFormat(format, out var sanitized)) return this;
+            var source = GetSource(type, restricted);
+            if (isAdd && !source.Contains(sanitized)) source.Add(sanitized);
+            if (!isAdd && source.Contains(sanitized)) source.Remove(sanitized);
+            return this;
+        }
+        IOSSFormatManagement ModifyFormatRange(List<string> formats, OSSFormatType type, bool isAdd, bool restricted) {
             foreach (var format in formats) {
-                AddFormat(format,source); //Add only the allowed formats.
+                ModifyFormat(format, type,isAdd,restricted); //Add only the allowed formats.
             }
             return this;
         }
+        public IOSSFormatManagement AddFormat(string format, OSSFormatType type, bool restricted = false) => ModifyFormat(format,type,true,restricted);
+        public IOSSFormatManagement AddFormatRange(List<string> formats, OSSFormatType type, bool restricted = false) => ModifyFormatRange(formats, type, true, restricted);
+        public IOSSFormatManagement RemoveFormat(string format, OSSFormatType type, bool restricted = false) => ModifyFormat(format, type, false, restricted);
 
-        IOSSFormatManagement RemoveFormat(string format, List<string> source) {
-            if (!TrySanitizeFormat(format, out var sanitized)) return this;
-            if (source.Contains(sanitized)) source.Remove(sanitized);
-            return this;
-        }
-
-        public IOSSFormatManagement AddAllowedFormat(string format) => AddFormat(format, AllowedFormats);
-        public IOSSFormatManagement AddAllowedFormatRange(List<string> formats) => AddFormatRange(formats, AllowedFormats);
-        public IOSSFormatManagement RemoveAllowedFormat(string format) => RemoveFormat(format, AllowedFormats);
-        public IOSSFormatManagement AddRestrictedFormat(string format) => AddFormat(format, RestrictedFormats);
-        public IOSSFormatManagement AddRestrictedFormatRange(List<string> formats) => AddFormatRange(formats, RestrictedFormats);
-        public IOSSFormatManagement RemoveRestrictedFormat(string format) => RemoveFormat(format, RestrictedFormats);
-        public bool IsFormatAllowed(string format) {
+        public bool IsFormatAllowed(string format, OSSFormatType type) {
             if (!TrySanitizeFormat(format, out var sanitized)) return false;
 
+            var allowedSource = GetSource(type, false);
+            var restrictedSource = GetSource(type, true);
+
             //Priority 1: If Allowed Formats is present. (If present means, allowed)
-            if (AllowedFormats != null && AllowedFormats.Count > 0) return AllowedFormats.Contains(sanitized);
+            if (allowedSource != null && allowedSource.Count > 0) return allowedSource.Contains(sanitized);
 
             //Priority 2: If Restricted Formats is present (Should not be present means, it is allowed)
-            if (RestrictedFormats != null && RestrictedFormats.Count > 0) return !RestrictedFormats.Contains(sanitized);
+            if (restrictedSource != null && restrictedSource.Count > 0) return !restrictedSource.Contains(sanitized);
             return true; //In this case, there is not restriction, allow everything.
+        }
+        public bool IsFormatTypeControlled(OSSFormatType type) {
+            return GetSource(type, false)?.Count > 0 || GetSource(type, true)?.Count > 0; //If either, allowed, or restricted list is not empty, then it has some sort of control in place.
         }
     }
 }
