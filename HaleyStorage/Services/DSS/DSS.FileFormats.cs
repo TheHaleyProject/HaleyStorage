@@ -7,13 +7,51 @@ using System.Reflection.Metadata.Ecma335;
 namespace Haley.Services {
     public partial class DiskStorageService : IDiskStorageService {
         bool TrySanitizeFormat(string format, out string result) {
+            result = default;
+
+            if (string.IsNullOrWhiteSpace(format))
+                return false;
+
+            // Trim spaces first
+            format = format.Trim();
+
+            // Lowercase
+            format = format.ToLowerInvariant();
+
+            // Normalize MIME vs Extension behavior
+            if (format.Contains("/")) {
+                // MIME TYPE SANITIZATION
+                // Remove repeated slashes
+                while (format.Contains("//"))
+                    format = format.Replace("//", "/");
+
+                // Remove backslashes
+                format = format.Replace("\\", "/");
+
+                // Remove internal spaces
+                format = string.Join("", format.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            } else {
+                // EXTENSION SANITIZATION
+                // Remove starting dots
+                format = format.TrimStart('.');
+
+                // Remove everything after the first extension if multiple
+                // e.g., pdf.exe → pdf
+                if (format.Contains(".")) {
+                    format = format.Split('.')[0];
+                }
+
+                // Remove any invalid characters
+                format = new string(format.Where(char.IsLetterOrDigit).ToArray());
+            }
+
+            if (string.IsNullOrWhiteSpace(format))
+                return false;
+
             result = format;
-            if (string.IsNullOrWhiteSpace(format)) return false;
-            result = format.TrimStart('.');
-            result = result.ToLower();
-            result = result.Trim(); //remove all the leading and trailing spaces.
-            return true; ;
+            return true;
         }
+
 
         List<string> GetSource (OSSFormatType type, bool restricted) {
             switch (type) {
