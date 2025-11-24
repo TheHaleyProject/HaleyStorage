@@ -5,7 +5,7 @@ using Haley.Utils;
 using System.Reflection.Metadata.Ecma335;
 
 namespace Haley.Services {
-    public partial class DiskStorageService : IDiskStorageService {
+    public partial class StorageCoordinator : IStorageCoordinator {
         bool TrySanitizeFormat(string format, out string result) {
             result = default;
 
@@ -53,35 +53,35 @@ namespace Haley.Services {
         }
 
 
-        List<string> GetSource (OSSFormatType type, bool restricted) {
+        List<string> GetSource (FormatControlMode type, bool restricted) {
             switch (type) {
-                case OSSFormatType.Extension:
+                case FormatControlMode.Extension:
                 return restricted ? RestrictedExtensions : AllowedExtensions;
-                case OSSFormatType.MimeType:
+                case FormatControlMode.MimeType:
                 return restricted ? RestrictedMimeTypes : AllowedMimeTypes;
                 default:
                 throw new ArgumentNullException(nameof(type));
             }
         }
 
-        IOSSFormatManagement ModifyFormat(string format, OSSFormatType type, bool isAdd, bool restricted) {
+        IFormatControl ModifyFormat(string format, FormatControlMode type, bool isAdd, bool restricted) {
             if (!TrySanitizeFormat(format, out var sanitized)) return this;
             var source = GetSource(type, restricted);
             if (isAdd && !source.Contains(sanitized)) source.Add(sanitized);
             if (!isAdd && source.Contains(sanitized)) source.Remove(sanitized);
             return this;
         }
-        IOSSFormatManagement ModifyFormatRange(List<string> formats, OSSFormatType type, bool isAdd, bool restricted) {
+        IFormatControl ModifyFormatRange(List<string> formats, FormatControlMode type, bool isAdd, bool restricted) {
             foreach (var format in formats) {
                 ModifyFormat(format, type,isAdd,restricted); //Add only the allowed formats.
             }
             return this;
         }
-        public IOSSFormatManagement AddFormat(string format, OSSFormatType type, bool restricted = false) => ModifyFormat(format,type,true,restricted);
-        public IOSSFormatManagement AddFormatRange(List<string> formats, OSSFormatType type, bool restricted = false) => ModifyFormatRange(formats, type, true, restricted);
-        public IOSSFormatManagement RemoveFormat(string format, OSSFormatType type, bool restricted = false) => ModifyFormat(format, type, false, restricted);
+        public IFormatControl AddFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format,type,true,restricted);
+        public IFormatControl AddFormatRange(List<string> formats, FormatControlMode type, bool restricted = false) => ModifyFormatRange(formats, type, true, restricted);
+        public IFormatControl RemoveFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format, type, false, restricted);
 
-        public bool IsFormatAllowed(string format, OSSFormatType type) {
+        public bool IsFormatAllowed(string format, FormatControlMode type) {
             if (!TrySanitizeFormat(format, out var sanitized)) return false;
 
             var allowedSource = GetSource(type, false);
@@ -94,7 +94,7 @@ namespace Haley.Services {
             if (restrictedSource != null && restrictedSource.Count > 0) return !restrictedSource.Contains(sanitized);
             return true; //In this case, there is not restriction, allow everything.
         }
-        public bool IsFormatTypeControlled(OSSFormatType type) {
+        public bool IsFormatTypeControlled(FormatControlMode type) {
             return GetSource(type, false)?.Count > 0 || GetSource(type, true)?.Count > 0; //If either, allowed, or restricted list is not empty, then it has some sort of control in place.
         }
     }

@@ -34,18 +34,18 @@ namespace Haley.Utils
             return input;
         }
 
-        public static (string name, string path) GenerateFileSystemSavePath(this IOSSControlled nObj,OSSParseMode? parse_overwrite = null, Func<bool,(int length,int depth)> splitProvider = null, string suffix = null, Func<IOSSControlled,(long id, Guid guid)> uidManager = null,bool throwExceptions = false, bool caseSensitive = false) {
+        public static (string name, string path) GenerateFileSystemSavePath(this IStorageInfo nObj,StorageParseMode? parse_overwrite = null, Func<bool,(int length,int depth)> splitProvider = null, string suffix = null, Func<IStorageInfo,(long id, Guid guid)> uidManager = null,bool throwExceptions = false, bool caseSensitive = false) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
             //If We are dealing with virutal item. No need to think a lot, as there is no path.
             if (nObj.IsVirtual) return (nObj.Name, "");
-            IOSSUID uidInfo = null;
+            IStorageUID uidInfo = null;
 
-            if (nObj.ControlMode == OSSControlMode.None) {
+            if (nObj.ControlMode == StorageControlMode.None) {
                 nObj.SaveAsName = !caseSensitive? nObj.Name : nObj.DisplayName; //Completely UnManaged.
             } else {
                 //Partially or fully managed
                 if (nObj.DisplayName.TryPopulateControlledID(out uidInfo,nObj.ControlMode, parse_overwrite ?? nObj.ParseMode, uidManager,nObj, throwExceptions)) {
-                    nObj.SaveAsName = (nObj.ControlMode == OSSControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
+                    nObj.SaveAsName = (nObj.ControlMode == StorageControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
                 }
             }
             
@@ -55,8 +55,8 @@ namespace Haley.Utils
             return (nObj.SaveAsName, result);
         }
 
-        public static string PreparePath(string input, Func<bool, (int length, int depth)> splitProvider = null, OSSControlMode control_mode = OSSControlMode.None, string suffix = null, string extension = null) {
-            if (string.IsNullOrWhiteSpace(input) || control_mode == OSSControlMode.None) return input;
+        public static string PreparePath(string input, Func<bool, (int length, int depth)> splitProvider = null, StorageControlMode control_mode = StorageControlMode.None, string suffix = null, string extension = null) {
+            if (string.IsNullOrWhiteSpace(input) || control_mode == StorageControlMode.None) return input;
             if (splitProvider == null) splitProvider = defaultSplitProvider;
             bool isNumber = input.IsNumber();
             var sinfo = splitProvider(isNumber);
@@ -74,15 +74,15 @@ namespace Haley.Utils
             return result;
         }
 
-        public static string GenerateCuid(this IOSSRead input, OSSComponent type) {
+        public static string GenerateCuid(this IStorageReadRequest input, StorageComponent type) {
             if (input == null) throw new ArgumentNullException("Inputs cannot be null or empty for CUID generation.");
             List<string> names = new List<string>();
-            if (type == OSSComponent.Client) {
+            if (type == StorageComponent.Client) {
                 names.Add(input.Client.Name);
-            } else if (type == OSSComponent.Module) {
+            } else if (type == StorageComponent.Module) {
                 names.Add(input.Client.Name);
                 names.Add(input.Module.Name);
-            } else if (type == OSSComponent.WorkSpace) {
+            } else if (type == StorageComponent.WorkSpace) {
                 names.Add(input.Client.Name);
                 names.Add(input.Module.Name);
                 names.Add(input.Workspace.Name);
@@ -101,11 +101,11 @@ namespace Haley.Utils
             return joined.CreateGUID(HashMethod.Sha256).ToString("N");
         }
 
-        public static string BuildStoragePath(this IOSSRead input, string basePath, bool allowRootAccess = false) {
-            bool readOnlyMode = input.ReadOnlyMode || !(input is IOSSWrite); //If the input is osswrite, then we are trying to upload a file or else we deliberately set the input as readonly
+        public static string BuildStoragePath(this IStorageReadRequest input, string basePath, bool allowRootAccess = false) {
+            bool readOnlyMode = input.ReadOnlyMode || !(input is IStorageWriteRequest); //If the input is osswrite, then we are trying to upload a file or else we deliberately set the input as readonly
             bool forFile = false;
             //While building storage path, may be we are building only the 
-            if (input == null || !(input is OSSReadRequest req)) throw new ArgumentNullException($@"{nameof(IOSSRead)} cannot be null. It has to be of type {nameof(OSSReadRequest)}");
+            if (input == null || !(input is OSSReadRequest req)) throw new ArgumentNullException($@"{nameof(IStorageReadRequest)} cannot be null. It has to be of type {nameof(OSSReadRequest)}");
             OSSReadFile fileReq = input as OSSReadFile;
             if (fileReq != null) forFile = true;
 
@@ -132,7 +132,7 @@ namespace Haley.Utils
             return req.TargetPath;
         }
 
-        static string FetchRoutePath(this IOSSRoute route, string basePath,bool finalDestination, bool allow_root_access, bool readonlyMode) {
+        static string FetchRoutePath(this IStorageRoute route, string basePath,bool finalDestination, bool allow_root_access, bool readonlyMode) {
             //SEND ONLY THE PATH FROM THE ROUTE.. NOT THE FULL PATH INCLUDING THE BASE PATH.
             //THE BASE PATH EXISTS HERE ONLY FOR TESTING PURPOSE.
             string path = basePath;  
@@ -143,7 +143,7 @@ namespace Haley.Utils
             //Route is expected to have one or more parents.
             // So we loop through the routes and reach the last route without any parent and start building from there.
             string value = SanitizePath(route.Path);
-            if (finalDestination || !(route is IOSSFolderRoute fldrRoute) || fldrRoute.IsVirutal) return value; //If the route is for file or else the folder route is only for virtual situation then we just return as is.
+            if (finalDestination || !(route is IStorageFolderRoute fldrRoute) || fldrRoute.IsVirutal) return value; //If the route is for file or else the folder route is only for virtual situation then we just return as is.
 
             if (string.IsNullOrWhiteSpace(value) && !allow_root_access) throw new AccessViolationException("Root directory access is not allowed."); //We should not access the root folder. It's like the path was kept deliberately empty so that the workspace location can be accessed.
 
@@ -167,10 +167,10 @@ namespace Haley.Utils
             return value; //Dont' return the full path as we will be joining this result with other base path outside this function.
         }
        
-        public static bool TryPopulateControlledID(this string value, out IOSSUID result, OSSControlMode cmode, OSSParseMode pmode , Func<IOSSControlled, (long id, Guid guid)> idManager, IOSSControlled holder, bool throwExceptions = false) {
+        public static bool TryPopulateControlledID(this string value, out IStorageUID result, StorageControlMode cmode, StorageParseMode pmode , Func<IStorageInfo, (long id, Guid guid)> idManager, IStorageInfo holder, bool throwExceptions = false) {
             result = null;
             
-            if (cmode == OSSControlMode.None) throw new Exception("The choosen control mode is wrong for generating or parsing the IDs. Please check.");
+            if (cmode == StorageControlMode.None) throw new Exception("The choosen control mode is wrong for generating or parsing the IDs. Please check.");
 
             if (string.IsNullOrWhiteSpace(value)) {
                 if (throwExceptions) throw new ArgumentNullException("Unable to generate the ID. The provided input is null or empty.");
@@ -178,33 +178,33 @@ namespace Haley.Utils
             }
             string workingValue = Path.GetFileNameWithoutExtension(value); //WITHOUT EXTENSION, ONLY FILE NAME
            
-            var data = (pmode == OSSParseMode.Parse) ? HandleParseUID(workingValue, cmode, idManager,holder, throwExceptions) : HandleGenerateUID(workingValue, cmode,idManager,holder,throwExceptions);
+            var data = (pmode == StorageParseMode.Parse) ? HandleParseUID(workingValue, cmode, idManager,holder, throwExceptions) : HandleGenerateUID(workingValue, cmode,idManager,holder,throwExceptions);
 
             if (!data.status) return false; //Dont' proceed.
 
             result = new OSSUID(data.id, data.guid);
 
-            if (cmode == OSSControlMode.Number && data.id < 1) {
+            if (cmode == StorageControlMode.Number && data.id < 1) {
                 if (throwExceptions) throw new ArgumentNullException("The final generated id is less than 1. Not acceptable. Please check the inputs.");
                 return false;
-            } else if (cmode == OSSControlMode.Guid && data.guid == Guid.Empty) {
+            } else if (cmode == StorageControlMode.Guid && data.guid == Guid.Empty) {
                 if (throwExceptions) throw new ArgumentNullException("The final generated guid is an empty value. Not acceptable. Please check the inputs.");
                 return false;
             }
             return true;
         }
         
-        static (bool status, long id, Guid guid) HandleParseUID(this string value, OSSControlMode cmode, Func<IOSSControlled,(long id, Guid guid)> idManager, IOSSControlled holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleParseUID(this string value, StorageControlMode cmode, Func<IStorageInfo,(long id, Guid guid)> idManager, IStorageInfo holder, bool throwExceptions = false) {
             //PARTIALLY MANAGED. IT SHOULD ALSO ALLOW ME TO STORE THE INFORMATION IN THE DATABASE??
 
             long resNumber = 0;
             Guid resGuid = Guid.Empty;
-            if (cmode == OSSControlMode.Number) {
+            if (cmode == StorageControlMode.Number) {
                 if (!long.TryParse(value, out resNumber)) {
                     if (throwExceptions) throw new ArgumentNullException($@"The provided input is not in the number format. Unable to parse a long value. ID Manager status : {idManager != null}");
                     return (false, resNumber, resGuid);
                 }
-            } else if (cmode == OSSControlMode.Guid) {
+            } else if (cmode == StorageControlMode.Guid) {
                 if (value.IsValidGuid(out resGuid)) { //Parse
                 } else if (value.IsCompactGuid(out resGuid)) { //Parse
                 } else {
@@ -216,13 +216,13 @@ namespace Haley.Utils
             return (true, resNumber, resGuid);
         }
         
-        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, OSSControlMode cmode, Func<IOSSControlled,(long id, Guid guid)> idManager, IOSSControlled holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, StorageControlMode cmode, Func<IStorageInfo,(long id, Guid guid)> idManager, IStorageInfo holder, bool throwExceptions = false) {
             long resNumber = 0;
             Guid resGuid = Guid.Empty;
             (long id, Guid guid)? dbInfo = null;
 
             if (idManager == null) {
-                if (cmode == OSSControlMode.Guid) {
+                if (cmode == StorageControlMode.Guid) {
                     //Only for GUID, we can autogenerate the hash based on the input. So, we can go ahead and create it.
                     resGuid = value.ToDBName().CreateGUID(HashMethod.Sha256);
                 } else {

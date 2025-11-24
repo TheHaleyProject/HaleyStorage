@@ -26,11 +26,11 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
-    public partial class MariaDBIndexing : IDSSIndexing {
-        public (long id, Guid guid) RegisterDocuments(IOSSRead request, IOSSControlled holder) {
+    public partial class MariaDBIndexing : IStorageIndexing {
+        public (long id, Guid guid) RegisterDocuments(IStorageReadRequest request, IStorageInfo holder) {
             return RegisterDocumentsInternal(request,holder).Result;
         }
-        public async Task<IFeedback> RegisterClient(IOSSClient info) {
+        public async Task<IFeedback> RegisterClient(IStorageClient info) {
             if (info == null) throw new ArgumentNullException("Input client directory info cannot be null");
             if (!info.TryValidate(out var msg)) throw new ArgumentException(msg);
             //We generate the hash_guid ourselves for the client.
@@ -62,7 +62,7 @@ namespace Haley.Utils {
             }
             return await ValidateAndCache(CLIENT.EXISTS, "Client", info, null, (NAME, info.Name));
         }
-        public async Task<IFeedback> RegisterModule(IOSSModule info) {
+        public async Task<IFeedback> RegisterModule(IStorageModule info) {
             if (info == null) throw new ArgumentNullException("Input Module directory info cannot be null");
             if (!info.TryValidate(out var msg)) throw new ArgumentNullException(msg);
             //We generate the hash_guid ourselves for the client.
@@ -83,7 +83,7 @@ namespace Haley.Utils {
             }
             return await ValidateAndCache(MODULE.EXISTS_BY_CUID, "Module", info, CreateModuleDBInstance, (CUID, info.Cuid));
         }
-        public async Task<IFeedback> RegisterWorkspace(IOSSWorkspace info) {
+        public async Task<IFeedback> RegisterWorkspace(IStorageWorkspace info) {
             if (info == null) throw new ArgumentNullException("Input Module directory info cannot be null");
             if (!info.TryValidate(out var msg)) throw new ArgumentNullException(msg);
             //We generate the hash_guid ourselves for the client.

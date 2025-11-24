@@ -18,9 +18,9 @@ namespace Haley.Models {
         [JsonPropertyName("space")]
         public string Workspace { get; set; }
         [JsonPropertyName("control")]
-        public OSSControlMode Control { get; set; }
+        public StorageControlMode Control { get; set; }
         [JsonPropertyName("parse")]
-        public OSSParseMode Parse { get; set; }
+        public StorageParseMode Parse { get; set; }
         [JsonPropertyName("virtual")]
         public bool IsVirtual { get; set; }
         [JsonPropertyName("case-sensitive")]

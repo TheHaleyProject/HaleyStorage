@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public class OSSClient : OSSDirectory, IOSSClient {
+    public class OSSClient : OSSDirectory, IStorageClient {
         public string SigningKey { get; set; }
         public string EncryptKey { get; set; }
         public string PasswordHash { get; set; }

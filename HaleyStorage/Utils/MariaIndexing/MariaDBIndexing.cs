@@ -26,7 +26,7 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
-    public partial class MariaDBIndexing : IDSSIndexing {
+    public partial class MariaDBIndexing : IStorageIndexing {
         const string DB_CORE_SQL_FILE = "dsscore.sql";
         const string DB_CLIENT_SQL_FILE = "dssclient.sql";
         const string DB_CORE_FALLBACK_NAME = "mss_core";

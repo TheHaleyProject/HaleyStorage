@@ -7,7 +7,7 @@ using Haley.Enums;
 using System.Linq;
 
 namespace Haley.Models {
-    public class OSSUID : IOSSUID {
+    public class OSSUID : IStorageUID {
         public long Id { get; set; }
         public Guid Guid { get; set; }
         public OSSUID(long id, Guid uid) {

@@ -7,9 +7,9 @@ using Microsoft.Identity.Client;
 namespace Haley.Services {
 
     //We can store the version either as separate files or as individual versions. Its totally upto us.
-    public partial class DiskStorageService : IDiskStorageService {
-        public async Task<IOSSResponse> Upload(IOSSWrite input) {
-            OSSResponse result = new OSSResponse() {
+    public partial class StorageCoordinator : IStorageCoordinator {
+        public async Task<IStorageOperationResponse> Upload(IStorageWriteRequest input) {
+            StorageOperationResponse result = new StorageOperationResponse() {
                 Status = false,
                 RawName = input.FileOriginalName
             };
@@ -62,11 +62,11 @@ namespace Haley.Services {
                 //Either file doesn't exists.. or exists and replace
                 bool fsOperation = false;
 
-                if (!result.PhysicalObjectExists || input.ResolveMode == OSSResolveMode.Replace) {
+                if (!result.PhysicalObjectExists || input.ResolveMode == StorageResolveMode.Replace) {
                     //TODO : DEFERRED REPLACEMENT
                     //If the file is currently in use, try for 5 times and then replace. May be easy option would be to store in temporary place and then update a database that a temporary file is created and then later, with some background process check the database and try to replace. This way we dont' have to block the api call or wait for completion.
                     fsOperation = await input.FileStream?.TryReplaceFileAsync(input.TargetPath, input.BufferSize);
-                } else if (input.ResolveMode == OSSResolveMode.Revise) {
+                } else if (input.ResolveMode == StorageResolveMode.Revise) {
                     //Then we revise the file and store in same location.
                     //First get the current version name.. and then 
                     if (DirectoryUtils.PopulateVersionedPath(Path.GetDirectoryName(input.TargetPath), input.TargetPath, out var version_path)) {
@@ -115,8 +115,8 @@ namespace Haley.Services {
             }
             return result;
         }
-        public Task<IOSSFileStreamResponse> Download(IOSSReadFile input, bool auto_search_extension = true) {
-            IOSSFileStreamResponse result = new FileStreamResponse() { Status = false, Stream = Stream.Null };
+        public Task<IStorageStreamResponse> Download(IStorageReadFileRequest input, bool auto_search_extension = true) {
+            IStorageStreamResponse result = new FileStreamResponse() { Status = false, Stream = Stream.Null };
             var path = ProcessAndBuildStoragePath(input,true).targetPath;
             if (string.IsNullOrWhiteSpace(path)) return Task.FromResult(result);
 
@@ -155,10 +155,10 @@ namespace Haley.Services {
             result.Stream = new FileStream(path, FileMode.Open, FileAccess.Read) as Stream;
             return Task.FromResult(result); //Stream is open here.
         }
-        public Task<IOSSFileStreamResponse> Download(IOSSFileRoute input, bool auto_search_extension = true) {
+        public Task<IStorageStreamResponse> Download(IStorageFileRoute input, bool auto_search_extension = true) {
             throw new NotImplementedException();
         }
-        public async Task<IFeedback> Delete(IOSSReadFile input) {
+        public async Task<IFeedback> Delete(IStorageReadFileRequest input) {
             IFeedback feedback = new Feedback() { Status = false };
             if (!WriteMode) {
                 feedback.Message = "Application is in Read-Only mode.";
@@ -180,7 +180,7 @@ namespace Haley.Services {
             feedback.Message = feedback.Status ? "File deleted" : "Unable to delete the file. Check if it is in use by other process & try again.";
             return feedback;
         }
-        public IFeedback Exists(IOSSRead input, bool isFilePath = false) {
+        public IFeedback Exists(IStorageReadRequest input, bool isFilePath = false) {
             var feedback = new Feedback() { Status = false };
             var path = ProcessAndBuildStoragePath(input, isFilePath).targetPath;
             if (string.IsNullOrWhiteSpace(path)) {
@@ -197,19 +197,19 @@ namespace Haley.Services {
         }
 
 
-        public long GetSize(IOSSRead input) {
+        public long GetSize(IStorageReadRequest input) {
             var path = ProcessAndBuildStoragePath(input, true).targetPath;
             if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return 0;
             return new FileInfo(path).Length;
         }
 
-        public async Task<IFeedback<string>> GetParent(IOSSReadFile input) {
-            input.Workspace.ForceSetCuid(OSSUtils.GenerateCuid(input,OSSComponent.WorkSpace));
+        public async Task<IFeedback<string>> GetParent(IStorageReadFileRequest input) {
+            input.Workspace.ForceSetCuid(OSSUtils.GenerateCuid(input,StorageComponent.WorkSpace));
             return await Indexer?.GetParentName(input);
         }
 
-        public Task<IOSSDirResponse> GetDirectoryInfo(IOSSRead input) {
-            IOSSDirResponse result = new OSSDirResponse() { Status = false };
+        public Task<IStorageDirectoryResponse> GetDirectoryInfo(IStorageReadRequest input) {
+            IStorageDirectoryResponse result = new StorageDirectoryResponse() { Status = false };
             var path = ProcessAndBuildStoragePath(input, false).targetPath;
             if (string.IsNullOrWhiteSpace(path)) {
                 result.Message = "Unable to generate path.";
@@ -229,8 +229,8 @@ namespace Haley.Services {
             return Task.FromResult(result);
         }
 
-        public async Task<IOSSResponse> CreateDirectory(IOSSRead input, string rawname) {
-            IOSSResponse result = new OSSResponse() {
+        public async Task<IStorageOperationResponse> CreateDirectory(IStorageReadRequest input, string rawname) {
+            IStorageOperationResponse result = new StorageOperationResponse() {
                 Status = false,
                 RawName = rawname
             };
@@ -265,7 +265,7 @@ namespace Haley.Services {
             return result;
         }
 
-        public async Task<IFeedback> DeleteDirectory(IOSSRead input, bool recursive) {
+        public async Task<IFeedback> DeleteDirectory(IStorageReadRequest input, bool recursive) {
             IFeedback feedback = new Feedback() { Status = false };
             if (!WriteMode) {
                 feedback.Message = "Application is in Read-Only mode.";
@@ -306,7 +306,7 @@ namespace Haley.Services {
             return feedback;
         }
 
-        bool ShouldProceedFileUpload(IOSSResponse result, string filePath, OSSResolveMode conflict) {
+        bool ShouldProceedFileUpload(IStorageOperationResponse result, string filePath, StorageResolveMode conflict) {
 
             var targetDir = Path.GetDirectoryName(filePath); //Get only the directory.
             //Should we even try to generate the directory first???
@@ -323,18 +323,18 @@ namespace Haley.Services {
             result.PhysicalObjectExists = File.Exists(filePath);
             if (result.PhysicalObjectExists) {
                 switch (conflict) {
-                    case OSSResolveMode.Skip:
+                    case StorageResolveMode.Skip:
                     result.Status = true;
                     result.Message = "File exists. Skipped";
                     return false; //DONT PROCESS FURTHER
-                    case OSSResolveMode.ReturnError:
+                    case StorageResolveMode.ReturnError:
                     result.Status = false;
                     result.Message = $@"File Exists. Returned Error.";
                     return false; //DONT PROCESS FURTHER
-                    case OSSResolveMode.Replace:
+                    case StorageResolveMode.Replace:
                     result.Message = "Replace initiated";
                     return true; //PROCESS FURTHER
-                    case OSSResolveMode.Revise:
+                    case StorageResolveMode.Revise:
                     result.Message = "File revision initiated";
                     return true; //PROCESS FURTHER
                 }

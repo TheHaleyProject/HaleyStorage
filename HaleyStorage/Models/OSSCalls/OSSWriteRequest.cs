@@ -10,14 +10,14 @@ using System.Threading.Tasks;
 using System.Xml;
 
 namespace Haley.Models {
-    public class OSSWriteRequest : OSSReadFile, IOSSWrite {
+    public class OSSWriteRequest : OSSReadFile, IStorageWriteRequest {
         public string FileOriginalName { get; set; } //actual file name.
-        public OSSResolveMode ResolveMode { get; set; } = OSSResolveMode.ReturnError;
+        public StorageResolveMode ResolveMode { get; set; } = StorageResolveMode.ReturnError;
         public int BufferSize { get; set; } = 1024 * 80; //Default to 80KB
         public string Id { get; set; }
         public Stream FileStream { get; set; }
 
-        public new OSSWriteRequest SetComponent(OSSControlled input, OSSComponent type) {
+        public new OSSWriteRequest SetComponent(OSSControlled input, StorageComponent type) {
              base.SetComponent(input,type);
             return this;
         }
@@ -41,7 +41,7 @@ namespace Haley.Models {
             return cloned ;
         }
 
-        public IOSSWrite SetFileOriginalName(string name) {
+        public IStorageWriteRequest SetFileOriginalName(string name) {
             if (string.IsNullOrWhiteSpace(name)) return this;
             FileOriginalName = name;
             return this;

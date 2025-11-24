@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 
 namespace Haley.Services {
-    public partial class DiskStorageService : IDiskStorageService {
+    public partial class StorageCoordinator : IStorageCoordinator {
         public Task<IFeedback> AuthorizeClient(object clientInfo, object clientSecret) {
             //Take may be we take the password? no?
             //We can take the password for this client, and compare with the information available in the DB or in the folder. 

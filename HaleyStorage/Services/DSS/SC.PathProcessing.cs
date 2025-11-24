@@ -7,33 +7,33 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
 namespace Haley.Services {
-    public partial class DiskStorageService : IDiskStorageService {
+    public partial class StorageCoordinator : IStorageCoordinator {
         ConcurrentDictionary<string, string> _pathCache = new ConcurrentDictionary<string, string>(); //Let us store the paths of all places.
-        public (string name, string path) GenerateBasePath(IOSSControlled input, OSSComponent component) {
+        public (string name, string path) GenerateBasePath(IStorageInfo input, StorageComponent component) {
             string suffix = string.Empty;
             int length = 2;
             int depth = 0;
             bool case_sensitive = false;
 
             switch (component) {
-                case OSSComponent.Client: //We might have very limited number of clients.
+                case StorageComponent.Client: //We might have very limited number of clients.
                 suffix = Config.SuffixClient;
                 length = 0; depth = 0;
                 case_sensitive = _caseSensitivePairs.Any(p => input.Name.ToDBName().Equals(p.client, StringComparison.OrdinalIgnoreCase));
                 break;
-                case OSSComponent.Module:
+                case StorageComponent.Module:
                 suffix = Config.SuffixModule;
                 length = 0; depth = 0;
                 case_sensitive = _caseSensitivePairs.Any(p => input.Name.ToDBName().Equals(p.module, StringComparison.OrdinalIgnoreCase));
                 break;
 
-                case OSSComponent.WorkSpace:
+                case StorageComponent.WorkSpace:
                 //Only if the parase mode is generate, it is managed.
                 string suffixAddon =string.Empty;
-                if (input.ControlMode == OSSControlMode.None) {
+                if (input.ControlMode == StorageControlMode.None) {
                     suffixAddon = "u"; //Fully unmanagaed.
                 } else {
-                    if (input.ParseMode == OSSParseMode.Generate) {
+                    if (input.ParseMode == StorageParseMode.Generate) {
                         suffixAddon = "f"; //Fully unmanagaed. //Ids are generated from the database and everthing is controlled there.
                     } else {
                         suffixAddon = "p"; //Partially managed. Folder structures are properly managed with split, but, will not store any other file information. File conflicts and other things are possible. No directory structure allowed.
@@ -42,31 +42,31 @@ namespace Haley.Services {
                 suffix = suffixAddon + Config.SuffixWorkSpace;
                 length = 1; depth = 5;
                 break;
-                case OSSComponent.File:
+                case StorageComponent.File:
                 suffix = Config.SuffixFile;
                 throw new NotImplementedException("No method implemented for handling BasePath generation for File Component type.");
             }
-            return OSSUtils.GenerateFileSystemSavePath(input, OSSParseMode.Generate, (n) => { return (length, depth); }, suffix: suffix, throwExceptions: false,caseSensitive:case_sensitive);
+            return OSSUtils.GenerateFileSystemSavePath(input, StorageParseMode.Generate, (n) => { return (length, depth); }, suffix: suffix, throwExceptions: false,caseSensitive:case_sensitive);
         }
         public string GetStorageRoot() {
             return BasePath;
         }
 
-        (IOSSControlled target, OSSComponent type, string metaFilePath, string cuid) GetTargetInfo<T>(IOSSRead input) where T : IOSSDirectory {
-            IOSSControlled target = null;
-            OSSComponent targetType = OSSComponent.Client;
+        (IStorageInfo target, StorageComponent type, string metaFilePath, string cuid) GetTargetInfo<T>(IStorageReadRequest input) where T : IStorageDirectory {
+            IStorageInfo target = null;
+            StorageComponent targetType = StorageComponent.Client;
             string metaFilePath = string.Empty;
 
-            if (typeof(IOSSClient).IsAssignableFrom(typeof(T))) {
-                targetType = OSSComponent.Client;
+            if (typeof(IStorageClient).IsAssignableFrom(typeof(T))) {
+                targetType = StorageComponent.Client;
                 metaFilePath = CLIENTMETAFILE;
                 target = input.Client;
-            } else if (typeof(IOSSModule).IsAssignableFrom(typeof(T))) {
-                targetType = OSSComponent.Module;
+            } else if (typeof(IStorageModule).IsAssignableFrom(typeof(T))) {
+                targetType = StorageComponent.Module;
                 metaFilePath = MODULEMETAFILE;
                 target = input.Module;
-            } else if (typeof(IOSSWorkspace).IsAssignableFrom(typeof(T))) {
-                targetType = OSSComponent.WorkSpace;
+            } else if (typeof(IStorageWorkspace).IsAssignableFrom(typeof(T))) {
+                targetType = StorageComponent.WorkSpace;
                 metaFilePath = WORKSPACEMETAFILE;
                 target = input.Workspace;
             }
@@ -75,7 +75,7 @@ namespace Haley.Services {
             return (target, targetType, metaFilePath, cuid);
         }
 
-        void AddBasePath<T>(IOSSRead input, List<string> paths) where T : IOSSDirectory {
+        void AddBasePath<T>(IStorageReadRequest input, List<string> paths) where T : IStorageDirectory {
             //We try to take the paths for all the components.
             if (paths == null) paths = new List<string>();
 
@@ -107,7 +107,7 @@ namespace Haley.Services {
             }
         }
 
-        string FetchBasePath(IOSSRead request, bool ignoreCache = false) {
+        string FetchBasePath(IStorageReadRequest request, bool ignoreCache = false) {
             Initialize().Wait(); //To ensure base folders are created.
             string result = string.Empty;
             if (!ignoreCache && _pathCache.ContainsKey(request.Workspace.Cuid) && !string.IsNullOrWhiteSpace(_pathCache[request.Workspace.Cuid])) {
@@ -130,7 +130,7 @@ namespace Haley.Services {
             return (Config.SplitLengthHash, Config.DepthHash);
         }
 
-        async Task<bool> GetPathFromIndexer(IOSSReadFile input, bool forupload, string workspaceCuid) {
+        async Task<bool> GetPathFromIndexer(IStorageReadFileRequest input, bool forupload, string workspaceCuid) {
             if (!string.IsNullOrWhiteSpace(input.File?.Cuid) || input.File?.Id > 0) {
                 //So, the workspace is partially or fully managed.
                 var existing = input.File.Id > 0 ?
@@ -148,7 +148,7 @@ namespace Haley.Services {
             } else if (!string.IsNullOrWhiteSpace(input.File?.Name) || !string.IsNullOrWhiteSpace(input.TargetName)) {
                 //We try to search by the target name. For a target name, we also need the parent directory information as well.
                 var searchName = input.File?.Name ?? input.TargetName;
-                var dirName = input.Folder?.Name ?? OSSConstants.DEFAULT_NAME;
+                var dirName = input.Folder?.Name ?? StorageConstants.DEFAULT_NAME;
                 var dirParent = input.Folder?.Parent?.Id ?? 0;
                 var existing = await Indexer.GetDocVersionInfo(input.Module.Cuid, workspaceCuid, searchName, dirName, dirParent);
                 if (existing != null && existing.Status && existing.Result is Dictionary<string, object> dic) {
@@ -170,16 +170,16 @@ namespace Haley.Services {
             }
             return false;
         }
-        bool PopulateFromSavedPath(IOSSReadFile input, bool forupload, OSSWorkspace wInfo) {
+        bool PopulateFromSavedPath(IStorageReadFileRequest input, bool forupload, OSSWorkspace wInfo) {
             if (forupload || string.IsNullOrWhiteSpace(input?.File?.SaveAsName)) return false;
             //If the save as name is provided, then we need to check if workspace mode and generate the path accordingly.
-            if (wInfo.ContentControl == OSSControlMode.None) input.File.Path = input.File.SaveAsName; //Use the save as name as the file path as well.
+            if (wInfo.ContentControl == StorageControlMode.None) input.File.Path = input.File.SaveAsName; //Use the save as name as the file path as well.
             var sname = Path.GetFileNameWithoutExtension(input.File.SaveAsName);
             var extension = Path.GetExtension(input.File.SaveAsName);
             string workingName = sname;
-            if (wInfo.ContentControl == OSSControlMode.Number && !sname.IsNumber()) {
+            if (wInfo.ContentControl == StorageControlMode.Number && !sname.IsNumber()) {
                 throw new ArgumentException("Provided Saveas Name is expected to be in a numberic format");
-            } else if(wInfo.ContentControl == OSSControlMode.Guid) {
+            } else if(wInfo.ContentControl == StorageControlMode.Guid) {
                 Guid fileGuid;
                 if (sname.IsCompactGuid(out fileGuid) || sname.IsValidGuid(out fileGuid)) {
                     workingName = fileGuid.ToString("N");
@@ -191,14 +191,14 @@ namespace Haley.Services {
             return true;
         }
 
-        public async Task ProcessFileRoute(IOSSReadFile input) {
+        public async Task ProcessFileRoute(IStorageReadFileRequest input) {
 
             //If the input is OSSWrite, then we are tyring to upload or else, we are merely trying to check.
             if (input == null) return;
             if (!string.IsNullOrWhiteSpace(input.TargetPath)) return; // End goal is to have this path defined.
             if (input.File != null && !string.IsNullOrWhiteSpace(input.File.Path)) return; //Our end goal is to generate this path.
 
-            IOSSWrite inputW = input as IOSSWrite;
+            IStorageWriteRequest inputW = input as IStorageWriteRequest;
             bool forupload = inputW != null;
 
             //If a component information is not avaialble for the workspace, we should not proceed.
@@ -207,7 +207,7 @@ namespace Haley.Services {
             }
             
             //If the workspace is managed, then we have the possibility to get the path from the database or from generation as well.
-            if ((!forupload || ! string.IsNullOrWhiteSpace(input.File?.Cuid)) && (wInfo?.ContentControl != OSSControlMode.None || input.File != null)) {
+            if ((!forupload || ! string.IsNullOrWhiteSpace(input.File?.Cuid)) && (wInfo?.ContentControl != StorageControlMode.None || input.File != null)) {
                 if (PopulateFromSavedPath(input, forupload, wInfo)) return;
                 if (await GetPathFromIndexer(input, forupload, input.Workspace.Cuid)) return; //Path is retrieved.
             }
@@ -240,7 +240,7 @@ namespace Haley.Services {
                 input.SetTargetName(targetFileName);
             }
 
-            if (forupload && !IsFormatAllowed(targetExtension,OSSFormatType.Extension)) throw new ArgumentException("Uploading of this file format is not allowed");
+            if (forupload && !IsFormatAllowed(targetExtension,FormatControlMode.Extension)) throw new ArgumentException("Uploading of this file format is not allowed");
 
             if (string.IsNullOrWhiteSpace(input.TargetName) && !string.IsNullOrWhiteSpace(targetFileName)) input.SetTargetName(targetFileName);
             
@@ -283,16 +283,16 @@ namespace Haley.Services {
 
 
 
-        public (string basePath, string targetPath) ProcessAndBuildStoragePath(IOSSRead input, bool allowRootAccess = false) {
+        public (string basePath, string targetPath) ProcessAndBuildStoragePath(IStorageReadRequest input, bool allowRootAccess = false) {
             var bpath = FetchBasePath(input);
             //For the Virtual or default workspaces, the CUID could end up being wrong. So, ensure and set it here.
-            input.Workspace.ForceSetCuid(OSSUtils.GenerateCuid(input, OSSComponent.WorkSpace)); //CUID might be wrong before this. Let us force set it.
-            if (input is IOSSReadFile fileRead) ProcessFileRoute(fileRead).Wait();
+            input.Workspace.ForceSetCuid(OSSUtils.GenerateCuid(input, StorageComponent.WorkSpace)); //CUID might be wrong before this. Let us force set it.
+            if (input is IStorageReadFileRequest fileRead) ProcessFileRoute(fileRead).Wait();
             if (input.Folder != null) {
                 //Find out if the workspace is managed or not. So that, we can set the folder as Virtual
                 //If a component information is not avaialble for the workspace, we should not proceed.
                 if (Indexer.TryGetComponentInfo<OSSWorkspace>(input.Workspace.Cuid, out OSSWorkspace wInfo)) {
-                    if (wInfo.ContentControl != OSSControlMode.None) input.Folder.IsVirutal = true;
+                    if (wInfo.ContentControl != StorageControlMode.None) input.Folder.IsVirutal = true;
                 }
             }
             

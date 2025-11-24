@@ -26,12 +26,12 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
-    public partial class MariaDBIndexing : IDSSIndexing {
+    public partial class MariaDBIndexing : IStorageIndexing {
         async Task EnsureValidation() {
             if (!isValidated) await Validate();
         }
 
-        async Task<(bool status, long id)> EnsureWorkSpace(IOSSRead request) {
+        async Task<(bool status, long id)> EnsureWorkSpace(IStorageReadRequest request) {
             if (!_cache.ContainsKey(request.Workspace.Cuid)) throw new ArgumentNullException($@"Unable to find any workspace for {request?.Workspace?.Cuid}");
             var dbid = request.Module.Cuid;
             var wspace = _cache[request.Workspace.Cuid];
@@ -44,7 +44,7 @@ namespace Haley.Utils {
             return (true, wspace.Id);
         }
 
-        async Task<(bool status, (long id, string uid) result)> EnsureDirectory(IOSSRead request, long ws_id) {
+        async Task<(bool status, (long id, string uid) result)> EnsureDirectory(IStorageReadRequest request, long ws_id) {
             if (ws_id == 0) return (false, (0, string.Empty));
             var dbid = request.Module.Cuid;
             //If directory name is not provided, then go for "default" as usual
@@ -53,7 +53,7 @@ namespace Haley.Utils {
             
 
             var dirParent = request.Folder?.Parent?.Id ?? 0;
-            var dirName = request.Folder?.Name ?? OSSConstants.DEFAULT_NAME;
+            var dirName = request.Folder?.Name ?? StorageConstants.DEFAULT_NAME;
             var dirDbName = dirName.ToDBName();
 
             var dirInfo = await InsertAndFetchIDRead(dbid,
@@ -121,11 +121,11 @@ namespace Haley.Utils {
             return parameters;
         }
 
-       async Task<(bool status, long id)> EnsureNameStore(IOSSRead request) {
+       async Task<(bool status, long id)> EnsureNameStore(IStorageReadRequest request) {
             if (string.IsNullOrWhiteSpace(request.TargetName)) return (false, 0);
             var name = Path.GetFileNameWithoutExtension(request.TargetName)?.Trim();
             var ext = Path.GetExtension(request.TargetName)?.Trim();
-            if (string.IsNullOrWhiteSpace(ext)) ext = OSSConstants.DEFAULT_NAME;
+            if (string.IsNullOrWhiteSpace(ext)) ext = StorageConstants.DEFAULT_NAME;
             if (string.IsNullOrWhiteSpace(name)) return (false, 0);
             name = name.ToDBName();
             ext = ext.ToDBName();
@@ -148,7 +148,7 @@ namespace Haley.Utils {
             return $@"{callid}###{dbid.ToLower()}";
         }
 
-        async Task<(long id,Guid guid)> RegisterDocumentsInternal(IOSSRead request, IOSSControlled holder) {
+        async Task<(long id,Guid guid)> RegisterDocumentsInternal(IStorageReadRequest request, IStorageInfo holder) {
             try {
                 if (request.ReadOnlyMode) throw new ArgumentException("Cannot register a document in readonly mode");
                 //If we are in ParseMode, we still do all the process, but, store the file as is with Parsing information.
@@ -228,8 +228,8 @@ namespace Haley.Utils {
                 return (0, Guid.Empty);
             }
         }
-        async Task CreateModuleDBInstance(IOSSDirectory dirInfo) {
-            if (!(dirInfo is IOSSModule info)) return;
+        async Task CreateModuleDBInstance(IStorageDirectory dirInfo) {
+            if (!(dirInfo is IStorageModule info)) return;
             if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid}";
             //What if the CUID is changed? Should we use the guid instead? 
             //But, guid is not unique across clients. So, we use cuid.

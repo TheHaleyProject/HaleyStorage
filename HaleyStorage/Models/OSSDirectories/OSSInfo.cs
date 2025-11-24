@@ -7,7 +7,7 @@ using Haley.Enums;
 using System.Linq;
 
 namespace Haley.Models {
-    public class OSSInfo : IOSSInfo {
+    public class OSSInfo : IStorageInfoBase {
         public string Name { get; private set; }
         public long Id { get; private set; }
         private string _displayName;
@@ -17,7 +17,7 @@ namespace Haley.Models {
                 if (!string.IsNullOrWhiteSpace(value)) {
                     _displayName = value.Trim();
                 } else {
-                    _displayName = OSSConstants.DEFAULT_NAME;
+                    _displayName = StorageConstants.DEFAULT_NAME;
                 }
                 if (!ValidateInternal(out var msg)) throw new Exception(msg);
                 Name = _displayName.ToDBName(); //Db compatible name
@@ -46,7 +46,7 @@ namespace Haley.Models {
             Cuid = OSSUtils.GenerateCuid(DisplayName);
         }
 
-        public virtual IOSSInfo UpdateCUID(params string[] parentNames) {
+        public virtual IStorageInfoBase UpdateCUID(params string[] parentNames) {
             if (parentNames == null) return this;
             var inputList = parentNames.ToList();
             if (inputList.Count == 0 || inputList.Last().ToDBName() != Name) {
@@ -56,18 +56,18 @@ namespace Haley.Models {
             return this;
         }
 
-        public IOSSInfo ForceSetId(long setId) {
+        public IStorageInfoBase ForceSetId(long setId) {
             Id = setId;
             return this;
         }
 
-        public IOSSInfo ForceSetCuid(System.Guid guid) {
+        public IStorageInfoBase ForceSetCuid(System.Guid guid) {
             //if (guid == System.Guid.Empty) throw new Exception("Cannot set CUID. Input cannot be an empty GUID.");
             Cuid = guid.ToString("N");
             return this;
         }
 
-        public IOSSInfo ForceSetCuid(string guid) {
+        public IStorageInfoBase ForceSetCuid(string guid) {
             if (string.IsNullOrWhiteSpace(guid)) throw new Exception("Cannot set CUID with empty value");
             var res = System.Guid.Empty;
             if (guid.IsCompactGuid(out res) || guid.IsValidGuid(out res)) {
@@ -82,7 +82,7 @@ namespace Haley.Models {
         [IgnoreMapping] //Important.. no should map this.
         public string Cuid { get; private set; } //Collision resistant Unique identifier
         public OSSInfo(string displayName) {
-            DisplayName = displayName ?? OSSConstants.DEFAULT_NAME;
+            DisplayName = displayName ?? StorageConstants.DEFAULT_NAME;
         }
     }
 }

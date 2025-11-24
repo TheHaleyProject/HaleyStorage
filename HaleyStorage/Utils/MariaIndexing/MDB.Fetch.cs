@@ -28,14 +28,14 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
-    public partial class MariaDBIndexing : IDSSIndexing {
+    public partial class MariaDBIndexing : IStorageIndexing {
         public Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id) {
             return GetDocVersionInfoInternal(moduleCuid, id, string.Empty);
         }
         public Task<IFeedback> GetDocVersionInfo(string moduleCuid, string cuid) {
             return GetDocVersionInfoInternal(moduleCuid, 0, cuid);
         }
-        public async Task<IFeedback> GetDocVersionInfo(string moduleCuid, long wsId, string file_name, string dir_name = OSSConstants.DEFAULT_NAME, long dir_parent_id = 0) {
+        public async Task<IFeedback> GetDocVersionInfo(string moduleCuid, long wsId, string file_name, string dir_name = StorageConstants.DEFAULT_NAME, long dir_parent_id = 0) {
             Feedback result = new Feedback();
             try {
                 if (string.IsNullOrWhiteSpace(moduleCuid) || wsId < 1) return result.SetMessage($@"Module CUID & non-zero worspace id are mandatory to fetch document info");
@@ -45,7 +45,7 @@ namespace Haley.Utils {
                 var name = Path.GetFileNameWithoutExtension(file_name).ToDBName();
                 //if (!caseSensitive) name = name.ToDBName();
 
-                var extension = Path.GetExtension(file_name)?.ToDBName() ?? OSSConstants.DEFAULT_NAME;
+                var extension = Path.GetExtension(file_name)?.ToDBName() ?? StorageConstants.DEFAULT_NAME;
 
                 var docInfo = await _agw.Scalar(new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCUMENT.GET_BY_NAME }, (NAME,name.ToDBName()),(EXT, extension),(WSPACE,wsId),(PARENT,dir_parent_id),(DIRNAME,dir_name.ToDBName()));
                 if (docInfo == null || !long.TryParse(docInfo.ToString(),out var docId)) return result.SetMessage($@"Unable to fetch the document for the given inputs. FileName :  {file_name} ; WSID : {wsId} ; DirName : {dir_name}");
@@ -60,7 +60,7 @@ namespace Haley.Utils {
 
         }
 
-        public async Task<IFeedback> GetDocVersionInfo(string moduleCuid, string wsCuid, string file_name, string dir_name = OSSConstants.DEFAULT_NAME, long dir_parent_id = 0) {
+        public async Task<IFeedback> GetDocVersionInfo(string moduleCuid, string wsCuid, string file_name, string dir_name = StorageConstants.DEFAULT_NAME, long dir_parent_id = 0) {
             try {
                 if (string.IsNullOrWhiteSpace(wsCuid)) return new Feedback() { Message = "Workspace CUID cannot be empty." };
                 var wsInfo = await _agw.Scalar(new AdapterArgs(_key) { Query = WORKSPACE.EXISTS_BY_CUID }, (CUID, wsCuid));
@@ -74,7 +74,7 @@ namespace Haley.Utils {
             }
         }
 
-        public async Task<IFeedback<string>> GetParentName(IOSSReadFile request) {
+        public async Task<IFeedback<string>> GetParentName(IStorageReadFileRequest request) {
             var fb = new Feedback<string>();
             try {
                 if (request == null) return fb.SetMessage("Input request cannot be empty");

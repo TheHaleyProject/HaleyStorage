@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 
 namespace Haley.Models {
-    public class DSSConfig : IDSSConfig{
+    public class DSSConfig : IStorageRegistryConfig{
         //All suffix are applicable only when dealing with controlled names.
         public string SuffixClient { get; set; } = "c";
         public string SuffixModule { get; set; } = "m";

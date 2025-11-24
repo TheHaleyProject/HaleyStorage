@@ -4,15 +4,15 @@ using Haley.Enums;
 using Haley.Utils;
 
 namespace Haley.Models {
-    public class OSSReadRequest : IOSSRead {
+    public class OSSReadRequest : IStorageReadRequest {
         bool callIdGenerated;
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
         public string TargetPath { get; protected set; }
         public string TargetName { get; protected set; }
-        public IOSSControlled Client { get; protected set; } 
-        public IOSSControlled Module { get; protected set; }
-        public IOSSControlled Workspace { get; protected set; } 
-        public IOSSFolderRoute Folder { get; protected set; }
+        public IStorageInfo Client { get; protected set; } 
+        public IStorageInfo Module { get; protected set; }
+        public IStorageInfo Workspace { get; protected set; } 
+        public IStorageFolderRoute Folder { get; protected set; }
         public bool ReadOnlyMode { get; protected set; }
         public bool GenerateCallId() {
             if (callIdGenerated) return false;
@@ -21,15 +21,15 @@ namespace Haley.Models {
             return true;
         }
 
-        public virtual IOSSRead SetComponent(IOSSControlled input, OSSComponent type) {
+        public virtual IStorageReadRequest SetComponent(IStorageInfo input, StorageComponent type) {
             switch (type) {
-                case OSSComponent.Client:
+                case StorageComponent.Client:
                     Client = input;
                 break;
-                case OSSComponent.Module:
+                case StorageComponent.Module:
                     Module = input; 
                 break;
-                case OSSComponent.WorkSpace:
+                case StorageComponent.WorkSpace:
                     Workspace = input;
                 break;
             }
@@ -42,22 +42,22 @@ namespace Haley.Models {
             if (Workspace != null) Workspace.UpdateCUID(Client.DisplayName, Module?.DisplayName);
         }
 
-        public IOSSRead SetTargetName(string name) {
+        public IStorageReadRequest SetTargetName(string name) {
             if (string.IsNullOrWhiteSpace(name)) return this;
             TargetName = name;
             return this;
         }
-        public IOSSRead SetFolder(IOSSFolderRoute folder) {
+        public IStorageReadRequest SetFolder(IStorageFolderRoute folder) {
             if (folder != null) Folder = folder;
             return this;
         }
-        public IOSSRead SetTargetPath(string path) {
+        public IStorageReadRequest SetTargetPath(string path) {
             if (string.IsNullOrWhiteSpace(path)) return this;
             TargetPath = path;
             return this;
         }
 
-        public IOSSRead SetMode(bool readOnly) {
+        public IStorageReadRequest SetMode(bool readOnly) {
             ReadOnlyMode = readOnly;
             return this;
         }

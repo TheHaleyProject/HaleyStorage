@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public abstract class OSSDirectory : OSSControlled , IOSSDirectory{
+    public abstract class OSSDirectory : OSSControlled , IStorageDirectory{
         public string Path { get; set; }
         public OSSDirectory(string displayName):base(displayName) { }
     }
