@@ -21,7 +21,7 @@ namespace Haley.Services {
         List<string> AllowedMimeTypes = new List<string>();
         List<string> RestrictedMimeTypes = new List<string>();
 
-        public IStorageRegistryConfig Config { get; set; } = new DSSConfig();
+        public IStorageRegistryConfig Config { get; set; } = new StorageRegistryConfig();
         public StorageCoordinator(bool write_mode = true, ILogger logger = null, bool throwExceptions = false) : this(null, null, write_mode,logger,throwExceptions) {
         }
         public StorageCoordinator(string basePath, bool write_mode = true, ILogger logger = null, bool throwExceptions = false) : this(basePath, write_mode, null, throwExceptions, logger) { }
@@ -43,7 +43,7 @@ namespace Haley.Services {
         }
         async Task Initialize(bool force = false) {
             if (_isInitialized && !force) return;
-            var defObj = new OSSControlled(StorageConstants.DEFAULT_NAME);
+            var defObj = new StorageInfo(StorageConstants.DEFAULT_NAME);
             await RegisterClient(defObj); //Registers defaul client, with default module and default workspace
             _isInitialized = true;
         }
@@ -63,7 +63,7 @@ namespace Haley.Services {
             if (dirInfo != null && dirInfo!.TryGetValue("path", out var storageObj)) storagePath = storageObj.ToString();
 
             var dss = new StorageCoordinator(agw, adapter_key, storagePath, writemode,throwExceptions:throwExceptions);
-            var ossConfig = cfgRoot.GetSection($@"Seed:{StorageConstants.OSS_CONFIG}")?.Get<DSSConfig>();
+            var ossConfig = cfgRoot.GetSection($@"Seed:{StorageConstants.OSS_CONFIG}")?.Get<StorageRegistryConfig>();
             if (ossConfig != null) dss.SetConfig(ossConfig);
             dss.RegisterFromSource().Wait();
 
@@ -101,7 +101,7 @@ namespace Haley.Services {
         }
 
         public IStorageCoordinator SetConfig(IStorageRegistryConfig config) {
-            Config = config ?? new DSSConfig();
+            Config = config ?? new StorageRegistryConfig();
             return this;
         }
     }

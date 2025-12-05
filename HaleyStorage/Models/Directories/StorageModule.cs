@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public class OSSModule : OSSDirectory, IStorageModule {
+    public class StorageModule : StorageDirectory, IStorageModule {
         public IStorageInfoBase Client { get; set; }
         public string DatabaseName { get; set; }
         public override bool TryValidate(out string message) {
@@ -21,8 +21,8 @@ namespace Haley.Models {
             }
             return true;
         }
-        public OSSModule(string clientName, string displayName) : base(displayName) {
-            Client = new OSSInfo(clientName) {};
+        public StorageModule(string clientName, string displayName) : base(displayName) {
+            Client = new StorageInfoBase(clientName) {};
             UpdateCUID(Client.Name, Name); //With all other names
         }
     }

@@ -7,7 +7,7 @@ using Haley.Enums;
 using System.Linq;
 
 namespace Haley.Models {
-    public class OSSInfo : IStorageInfoBase {
+    public class StorageInfoBase : IStorageInfoBase {
         public string Name { get; private set; }
         public long Id { get; private set; }
         private string _displayName;
@@ -43,7 +43,7 @@ namespace Haley.Models {
         }
 
         protected virtual void GenerateCuid() {
-            Cuid = OSSUtils.GenerateCuid(DisplayName);
+            Cuid = StorageUtils.GenerateCuid(DisplayName);
         }
 
         public virtual IStorageInfoBase UpdateCUID(params string[] parentNames) {
@@ -52,7 +52,7 @@ namespace Haley.Models {
             if (inputList.Count == 0 || inputList.Last().ToDBName() != Name) {
                 inputList.Add(Name); //I
             }
-            Cuid = OSSUtils.GenerateCuid(inputList.ToArray());
+            Cuid = StorageUtils.GenerateCuid(inputList.ToArray());
             return this;
         }
 
@@ -81,7 +81,7 @@ namespace Haley.Models {
         public string Guid { get; private set; } //Sha256 generated from the name and a guid is created from there.
         [IgnoreMapping] //Important.. no should map this.
         public string Cuid { get; private set; } //Collision resistant Unique identifier
-        public OSSInfo(string displayName) {
+        public StorageInfoBase(string displayName) {
             DisplayName = displayName ?? StorageConstants.DEFAULT_NAME;
         }
     }

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public class OSSClient : OSSDirectory, IStorageClient {
+    public class StorageClient : StorageDirectory, IStorageClient {
         public string SigningKey { get; set; }
         public string EncryptKey { get; set; }
         public string PasswordHash { get; set; }
@@ -26,7 +26,7 @@ namespace Haley.Models {
 
             return true;
         }
-        public OSSClient(string password, string signingkey,string encryptkey, string displayName) :base(displayName){ 
+        public StorageClient(string password, string signingkey,string encryptkey, string displayName) :base(displayName){ 
             PasswordHash = password;
             SigningKey = signingkey;
             EncryptKey = encryptkey;

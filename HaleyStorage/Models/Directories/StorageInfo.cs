@@ -8,7 +8,7 @@ using System.Text;
 using System.Xml.Linq;
 
 namespace Haley.Models {
-    public class OSSControlled :OSSInfo , IStorageInfo{
+    public class StorageInfo :StorageInfoBase , IStorageInfo{
         public string SaveAsName { get; set; } //Should be the controlled name or a name compatible for the database 
         public bool IsVirtual { get; set; }
         public int Version { get; set; } = 0;
@@ -17,7 +17,7 @@ namespace Haley.Models {
         public override IStorageInfo UpdateCUID(params string[] parentNames) {
             return (IStorageInfo)base.UpdateCUID(parentNames);
         }
-        public OSSControlled(string displayname, StorageControlMode control = StorageControlMode.None, StorageParseMode parse = StorageParseMode.Parse, bool isVirtual = false) : base(displayname) {
+        public StorageInfo(string displayname, StorageControlMode control = StorageControlMode.Number, StorageParseMode parse = StorageParseMode.Parse, bool isVirtual = false) : base(displayname) {
             ControlMode = control;
             ParseMode = parse;
             GenerateCuid();

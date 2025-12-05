@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 
 namespace Haley.Models {
-    public class DSSConfig : IStorageRegistryConfig{
+    public class StorageRegistryConfig : IStorageRegistryConfig{
         //All suffix are applicable only when dealing with controlled names.
         public string SuffixClient { get; set; } = "c";
         public string SuffixModule { get; set; } = "m";
@@ -17,6 +17,6 @@ namespace Haley.Models {
         public int SplitLengthHash { get; set; } = 2; //For Hash
         public int DepthHash { get; set; } = 7;
 
-        public DSSConfig() { }
+        public StorageRegistryConfig() { }
     }
 }

@@ -18,7 +18,7 @@ using System.Xml.Schema;
 
 namespace Haley.Utils
 {
-    public static class OSSUtils {
+    public static class StorageUtils {
  
         static (int length,int depth) defaultSplitProvider(bool isInputNumber) {
             if (!isInputNumber) return (1, 8); //Split by 1 and go upto 8 depth for non numbers.
@@ -40,23 +40,19 @@ namespace Haley.Utils
             if (nObj.IsVirtual) return (nObj.Name, "");
             IStorageUID uidInfo = null;
 
-            if (nObj.ControlMode == StorageControlMode.None) {
-                nObj.SaveAsName = !caseSensitive? nObj.Name : nObj.DisplayName; //Completely UnManaged.
-            } else {
-                //Partially or fully managed
-                if (nObj.DisplayName.TryPopulateControlledID(out uidInfo,nObj.ControlMode, parse_overwrite ?? nObj.ParseMode, uidManager,nObj, throwExceptions)) {
-                    nObj.SaveAsName = (nObj.ControlMode == StorageControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
-                }
+            //Partially or fully managed
+            if (nObj.DisplayName.TryPopulateControlledID(out uidInfo, nObj.ControlMode, parse_overwrite ?? nObj.ParseMode, uidManager, nObj, throwExceptions)) {
+                nObj.SaveAsName = (nObj.ControlMode == StorageControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
             }
-            
+
             var result = PreparePath(nObj.SaveAsName, splitProvider, nObj.ControlMode,suffix,Path.GetExtension(nObj.Name));
 
             //We add suffix for all controlled paths.
             return (nObj.SaveAsName, result);
         }
 
-        public static string PreparePath(string input, Func<bool, (int length, int depth)> splitProvider = null, StorageControlMode control_mode = StorageControlMode.None, string suffix = null, string extension = null) {
-            if (string.IsNullOrWhiteSpace(input) || control_mode == StorageControlMode.None) return input;
+        public static string PreparePath(string input, Func<bool, (int length, int depth)> splitProvider = null, StorageControlMode control_mode = StorageControlMode.Number, string suffix = null, string extension = null) {
+            if (string.IsNullOrWhiteSpace(input)) return input;
             if (splitProvider == null) splitProvider = defaultSplitProvider;
             bool isNumber = input.IsNumber();
             var sinfo = splitProvider(isNumber);
@@ -105,8 +101,8 @@ namespace Haley.Utils
             bool readOnlyMode = input.ReadOnlyMode || !(input is IStorageWriteRequest); //If the input is osswrite, then we are trying to upload a file or else we deliberately set the input as readonly
             bool forFile = false;
             //While building storage path, may be we are building only the 
-            if (input == null || !(input is OSSReadRequest req)) throw new ArgumentNullException($@"{nameof(IStorageReadRequest)} cannot be null. It has to be of type {nameof(OSSReadRequest)}");
-            OSSReadFile fileReq = input as OSSReadFile;
+            if (input == null || !(input is StorageReadRequest req)) throw new ArgumentNullException($@"{nameof(IStorageReadRequest)} cannot be null. It has to be of type {nameof(StorageReadRequest)}");
+            StorageReadFileRequest fileReq = input as StorageReadFileRequest;
             if (fileReq != null) forFile = true;
 
             if (basePath.Contains("..")) throw new ArgumentOutOfRangeException("The base path contains invalid segments. Parent directory access is not allowed. Please fix");
@@ -170,8 +166,6 @@ namespace Haley.Utils
         public static bool TryPopulateControlledID(this string value, out IStorageUID result, StorageControlMode cmode, StorageParseMode pmode , Func<IStorageInfo, (long id, Guid guid)> idManager, IStorageInfo holder, bool throwExceptions = false) {
             result = null;
             
-            if (cmode == StorageControlMode.None) throw new Exception("The choosen control mode is wrong for generating or parsing the IDs. Please check.");
-
             if (string.IsNullOrWhiteSpace(value)) {
                 if (throwExceptions) throw new ArgumentNullException("Unable to generate the ID. The provided input is null or empty.");
                 return false;
@@ -182,7 +176,7 @@ namespace Haley.Utils
 
             if (!data.status) return false; //Dont' proceed.
 
-            result = new OSSUID(data.id, data.guid);
+            result = new StorageUID(data.id, data.guid);
 
             if (cmode == StorageControlMode.Number && data.id < 1) {
                 if (throwExceptions) throw new ArgumentNullException("The final generated id is less than 1. Not acceptable. Please check the inputs.");

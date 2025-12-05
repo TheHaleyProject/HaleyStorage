@@ -11,13 +11,13 @@ namespace Haley.Services {
     public partial class StorageCoordinator : IStorageCoordinator {
         List<(string client, string module)> _caseSensitivePairs = new List<(string client, string module)>();
         public Task<IFeedback> RegisterClient(string client_name, string password = null) {
-            return RegisterClient(new OSSControlled(client_name) { });
+            return RegisterClient(new StorageInfo(client_name) { });
         }
         public Task<IFeedback> RegisterModule(string module_name=null, string client_name = null) {
-            return RegisterModule(new OSSControlled(module_name), new OSSControlled(client_name));
+            return RegisterModule(new StorageInfo(module_name), new StorageInfo(client_name));
         }
         public Task<IFeedback> RegisterWorkSpace(string workspace_name=null, string client_name = null, string module_name = null, StorageControlMode content_control = StorageControlMode.Number, StorageParseMode content_pmode = StorageParseMode.Generate, bool is_virtual = false) {
-            return RegisterWorkSpace(new OSSControlled(workspace_name, StorageControlMode.Guid, StorageParseMode.Generate, isVirtual:is_virtual), new OSSControlled(client_name), new OSSControlled(module_name), content_control, content_pmode);
+            return RegisterWorkSpace(new StorageInfo(workspace_name, StorageControlMode.Guid, StorageParseMode.Generate, isVirtual:is_virtual), new StorageInfo(client_name), new StorageInfo(module_name), content_control, content_pmode);
         }
 
         public async Task<IFeedback> RegisterClient(IStorageInfo client, string password = null) {
@@ -25,7 +25,7 @@ namespace Haley.Services {
             //Password will be stored in the .dss.meta file
             if (client == null) return new Feedback(false, "Name cannot be empty");
             if (!client.TryValidate(out var msg)) return new Feedback(false, msg);
-            if (client.ControlMode != StorageControlMode.None) client.ControlMode = StorageControlMode.Guid; //Either we allow as is, or we go with GUID. no numbers allowed.
+            client.ControlMode = StorageControlMode.Guid; //Either we allow as is, or we go with GUID. no numbers allowed.
             if (string.IsNullOrWhiteSpace(password)) password = DEFAULTPWD;
             var cInput = GenerateBasePath(client, StorageComponent.Client); //For client, we only prefer hash mode.
             var path = Path.Combine(BasePath, cInput.path);
@@ -43,7 +43,7 @@ namespace Haley.Services {
             var pwdHash = HashUtils.ComputeHash(password, HashMethod.Sha256);
             
 
-            var clientInfo = client.MapProperties(new OSSClient(pwdHash, signing, encrypt,client.DisplayName) { Path = cInput.path });
+            var clientInfo = client.MapProperties(new StorageClient(pwdHash, signing, encrypt,client.DisplayName) { Path = cInput.path });
             if (WriteMode) {
                 var metaFile = Path.Combine(path, CLIENTMETAFILE);
                 File.WriteAllText(metaFile, clientInfo.ToJson());   // Over-Write the keys here.
@@ -55,7 +55,7 @@ namespace Haley.Services {
             result.Result = idxResult.Result;
 
             //Whenever  we register a client, we immediately register default module and default workspace.
-            await RegisterModule(new OSSControlled(null), client);
+            await RegisterModule(new StorageInfo(null), client);
             return result;
         }
         public async Task<IFeedback> RegisterModule(IStorageInfo module, IStorageInfo client) {
@@ -78,7 +78,7 @@ namespace Haley.Services {
                 Directory.CreateDirectory(bPath); //Create the directory.
             }
 
-            var moduleInfo = module.MapProperties(new OSSModule(client.Name,module.DisplayName) { Path = modPath });
+            var moduleInfo = module.MapProperties(new StorageModule(client.Name,module.DisplayName) { Path = modPath });
             if (WriteMode) {
                 var metaFile = Path.Combine(bPath, MODULEMETAFILE);
                 File.WriteAllText(metaFile, moduleInfo.ToJson());
@@ -92,7 +92,7 @@ namespace Haley.Services {
             result.Result = idxResult.Result;
 
             //if (!string.IsNullOrWhiteSpace(moduleInfo.DatabaseName)) module.SetCUID(moduleInfo.DatabaseName);
-            await RegisterWorkSpace(new OSSControlled(null, StorageControlMode.Guid, StorageParseMode.Generate, isVirtual:true), client, module);
+            await RegisterWorkSpace(new StorageInfo(null, StorageControlMode.Guid, StorageParseMode.Generate, isVirtual:true), client, module);
             return result;
         }
         public async Task<IFeedback> RegisterWorkSpace(IStorageInfo wspace, IStorageInfo client, IStorageInfo module, StorageControlMode content_control = StorageControlMode.Number, StorageParseMode content_pmode = StorageParseMode.Generate) {
@@ -120,7 +120,7 @@ namespace Haley.Services {
                 }
             }
 
-            var wsInfo = wspace.MapProperties(new OSSWorkspace(client.Name, module.Name, wspace.DisplayName) { Path = wsPath ,ContentControl = content_control, ContentParse = content_pmode });
+            var wsInfo = wspace.MapProperties(new StorageWorkspace(client.Name, module.Name, wspace.DisplayName) { Path = wsPath ,ContentControl = content_control, ContentParse = content_pmode });
             if (WriteMode) {
                 var metaFile = Path.Combine(path, WORKSPACEMETAFILE);
                 File.WriteAllText(metaFile, wsInfo.ToJson());

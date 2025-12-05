@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public abstract class OSSDirectory : OSSControlled , IStorageDirectory{
+    public abstract class StorageDirectory : StorageInfo , IStorageDirectory{
         public string Path { get; set; }
-        public OSSDirectory(string displayName):base(displayName) { }
+        public StorageDirectory(string displayName):base(displayName) { }
     }
 }

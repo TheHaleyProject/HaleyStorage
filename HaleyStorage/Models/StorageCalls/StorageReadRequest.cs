@@ -4,7 +4,7 @@ using Haley.Enums;
 using Haley.Utils;
 
 namespace Haley.Models {
-    public class OSSReadRequest : IStorageReadRequest {
+    public class StorageReadRequest : IStorageReadRequest {
         bool callIdGenerated;
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
         public string TargetPath { get; protected set; }
@@ -62,14 +62,14 @@ namespace Haley.Models {
             return this;
         }
 
-        public OSSReadRequest() :this (null,null,null){ }
-        public OSSReadRequest(string client_name) :this(client_name,null,null) { }
-        public OSSReadRequest(string client_name,string module_name) :this(client_name, module_name, null) { }
+        public StorageReadRequest() :this (null,null,null){ }
+        public StorageReadRequest(string client_name) :this(client_name,null,null) { }
+        public StorageReadRequest(string client_name,string module_name) :this(client_name, module_name, null) { }
 
-        public  OSSReadRequest(string client_name, string module_name, string workspace_name) {
-            Client = new OSSControlled(client_name);
-            Module = new OSSControlled(module_name).UpdateCUID(Client.DisplayName,module_name);
-            Workspace = new OSSControlled(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName); //Here nothing matters, because it is an input request. // We need to fetch the information from database and then update this workspace information.
+        public  StorageReadRequest(string client_name, string module_name, string workspace_name) {
+            Client = new StorageInfo(client_name);
+            Module = new StorageInfo(module_name).UpdateCUID(Client.DisplayName,module_name);
+            Workspace = new StorageInfo(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName); //Here nothing matters, because it is an input request. // We need to fetch the information from database and then update this workspace information.
         }
     }
 }

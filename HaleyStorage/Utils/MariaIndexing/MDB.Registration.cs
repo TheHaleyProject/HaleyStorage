@@ -94,7 +94,7 @@ namespace Haley.Utils {
                 //Module exists. .just update it.
                 await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPDATE }, (DNAME, info.DisplayName), (PATH, info.Path), (CONTROLMODE, (int)info.ControlMode), (PARSEMODE, (int)info.ParseMode),(ID, wsId));
             } else {
-                var moduleCuid = OSSUtils.GenerateCuid(info.Client.Name, info.Module.Name);
+                var moduleCuid = StorageUtils.GenerateCuid(info.Client.Name, info.Module.Name);
                 var mexists = await _agw.Scalar(new AdapterArgs(_key) { Query = MODULE.EXISTS_BY_CUID }, (CUID, moduleCuid));
                 if (mexists == null || !(mexists is int modId)) throw new ArgumentException($@"Module {info.Module.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
                 await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPSERT }, (PARENT, modId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid), (PATH, info.Path), (CUID, info.Cuid), (CONTROLMODE, (int)info.ControlMode), (PARSEMODE, (int)info.ParseMode));

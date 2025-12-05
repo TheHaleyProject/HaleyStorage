@@ -204,7 +204,7 @@ namespace Haley.Services {
         }
 
         public async Task<IFeedback<string>> GetParent(IStorageReadFileRequest input) {
-            input.Workspace.ForceSetCuid(OSSUtils.GenerateCuid(input,StorageComponent.WorkSpace));
+            input.Workspace.ForceSetCuid(StorageUtils.GenerateCuid(input,StorageComponent.WorkSpace));
             return await Indexer?.GetParentName(input);
         }
 
