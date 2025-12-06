@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public class StorageClient : StorageDirectory, IStorageClient {
+    public class VaultClient : VaultComponent, IVaultClient {
         public string SigningKey { get; set; }
         public string EncryptKey { get; set; }
         public string PasswordHash { get; set; }
@@ -26,11 +26,11 @@ namespace Haley.Models {
 
             return true;
         }
-        public StorageClient(string password, string signingkey,string encryptkey, string displayName) :base(displayName){ 
+        public VaultClient(string password, string signingkey,string encryptkey, string displayName) :base(displayName){ 
             PasswordHash = password;
             SigningKey = signingkey;
             EncryptKey = encryptkey;
-            ForceSetCuid(Guid);
+            SetCuid(Guid);
         }
     }
 }

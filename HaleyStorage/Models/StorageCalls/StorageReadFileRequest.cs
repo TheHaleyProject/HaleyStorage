@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using Haley.Enums;
 
 namespace Haley.Models {
-    public class StorageReadFileRequest : StorageReadRequest, IStorageReadFileRequest {
-        public IStorageFileRoute File { get; private set; }
-        public IStorageReadFileRequest SetFile(IStorageFileRoute file) {
+    public class StorageReadFileRequest : StorageReadRequest, IVaultFileReadRequest {
+        public IVaultFileRoute File { get; private set; }
+        public IVaultFileReadRequest SetFile(IVaultFileRoute file) {
             if (file != null) File = file;
             return this;
         }

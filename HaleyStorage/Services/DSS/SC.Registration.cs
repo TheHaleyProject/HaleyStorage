@@ -16,18 +16,18 @@ namespace Haley.Services {
         public Task<IFeedback> RegisterModule(string module_name=null, string client_name = null) {
             return RegisterModule(new StorageInfo(module_name), new StorageInfo(client_name));
         }
-        public Task<IFeedback> RegisterWorkSpace(string workspace_name=null, string client_name = null, string module_name = null, StorageControlMode content_control = StorageControlMode.Number, StorageParseMode content_pmode = StorageParseMode.Generate, bool is_virtual = false) {
-            return RegisterWorkSpace(new StorageInfo(workspace_name, StorageControlMode.Guid, StorageParseMode.Generate, isVirtual:is_virtual), new StorageInfo(client_name), new StorageInfo(module_name), content_control, content_pmode);
+        public Task<IFeedback> RegisterWorkSpace(string workspace_name=null, string client_name = null, string module_name = null, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate, bool is_virtual = false) {
+            return RegisterWorkSpace(new StorageInfo(workspace_name, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:is_virtual), new StorageInfo(client_name), new StorageInfo(module_name), content_control, content_pmode);
         }
 
-        public async Task<IFeedback> RegisterClient(IStorageInfo client, string password = null) {
+        public async Task<IFeedback> RegisterClient(IVaultProfileControlled client, string password = null) {
             var result = new Feedback();
             //Password will be stored in the .dss.meta file
             if (client == null) return new Feedback(false, "Name cannot be empty");
             if (!client.TryValidate(out var msg)) return new Feedback(false, msg);
-            client.ControlMode = StorageControlMode.Guid; //Either we allow as is, or we go with GUID. no numbers allowed.
+            client.ControlMode = VaultControlMode.Guid; //Either we allow as is, or we go with GUID. no numbers allowed.
             if (string.IsNullOrWhiteSpace(password)) password = DEFAULTPWD;
-            var cInput = GenerateBasePath(client, StorageComponent.Client); //For client, we only prefer hash mode.
+            var cInput = GenerateBasePath(client, Enums.VaultComponent.Client); //For client, we only prefer hash mode.
             var path = Path.Combine(BasePath, cInput.path);
 
             //Thins is we are not allowing any path to be provided by user. Only the name is allowed.
@@ -43,7 +43,7 @@ namespace Haley.Services {
             var pwdHash = HashUtils.ComputeHash(password, HashMethod.Sha256);
             
 
-            var clientInfo = client.MapProperties(new StorageClient(pwdHash, signing, encrypt,client.DisplayName) { Path = cInput.path });
+            var clientInfo = client.MapProperties(new VaultClient(pwdHash, signing, encrypt,client.DisplayName) { Path = cInput.path });
             if (WriteMode) {
                 var metaFile = Path.Combine(path, CLIENTMETAFILE);
                 File.WriteAllText(metaFile, clientInfo.ToJson());   // Over-Write the keys here.
@@ -58,19 +58,19 @@ namespace Haley.Services {
             await RegisterModule(new StorageInfo(null), client);
             return result;
         }
-        public async Task<IFeedback> RegisterModule(IStorageInfo module, IStorageInfo client) {
+        public async Task<IFeedback> RegisterModule(IVaultProfileControlled module, IVaultProfileControlled client) {
             //AssertValues(true, (client_name,"client name"), (name,"module name")); //uses reflection and might carry performance penalty
             string msg = string.Empty;
             if (!module.TryValidate(out msg)) new Feedback(false, msg);
             if (!client.TryValidate(out msg)) new Feedback(false, msg);
 
-            var client_path = GenerateBasePath(client, StorageComponent.Client).path; //For client, we only prefer hash mode.
+            var client_path = GenerateBasePath(client, Enums.VaultComponent.Client).path; //For client, we only prefer hash mode.
             var bPath = Path.Combine(BasePath, client_path);
             if (!Directory.Exists(bPath)) return new Feedback(false, $@"Directory not found for the client {client.DisplayName}");
             if (client_path.Contains("..")) return new Feedback(false, "Client Path contains invalid characters");
 
             //MODULE INFORMATION BASIC VALIDATION
-            var modPath = GenerateBasePath(module, StorageComponent.Module).path; //For client, we only prefer hash mode.
+            var modPath = GenerateBasePath(module, Enums.VaultComponent.Module).path; //For client, we only prefer hash mode.
             bPath = Path.Combine(bPath, modPath); //Including Client Path
 
             //Create these folders and then register them.
@@ -92,18 +92,18 @@ namespace Haley.Services {
             result.Result = idxResult.Result;
 
             //if (!string.IsNullOrWhiteSpace(moduleInfo.DatabaseName)) module.SetCUID(moduleInfo.DatabaseName);
-            await RegisterWorkSpace(new StorageInfo(null, StorageControlMode.Guid, StorageParseMode.Generate, isVirtual:true), client, module);
+            await RegisterWorkSpace(new StorageInfo(null, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:true), client, module);
             return result;
         }
-        public async Task<IFeedback> RegisterWorkSpace(IStorageInfo wspace, IStorageInfo client, IStorageInfo module, StorageControlMode content_control = StorageControlMode.Number, StorageParseMode content_pmode = StorageParseMode.Generate) {
+        public async Task<IFeedback> RegisterWorkSpace(IVaultProfileControlled wspace, IVaultProfileControlled client, IVaultProfileControlled module, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate) {
             string msg = string.Empty;
             if (!wspace.TryValidate(out msg)) throw new Exception(msg);
             if (!client.TryValidate(out msg)) throw new Exception(msg);
             if (!module.TryValidate(out msg)) throw new Exception(msg);
             module.UpdateCUID(client.Name,module.Name);
 
-            var cliPath = GenerateBasePath(client, StorageComponent.Client).path;
-            var modPath = GenerateBasePath(module, StorageComponent.Module).path;
+            var cliPath = GenerateBasePath(client, Enums.VaultComponent.Client).path;
+            var modPath = GenerateBasePath(module, Enums.VaultComponent.Module).path;
 
             var path = Path.Combine(BasePath, cliPath, modPath);
             if (!Directory.Exists(path)) return new Feedback(false, $@"Unable to lcoate the basepath for the Client : {client.DisplayName}, Module : {module.DisplayName}");
@@ -111,7 +111,7 @@ namespace Haley.Services {
             string wsPath = string.Empty;
             if (!wspace.IsVirtual) {
                 //MODULE INFORMATION BASIC VALIDATION
-                wsPath = GenerateBasePath(wspace, StorageComponent.WorkSpace).path; //For client, we only prefer hash mode.
+                wsPath = GenerateBasePath(wspace, Enums.VaultComponent.WorkSpace).path; //For client, we only prefer hash mode.
                 path = Path.Combine(path, wsPath); //Including Base Paths
 
                 //Create these folders and then register them.
@@ -139,7 +139,7 @@ namespace Haley.Services {
             try {
                 var result = new Feedback();
                 if (section == null) {
-                    section = ResourceUtils.GenerateConfigurationRoot()?.GetSection($@"Seed:{StorageConstants.CONFIG_SOURCE}");
+                    section = ResourceUtils.GenerateConfigurationRoot()?.GetSection($@"Seed:{VaultConstants.CONFIG_SOURCE}");
                     if (section == null) return result.SetMessage("Cannot proceed with empty configuration");
                 }
                 var sources = section.AsDictionaryList();

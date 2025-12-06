@@ -5,8 +5,8 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public class StorageModule : StorageDirectory, IStorageModule {
-        public IStorageInfoBase Client { get; set; }
+    public class StorageModule : VaultComponent, IVaultModule {
+        public IVaultProfile Client { get; set; }
         public string DatabaseName { get; set; }
         public override bool TryValidate(out string message) {
             message = string.Empty;

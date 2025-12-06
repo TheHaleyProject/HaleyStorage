@@ -26,10 +26,10 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
-    public partial class MariaDBIndexing : IStorageIndexing {
+    public partial class MariaDBIndexing : IVaultIndexing {
         //We also need to cache the results to avoid frequent calls to the DB.
-        ConcurrentDictionary<string, IStorageDirectory> _cache = new ConcurrentDictionary<string, IStorageDirectory>();
-        public bool TryAddInfo(IStorageDirectory dirInfo, bool replace = false) {
+        ConcurrentDictionary<string, IVaultComponent> _cache = new ConcurrentDictionary<string, IVaultComponent>();
+        public bool TryAddInfo(IVaultComponent dirInfo, bool replace = false) {
             if (dirInfo == null || !dirInfo.Name.AssertValue(false) || !dirInfo.Cuid.AssertValue(false)) return false;
             if (_cache.ContainsKey(dirInfo.Cuid)) {
                 if (!replace) return false;
@@ -38,7 +38,7 @@ namespace Haley.Utils {
                 return _cache.TryAdd(dirInfo.Cuid, dirInfo);
             }
         }
-        public bool TryGetComponentInfo<T>(string key, out T component) where T : IStorageDirectory {
+        public bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultComponent {
             component = default;
             if (string.IsNullOrWhiteSpace(key) || !_cache.ContainsKey(key)) return false;
             var data = _cache[key];
@@ -46,17 +46,17 @@ namespace Haley.Utils {
             component = (T)data;
             return true;
         }
-        async Task<IFeedback> ValidateAndCache(string query, string title, IStorageDirectory info, Func<IStorageDirectory, Task> preProcess, params (string key, object value)[] parameters) {
+        async Task<IFeedback> ValidateAndCache(string query, string title, IVaultComponent info, Func<IVaultComponent, Task> preProcess, params (string key, object value)[] parameters) {
             var result = await _agw.Scalar(new AdapterArgs(_key) { Query = query }, parameters);
             if (result != null && result.IsNumericType()) {
-                if (long.TryParse(result.ToString(), out var id)) info.ForceSetId(id);
+                if (long.TryParse(result.ToString(), out var id)) info.SetId(id);
                 //Every time a client is sucessfully done. We validate if it is present or not.
                 await AddComponentCache(info, preProcess);
                 return new Feedback(true, $@"{title} - {info.Name} Indexed.") { Result = id };
             }
             return new Feedback(false, "Unable to index");
         }
-        async Task AddComponentCache(IStorageDirectory info, Func<IStorageDirectory,Task> preProcess = null) {
+        async Task AddComponentCache(IVaultComponent info, Func<IVaultComponent,Task> preProcess = null) {
             if (info == null) return;
             if (_cache.ContainsKey(info.Cuid) && _cache[info.Cuid] != null) return; 
             

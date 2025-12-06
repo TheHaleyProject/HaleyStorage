@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public abstract class StorageDirectory : StorageInfo , IStorageDirectory{
+    public abstract class VaultComponent : StorageInfo , IVaultComponent{
         public string Path { get; set; }
-        public StorageDirectory(string displayName):base(displayName) { }
+        public VaultComponent(string displayName):base(displayName) { }
     }
 }

@@ -4,15 +4,15 @@ using Haley.Enums;
 using Haley.Utils;
 
 namespace Haley.Models {
-    public class StorageReadRequest : IStorageReadRequest {
+    public class StorageReadRequest : IVaultReadRequest {
         bool callIdGenerated;
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
         public string TargetPath { get; protected set; }
         public string TargetName { get; protected set; }
-        public IStorageInfo Client { get; protected set; } 
-        public IStorageInfo Module { get; protected set; }
-        public IStorageInfo Workspace { get; protected set; } 
-        public IStorageFolderRoute Folder { get; protected set; }
+        public IVaultProfileControlled Client { get; protected set; } 
+        public IVaultProfileControlled Module { get; protected set; }
+        public IVaultProfileControlled Workspace { get; protected set; } 
+        public IVaultFolderRoute Folder { get; protected set; }
         public bool ReadOnlyMode { get; protected set; }
         public bool GenerateCallId() {
             if (callIdGenerated) return false;
@@ -21,16 +21,16 @@ namespace Haley.Models {
             return true;
         }
 
-        public virtual IStorageReadRequest SetComponent(IStorageInfo input, StorageComponent type) {
+        public virtual IVaultReadRequest SetComponent(IVaultProfileControlled input, Enums.VaultComponent type) {
             switch (type) {
-                case StorageComponent.Client:
-                    Client = input;
+                case Enums.VaultComponent.Client:
+                Client = input;
                 break;
-                case StorageComponent.Module:
-                    Module = input; 
+                case Enums.VaultComponent.Module:
+                Module = input; 
                 break;
-                case StorageComponent.WorkSpace:
-                    Workspace = input;
+                case Enums.VaultComponent.WorkSpace:
+                Workspace = input;
                 break;
             }
             UpdateCUID();
@@ -42,22 +42,22 @@ namespace Haley.Models {
             if (Workspace != null) Workspace.UpdateCUID(Client.DisplayName, Module?.DisplayName);
         }
 
-        public IStorageReadRequest SetTargetName(string name) {
+        public IVaultReadRequest SetTargetName(string name) {
             if (string.IsNullOrWhiteSpace(name)) return this;
             TargetName = name;
             return this;
         }
-        public IStorageReadRequest SetFolder(IStorageFolderRoute folder) {
+        public IVaultReadRequest SetFolder(IVaultFolderRoute folder) {
             if (folder != null) Folder = folder;
             return this;
         }
-        public IStorageReadRequest SetTargetPath(string path) {
+        public IVaultReadRequest SetTargetPath(string path) {
             if (string.IsNullOrWhiteSpace(path)) return this;
             TargetPath = path;
             return this;
         }
 
-        public IStorageReadRequest SetMode(bool readOnly) {
+        public IVaultReadRequest SetMode(bool readOnly) {
             ReadOnlyMode = readOnly;
             return this;
         }

@@ -6,7 +6,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 
 namespace Haley.Models {
-    public class StorageRegistryConfig : IStorageRegistryConfig{
+    public class StorageRegistryConfig : IVaultRegistryConfig{
         //All suffix are applicable only when dealing with controlled names.
         public string SuffixClient { get; set; } = "c";
         public string SuffixModule { get; set; } = "m";

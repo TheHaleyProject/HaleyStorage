@@ -26,8 +26,8 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
-    public partial class MariaDBIndexing : IStorageIndexing {
-        public async Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IStorageFileRoute file, string callId = null) {
+    public partial class MariaDBIndexing : IVaultIndexing {
+        public async Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IVaultFileRoute file, string callId = null) {
             Feedback result = new Feedback();
             try {
                 if (string.IsNullOrWhiteSpace(moduleCuid)) return result.SetMessage($@"Module CUID is mandatory to update document info");

@@ -5,12 +5,12 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public class StorageWorkspace : StorageDirectory, IStorageWorkspace {
-        public IStorageInfoBase Client { get; set; }
-        public IStorageInfoBase Module { get; set; }
+    public class StorageWorkspace : VaultComponent, IVaultWorkSpace {
+        public IVaultProfile Client { get; set; }
+        public IVaultProfile Module { get; set; }
         public string DatabaseName { get; set; }
-        public StorageControlMode ContentControl { get; set; }
-        public StorageParseMode ContentParse { get; set; }
+        public VaultControlMode ContentControl { get; set; }
+        public VaultParseMode ContentParse { get; set; }
         
         public void Assert() {
             if (string.IsNullOrWhiteSpace(DisplayName)) throw new ArgumentNullException("Name cannot be empty");
