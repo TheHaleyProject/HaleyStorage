@@ -34,7 +34,7 @@ namespace Haley.Utils
             return input;
         }
 
-        public static (string name, string path) GenerateFileSystemSavePath(this IVaultProfileControlled nObj,VaultParseMode? parse_overwrite = null, Func<bool,(int length,int depth)> splitProvider = null, string suffix = null, Func<IVaultProfileControlled,(long id, Guid guid)> uidManager = null,bool throwExceptions = false, bool caseSensitive = false) {
+        public static (string name, string path) GenerateFileSystemSavePath(this IVaultProfile nObj,VaultParseMode? parse_overwrite = null, Func<bool,(int length,int depth)> splitProvider = null, string suffix = null, Func<IVaultProfile,(long id, Guid guid)> uidManager = null,bool throwExceptions = false, bool caseSensitive = false) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
             //If We are dealing with virutal item. No need to think a lot, as there is no path.
             if (nObj.IsVirtual) return (nObj.Name, "");
@@ -163,7 +163,7 @@ namespace Haley.Utils
             return value; //Dont' return the full path as we will be joining this result with other base path outside this function.
         }
        
-        public static bool TryPopulateControlledID(this string value, out IVaultUID result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultProfileControlled, (long id, Guid guid)> idManager, IVaultProfileControlled holder, bool throwExceptions = false) {
+        public static bool TryPopulateControlledID(this string value, out IVaultUID result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultProfile, (long id, Guid guid)> idManager, IVaultProfile holder, bool throwExceptions = false) {
             result = null;
             
             if (string.IsNullOrWhiteSpace(value)) {
@@ -188,7 +188,7 @@ namespace Haley.Utils
             return true;
         }
         
-        static (bool status, long id, Guid guid) HandleParseUID(this string value, VaultControlMode cmode, Func<IVaultProfileControlled,(long id, Guid guid)> idManager, IVaultProfileControlled holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleParseUID(this string value, VaultControlMode cmode, Func<IVaultProfile,(long id, Guid guid)> idManager, IVaultProfile holder, bool throwExceptions = false) {
             //PARTIALLY MANAGED. IT SHOULD ALSO ALLOW ME TO STORE THE INFORMATION IN THE DATABASE??
 
             long resNumber = 0;
@@ -210,7 +210,7 @@ namespace Haley.Utils
             return (true, resNumber, resGuid);
         }
         
-        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, VaultControlMode cmode, Func<IVaultProfileControlled,(long id, Guid guid)> idManager, IVaultProfileControlled holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, VaultControlMode cmode, Func<IVaultProfile,(long id, Guid guid)> idManager, IVaultProfile holder, bool throwExceptions = false) {
             long resNumber = 0;
             Guid resGuid = Guid.Empty;
             (long id, Guid guid)? dbInfo = null;

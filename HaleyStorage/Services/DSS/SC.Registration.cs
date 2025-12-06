@@ -11,16 +11,16 @@ namespace Haley.Services {
     public partial class StorageCoordinator : IStorageCoordinator {
         List<(string client, string module)> _caseSensitivePairs = new List<(string client, string module)>();
         public Task<IFeedback> RegisterClient(string client_name, string password = null) {
-            return RegisterClient(new StorageInfo(client_name) { });
+            return RegisterClient(new VaultProfile(client_name) { });
         }
         public Task<IFeedback> RegisterModule(string module_name=null, string client_name = null) {
-            return RegisterModule(new StorageInfo(module_name), new StorageInfo(client_name));
+            return RegisterModule(new VaultProfile(module_name), new VaultProfile(client_name));
         }
         public Task<IFeedback> RegisterWorkSpace(string workspace_name=null, string client_name = null, string module_name = null, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate, bool is_virtual = false) {
-            return RegisterWorkSpace(new StorageInfo(workspace_name, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:is_virtual), new StorageInfo(client_name), new StorageInfo(module_name), content_control, content_pmode);
+            return RegisterWorkSpace(new VaultProfile(workspace_name, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:is_virtual), new VaultProfile(client_name), new VaultProfile(module_name), content_control, content_pmode);
         }
 
-        public async Task<IFeedback> RegisterClient(IVaultProfileControlled client, string password = null) {
+        public async Task<IFeedback> RegisterClient(IVaultProfile client, string password = null) {
             var result = new Feedback();
             //Password will be stored in the .dss.meta file
             if (client == null) return new Feedback(false, "Name cannot be empty");
@@ -55,10 +55,10 @@ namespace Haley.Services {
             result.Result = idxResult.Result;
 
             //Whenever  we register a client, we immediately register default module and default workspace.
-            await RegisterModule(new StorageInfo(null), client);
+            await RegisterModule(new VaultProfile(null), client);
             return result;
         }
-        public async Task<IFeedback> RegisterModule(IVaultProfileControlled module, IVaultProfileControlled client) {
+        public async Task<IFeedback> RegisterModule(IVaultProfile module, IVaultProfile client) {
             //AssertValues(true, (client_name,"client name"), (name,"module name")); //uses reflection and might carry performance penalty
             string msg = string.Empty;
             if (!module.TryValidate(out msg)) new Feedback(false, msg);
@@ -92,10 +92,10 @@ namespace Haley.Services {
             result.Result = idxResult.Result;
 
             //if (!string.IsNullOrWhiteSpace(moduleInfo.DatabaseName)) module.SetCUID(moduleInfo.DatabaseName);
-            await RegisterWorkSpace(new StorageInfo(null, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:true), client, module);
+            await RegisterWorkSpace(new VaultProfile(null, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:true), client, module);
             return result;
         }
-        public async Task<IFeedback> RegisterWorkSpace(IVaultProfileControlled wspace, IVaultProfileControlled client, IVaultProfileControlled module, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate) {
+        public async Task<IFeedback> RegisterWorkSpace(IVaultProfile wspace, IVaultProfile client, IVaultProfile module, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate) {
             string msg = string.Empty;
             if (!wspace.TryValidate(out msg)) throw new Exception(msg);
             if (!client.TryValidate(out msg)) throw new Exception(msg);

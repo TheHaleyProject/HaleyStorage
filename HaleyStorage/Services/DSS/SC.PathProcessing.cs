@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace Haley.Services {
     public partial class StorageCoordinator : IStorageCoordinator {
         ConcurrentDictionary<string, string> _pathCache = new ConcurrentDictionary<string, string>(); //Let us store the paths of all places.
-        public (string name, string path) GenerateBasePath(IVaultProfileControlled input, Enums.VaultComponent component) {
+        public (string name, string path) GenerateBasePath(IVaultProfile input, Enums.VaultComponent component) {
             string suffix = string.Empty;
             int length = 2;
             int depth = 0;
@@ -50,8 +50,8 @@ namespace Haley.Services {
             return BasePath;
         }
 
-        (IVaultProfileControlled target, Enums.VaultComponent type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultComponent {
-            IVaultProfileControlled target = null;
+        (IVaultProfile target, Enums.VaultComponent type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultComponent {
+            IVaultProfile target = null;
             Enums.VaultComponent targetType = Enums.VaultComponent.Client;
             string metaFilePath = string.Empty;
 
@@ -249,7 +249,7 @@ namespace Haley.Services {
 
                 //TODO: USE THE INDEXER TO GET THE PATH FOR THIS SPECIFIC FILE WITH MODULE AND CLIENT NAME.
                 //TODO: IF THE PATH IS OBTAINED, THEN JUST JOIN THE PATHS.
-                var holder = new StorageInfo(targetFileName, wInfo.ContentControl, wInfo.ContentParse, isVirtual: false);
+                var holder = new VaultProfile(targetFileName, wInfo.ContentControl, wInfo.ContentParse, isVirtual: false);
                 targetFilePath = StorageUtils.GenerateFileSystemSavePath(
                     holder,
                     uidManager: (h) => {

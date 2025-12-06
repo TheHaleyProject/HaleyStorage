@@ -7,9 +7,13 @@ using Haley.Enums;
 using System.Linq;
 
 namespace Haley.Models {
-    public class StorageInfoBase : IVaultProfile {
-        public string Name { get; private set; }
-        public long Id { get; private set; }
+    public class VaultInfo : IVaultInfo {
+        public string Name { get; protected set; }
+        public long Id { get; protected set; }
+        [IgnoreMapping] //Important.. should not map this.
+        public string Cuid { get; protected set; } //Collision resistant Unique identifier
+        public string Guid { get; private set; } //Sha256 generated from the name and a guid is created from there.
+
         private string _displayName;
         public string DisplayName {
             get { return _displayName; }
@@ -43,10 +47,12 @@ namespace Haley.Models {
         }
 
         protected virtual void GenerateCuid() {
-            Cuid = StorageUtils.GenerateCuid(DisplayName);
+            if (!string.IsNullOrWhiteSpace(DisplayName)) {
+                Cuid = StorageUtils.GenerateCuid(DisplayName);
+            }
         }
 
-        public virtual IVaultProfile UpdateCUID(params string[] parentNames) {
+        public virtual IVaultInfo UpdateCUID(params string[] parentNames) {
             if (parentNames == null) return this;
             var inputList = parentNames.ToList();
             if (inputList.Count == 0 || inputList.Last().ToDBName() != Name) {
@@ -55,19 +61,22 @@ namespace Haley.Models {
             Cuid = StorageUtils.GenerateCuid(inputList.ToArray());
             return this;
         }
-
-        public IVaultProfile SetId(long setId) {
+        public IVaultInfo SetId(long setId) {
             Id = setId;
             return this;
         }
+        public IVaultInfo SetName(string name) {
+            Name = name;
+            return this;
+        }
 
-        public IVaultProfile SetCuid(System.Guid guid) {
+        public IVaultInfo SetCuid(Guid guid) {
             //if (guid == System.Guid.Empty) throw new Exception("Cannot set CUID. Input cannot be an empty GUID.");
             Cuid = guid.ToString("N");
             return this;
         }
 
-        public IVaultProfile SetCuid(string guid) {
+        public IVaultInfo SetCuid(string guid) {
             if (string.IsNullOrWhiteSpace(guid)) throw new Exception("Cannot set CUID with empty value");
             var res = System.Guid.Empty;
             if (guid.IsCompactGuid(out res) || guid.IsValidGuid(out res)) {
@@ -77,11 +86,7 @@ namespace Haley.Models {
             }
             return this;
         }
-
-        public string Guid { get; private set; } //Sha256 generated from the name and a guid is created from there.
-        [IgnoreMapping] //Important.. no should map this.
-        public string Cuid { get; private set; } //Collision resistant Unique identifier
-        public StorageInfoBase(string displayName) {
+        public VaultInfo(string displayName) {
             DisplayName = displayName ?? VaultConstants.DEFAULT_NAME;
         }
     }

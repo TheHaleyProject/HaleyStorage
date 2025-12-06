@@ -43,7 +43,7 @@ namespace Haley.Services {
         }
         async Task Initialize(bool force = false) {
             if (_isInitialized && !force) return;
-            var defObj = new StorageInfo(VaultConstants.DEFAULT_NAME);
+            var defObj = new VaultProfile(VaultConstants.DEFAULT_NAME);
             await RegisterClient(defObj); //Registers defaul client, with default module and default workspace
             _isInitialized = true;
         }

@@ -9,9 +9,9 @@ namespace Haley.Models {
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
         public string TargetPath { get; protected set; }
         public string TargetName { get; protected set; }
-        public IVaultProfileControlled Client { get; protected set; } 
-        public IVaultProfileControlled Module { get; protected set; }
-        public IVaultProfileControlled Workspace { get; protected set; } 
+        public IVaultProfile Client { get; protected set; } 
+        public IVaultProfile Module { get; protected set; }
+        public IVaultProfile Workspace { get; protected set; } 
         public IVaultFolderRoute Folder { get; protected set; }
         public bool ReadOnlyMode { get; protected set; }
         public bool GenerateCallId() {
@@ -21,7 +21,7 @@ namespace Haley.Models {
             return true;
         }
 
-        public virtual IVaultReadRequest SetComponent(IVaultProfileControlled input, Enums.VaultComponent type) {
+        public virtual IVaultReadRequest SetComponent(IVaultProfile input, Enums.VaultComponent type) {
             switch (type) {
                 case Enums.VaultComponent.Client:
                 Client = input;
@@ -67,9 +67,9 @@ namespace Haley.Models {
         public StorageReadRequest(string client_name,string module_name) :this(client_name, module_name, null) { }
 
         public  StorageReadRequest(string client_name, string module_name, string workspace_name) {
-            Client = new StorageInfo(client_name);
-            Module = new StorageInfo(module_name).UpdateCUID(Client.DisplayName,module_name);
-            Workspace = new StorageInfo(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName); //Here nothing matters, because it is an input request. // We need to fetch the information from database and then update this workspace information.
+            Client = new VaultProfile(client_name);
+            Module = new VaultProfile(module_name).UpdateCUID(Client.DisplayName,module_name);
+            Workspace = new VaultProfile(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName); //Here nothing matters, because it is an input request. // We need to fetch the information from database and then update this workspace information.
         }
     }
 }

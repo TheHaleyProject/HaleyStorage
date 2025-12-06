@@ -148,7 +148,7 @@ namespace Haley.Utils {
             return $@"{callid}###{dbid.ToLower()}";
         }
 
-        async Task<(long id,Guid guid)> RegisterDocumentsInternal(IVaultReadRequest request, IVaultProfileControlled holder) {
+        async Task<(long id,Guid guid)> RegisterDocumentsInternal(IVaultReadRequest request, IVaultProfile holder) {
             try {
                 if (request.ReadOnlyMode) throw new ArgumentException("Cannot register a document in readonly mode");
                 //If we are in ParseMode, we still do all the process, but, store the file as is with Parsing information.

@@ -17,7 +17,7 @@ namespace Haley.Models {
         public string Id { get; set; }
         public Stream FileStream { get; set; }
 
-        public new StorageWriteRequest SetComponent(StorageInfo input, Enums.VaultComponent type) {
+        public new StorageWriteRequest SetComponent(VaultProfile input, Enums.VaultComponent type) {
              base.SetComponent(input,type);
             return this;
         }

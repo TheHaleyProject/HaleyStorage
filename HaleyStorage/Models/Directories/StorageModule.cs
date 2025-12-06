@@ -8,6 +8,7 @@ namespace Haley.Models {
     public class StorageModule : VaultComponent, IVaultModule {
         public IVaultProfile Client { get; set; }
         public string DatabaseName { get; set; }
+        public string StorageProfileName { get; set; }
         public override bool TryValidate(out string message) {
             message = string.Empty;
             if (!base.TryValidate(out message)) return false;

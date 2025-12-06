@@ -27,7 +27,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
     public partial class MariaDBIndexing : IVaultIndexing {
-        public (long id, Guid guid) RegisterDocuments(IVaultReadRequest request, IVaultProfileControlled holder) {
+        public (long id, Guid guid) RegisterDocuments(IVaultReadRequest request, IVaultProfile holder) {
             return RegisterDocumentsInternal(request,holder).Result;
         }
         public async Task<IFeedback> RegisterClient(IVaultClient info) {
