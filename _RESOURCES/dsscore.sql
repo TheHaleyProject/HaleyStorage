@@ -105,15 +105,28 @@ CREATE TABLE IF NOT EXISTS `module` (
 CREATE TABLE IF NOT EXISTS `profile` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
-  `profile_mode` int(11) NOT NULL DEFAULT 0 COMMENT '0 - Direct Save\n1 - Stage and Move\n2 - Stage and Retain a copy',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_core.profile_info
+CREATE TABLE IF NOT EXISTS `profile_info` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `profile` int(11) NOT NULL,
+  `version` int(11) NOT NULL DEFAULT 1,
+  `mode` int(11) NOT NULL DEFAULT 0 COMMENT '0 - Direct Save\n1 - Stage and Move\n2 - Stage and Retain a copy',
   `storage_provider` int(10) unsigned DEFAULT NULL,
   `staging_provider` int(10) unsigned DEFAULT NULL,
-  `config` text DEFAULT NULL COMMENT 'Storage & staging config.. Like region name, bucket name (if applicable) etc.',
+  `created` timestamp NOT NULL DEFAULT current_timestamp(),
+  `metadata` text NOT NULL COMMENT 'Full config, including the information present in the profile (like storage provider name, id, staging provider info, profile mode etc)>\nAdditionaly, for each provider configuration like region name, bucket name (if applicable) etc and whatever..',
   PRIMARY KEY (`id`),
-  KEY `fk_profile_provider` (`storage_provider`),
-  KEY `fk_profile_provider_0` (`staging_provider`),
-  CONSTRAINT `fk_profile_provider` FOREIGN KEY (`storage_provider`) REFERENCES `provider` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `fk_profile_provider_0` FOREIGN KEY (`staging_provider`) REFERENCES `provider` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  UNIQUE KEY `unq_profile_config` (`profile`,`version`),
+  KEY `fk_profile_info_provider` (`storage_provider`),
+  KEY `fk_profile_info_provider_0` (`staging_provider`),
+  CONSTRAINT `fk_profile_config_profile` FOREIGN KEY (`profile`) REFERENCES `profile` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_profile_info_provider` FOREIGN KEY (`storage_provider`) REFERENCES `provider` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_profile_info_provider_0` FOREIGN KEY (`staging_provider`) REFERENCES `provider` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
@@ -125,7 +138,7 @@ CREATE TABLE IF NOT EXISTS `provider` (
   `created` timestamp NOT NULL DEFAULT current_timestamp(),
   `description` text DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='A provider is nothing but the logic behind how the file is uploaded.. Like, an azure provider only knows how to upload the files to Azure Storage. Or an S3 provider will know how to upload to S3 compatible storage service, a BB provider for back blaze. HFS provider is for Haley File System Upload provider (the default in our case)\n\nThus, a provider is only about HOW. The WHERE portion is stored in the storage profile.. One provider can have mtuliple storage locations (based on the profile)';
 
 -- Data exporting was unselected.
 
@@ -148,8 +161,8 @@ CREATE TABLE IF NOT EXISTS `workspace` (
   UNIQUE KEY `unq_workspace_0` (`parent`,`guid`),
   UNIQUE KEY `unq_workspace_1` (`cuid`),
   CONSTRAINT `fk_workspace_module` FOREIGN KEY (`parent`) REFERENCES `module` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `cns_workspace_0` CHECK (`parse_mode` >= 0 and `parse_mode` <= 1),
-  CONSTRAINT `cns_workspace` CHECK (`control_mode` >= 1 and `control_mode` <= 2)
+  CONSTRAINT `cns_workspace` CHECK (`control_mode` >= 1 and `control_mode` <= 2),
+  CONSTRAINT `cns_workspace_0` CHECK (`parse_mode` >= 0 and `parse_mode` <= 1)
 ) ENGINE=InnoDB AUTO_INCREMENT=1923 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.

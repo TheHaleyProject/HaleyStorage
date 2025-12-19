@@ -1,6 +1,59 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <project name="haley-dss" database="MariaDb" id="93003ef9-df78-41a8-abf9-c1beee74eaca" >
 	<schema name="dss_client" >
+		<table name="chunk_info" prior="chunk_" >
+			<column name="id" type="BIGINT" mandatory="y" />
+			<column name="size" type="BIGINT" mandatory="y" >
+				<defo><![CDATA[1]]></defo>
+				<comment><![CDATA[in MB]]></comment>
+			</column>
+			<column name="parts" type="INT" mandatory="y" >
+				<defo><![CDATA[2]]></defo>
+			</column>
+			<column name="name" type="VARCHAR" length="64" mandatory="y" >
+				<comment><![CDATA[directory name for the for the chunked_files. Inside the directory, we create files with just numbers. file.mp4.001, file.mp4.002 etc.]]></comment>
+			</column>
+			<column name="path" type="VARCHAR" length="400" mandatory="y" >
+				<comment><![CDATA[chunked directory full path (including folder name)]]></comment>
+			</column>
+			<column name="is_completed" type="BIT" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<index name="pk_chunk_info" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<constraint name="cns_chunk_info" >
+				<string><![CDATA[parts > 1]]></string>
+				<comment><![CDATA[At least two parts are needed for a chunked upload]]></comment>
+			</constraint>
+			<constraint name="cns_chunk_info_0" >
+				<string><![CDATA[size > 1]]></string>
+				<comment><![CDATA[Size of splitter should be at least 1 MB]]></comment>
+			</constraint>
+			<fk name="fk_chunk_info_doc_version" to_schema="dss_client" to_table="doc_version" >
+				<fk_column name="id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="chunked_files" prior="chunked_file" >
+			<column name="id" type="BIGINT" mandatory="y" />
+			<column name="part" type="BIGINT" mandatory="y" />
+			<column name="size" type="INT" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+				<comment><![CDATA[in MB]]></comment>
+			</column>
+			<column name="uplodaed" type="DATETIME" mandatory="y" >
+				<defo><![CDATA[CURRENT_TIMESTAMP]]></defo>
+			</column>
+			<index name="pk_chunked_files" unique="PRIMARY_KEY" >
+				<column name="id" />
+				<column name="part" />
+			</index>
+			<fk name="fk_chunked_files_chunk_info" to_schema="dss_client" to_table="chunk_info" >
+				<fk_column name="id" pk="id" />
+			</fk>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
 		<table name="directory" prior="directo" >
 			<column name="id" type="BIGINT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
@@ -96,8 +149,6 @@
 			<column name="id" type="BIGINT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
 			</column>
-			<column name="parent" prior="dir" type="BIGINT" mandatory="y" />
-			<column name="name" prior="saveas_name" type="BIGINT" mandatory="y" />
 			<column name="cuid" prior="guid" type="VARCHAR" length="48" mandatory="y" >
 				<defo><![CDATA['uuid()']]></defo>
 				<comment><![CDATA[Collision Resistant Global unique identifier]]></comment>
@@ -105,6 +156,8 @@
 			<column name="created" prior="created_at" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 			</column>
+			<column name="parent" prior="dir" type="BIGINT" mandatory="y" />
+			<column name="name" prior="saveas_name" type="BIGINT" mandatory="y" />
 			<column name="modified" prior="modified_on" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 				<column_options><![CDATA[ON UPDATE CURRENT_TIMESTAMP]]></column_options>
@@ -162,10 +215,10 @@
 ]]></options>
 		</table>
 		<table name="name_store" prior="name_" >
-			<column name="extension" type="INT" mandatory="y" />
 			<column name="id" type="BIGINT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
 			</column>
+			<column name="extension" type="INT" mandatory="y" />
 			<column name="name" type="BIGINT" mandatory="y" />
 			<index name="pk_name_store_0" unique="PRIMARY_KEY" >
 				<column name="id" />
@@ -216,16 +269,19 @@
 				<defo><![CDATA[0]]></defo>
 				<comment><![CDATA[SIZE IN BYTES]]></comment>
 			</column>
-			<column name="state" type="INT" mandatory="y" >
+			<column name="metadata" type="TEXT" />
+			<column name="flags" type="INT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 				<comment><![CDATA[Flags:
 0 - None
-1 - Uploaded to Staging Area (optional)
-2 - Uploaded to Direct Storage
-4 - Deleted Staging Copy (Optional)
-8 - Completed]]></comment>
+1 - Chunked-Upload Mode (Marked)
+2 - Uploaded to Chunking Area (Chunks are always deleted upon moving out)
+4 - Uploaded to Staging Area (Optional)
+8 - Uploaded to Storage Area (Final)
+16 - Deleted Chunked Files (Mandatory)
+32 - Deleted Staging Copy (Optional)
+64 - Upload Process Completed]]></comment>
 			</column>
-			<column name="metadata" type="TEXT" />
 			<index name="pk_version_info" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -347,7 +403,20 @@ We would have anyhow created the guid based on the provided name. If the client 
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
 			</column>
 			<column name="name" type="VARCHAR" length="120" mandatory="y" />
-			<column name="profile_mode" type="INT" mandatory="y" >
+			<index name="pk_profile" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="profile_info" prior="profile_config" >
+			<column name="id" type="INT" mandatory="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="profile" type="INT" mandatory="y" />
+			<column name="version" type="INT" mandatory="y" >
+				<defo><![CDATA[1]]></defo>
+			</column>
+			<column name="mode" type="INT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 				<comment><![CDATA[0 - Direct Save
 1 - Stage and Move
@@ -355,27 +424,35 @@ We would have anyhow created the guid based on the provided name. If the client 
 			</column>
 			<column name="storage_provider" type="INT" unsigned="y" />
 			<column name="staging_provider" type="INT" unsigned="y" />
-			<column name="metadata" prior="config" type="TEXT" >
-				<comment><![CDATA[Storage & staging config.. Like region name, bucket name (if applicable) etc.]]></comment>
+			<column name="created" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[CURRENT_TIMESTAMP]]></defo>
 			</column>
-			<index name="pk_profile" unique="PRIMARY_KEY" >
+			<column name="metadata" type="TEXT" mandatory="y" >
+				<comment><![CDATA[Full config, including the information present in the profile (like storage provider name, id, staging provider info, profile mode etc)>
+Additionaly, for each provider configuration like region name, bucket name (if applicable) etc and whatever..]]></comment>
+			</column>
+			<index name="pk_profile_config" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
-			<index name="fk_profile_provider" unique="NORMAL" >
-				<column name="storage_provider" />
+			<index name="unq_profile_config" unique="UNIQUE_KEY" >
+				<column name="profile" />
+				<column name="version" />
 			</index>
-			<index name="fk_profile_provider_0" unique="NORMAL" >
-				<column name="staging_provider" />
-			</index>
-			<fk name="fk_profile_provider" to_schema="dss_core" to_table="provider" >
+			<fk name="fk_profile_config_profile" to_schema="dss_core" to_table="profile" >
+				<fk_column name="profile" pk="id" />
+			</fk>
+			<fk name="fk_profile_info_provider" to_schema="dss_core" to_table="provider" >
 				<fk_column name="storage_provider" pk="id" />
 			</fk>
-			<fk name="fk_profile_provider_0" to_schema="dss_core" to_table="provider" >
+			<fk name="fk_profile_info_provider_0" to_schema="dss_core" to_table="provider" >
 				<fk_column name="staging_provider" pk="id" />
 			</fk>
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="provider" prior="providers" >
+			<comment><![CDATA[A provider is nothing but the logic behind how the file is uploaded.. Like, an azure provider only knows how to upload the files to Azure Storage. Or an S3 provider will know how to upload to S3 compatible storage service, a BB provider for back blaze. HFS provider is for Haley File System Upload provider (the default in our case)
+
+Thus, a provider is only about HOW. The WHERE portion is stored in the storage profile.. One provider can have mtuliple storage locations (based on the profile)]]></comment>
 			<column name="id" type="INT" mandatory="y" unsigned="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
 			</column>
@@ -479,16 +556,18 @@ END]]></string>
 		</procedure>
 	</schema>
 	<layout name="mssclient" id="3ffb53d2-b523-405c-b56e-4864481bd7c9" joined_routing="y" show_relation="cascade" >
-		<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="323" />
-		<entity schema="dss_client" name="vault" color="C1D8EE" x="57" y="608" />
-		<entity schema="dss_client" name="name_store" color="C1D8EE" x="76" y="475" />
-		<entity schema="dss_client" name="doc_version" color="C1D8EE" x="247" y="247" />
-		<entity schema="dss_client" name="workspace" color="C1D8EE" x="266" y="722" />
-		<entity schema="dss_client" name="document" color="C1D8EE" x="247" y="456" />
-		<entity schema="dss_client" name="version_info" color="C1D8EE" x="437" y="209" />
-		<entity schema="dss_client" name="directory" color="C1D8EE" x="437" y="551" />
-		<entity schema="dss_client" name="doc_info" color="C1D8EE" x="437" y="418" />
-		<shape x="57" y="57" style="Rectangle" color="FF0000" >
+		<entity schema="dss_client" name="workspace" color="C1D8EE" x="342" y="703" />
+		<entity schema="dss_client" name="vault" color="C1D8EE" x="171" y="684" />
+		<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="684" />
+		<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="475" />
+		<entity schema="dss_client" name="directory" color="C1D8EE" x="532" y="551" />
+		<entity schema="dss_client" name="doc_info" color="C1D8EE" x="532" y="437" />
+		<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="551" />
+		<entity schema="dss_client" name="doc_version" color="C1D8EE" x="342" y="304" />
+		<entity schema="dss_client" name="chunk_info" color="C1D8EE" x="171" y="209" />
+		<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="152" y="399" />
+		<entity schema="dss_client" name="version_info" color="C1D8EE" x="532" y="209" />
+		<shape x="114" y="57" style="Rectangle" color="FF0000" >
 			<comment><![CDATA[If the workspace is controlled, then the directories are LOGICAL or else 
 the directories are PHYSICAL]]></comment>
 		</shape>
@@ -618,10 +697,11 @@ ALTER TABLE dss_client.document MODIFY deleted BIT  NOT NULL DEFAULT 0  COMMENT 
 	<layout name="msscore" id="24f2626d-ccb2-494d-bd2e-79024c8a6535" joined_routing="y" show_relation="cascade" >
 		<entity schema="dss_core" name="client" color="3986C1" x="76" y="304" />
 		<entity schema="dss_core" name="client_keys" color="C1D8EE" x="76" y="513" />
-		<entity schema="dss_core" name="provider" color="C1D8EE" x="494" y="627" />
 		<entity schema="dss_core" name="workspace" color="C1D8EE" x="494" y="304" />
 		<entity schema="dss_core" name="module" color="C1D8EE" x="266" y="304" />
-		<entity schema="dss_core" name="profile" color="C1D8EE" x="266" y="608" />
+		<entity schema="dss_core" name="profile" color="C1D8EE" x="95" y="665" />
+		<entity schema="dss_core" name="profile_info" color="C1D8EE" x="266" y="608" />
+		<entity schema="dss_core" name="provider" color="C1D8EE" x="494" y="627" />
 		<shape x="57" y="57" style="Rectangle" color="FF0000" >
 			<comment><![CDATA[The concept of 'CONTROLLED' is that it expects all the names to be in either
 GUID or number format such that the application expects that the name related
