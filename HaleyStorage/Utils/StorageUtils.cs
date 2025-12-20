@@ -34,21 +34,21 @@ namespace Haley.Utils
             return input;
         }
 
-        public static (string name, string path) GenerateFileSystemSavePath(this IVaultProfile nObj,VaultParseMode? parse_overwrite = null, Func<bool,(int length,int depth)> splitProvider = null, string suffix = null, Func<IVaultProfile,(long id, Guid guid)> uidManager = null,bool throwExceptions = false, bool caseSensitive = false) {
+        public static (string name, string path) GenerateFileSystemSavePath(this IVaultInfo nObj,VaultParseMode? parse_overwrite = null, Func<bool,(int length,int depth)> splitProvider = null, string suffix = null, Func<IVaultInfo,(long id, Guid guid)> uidManager = null,bool throwExceptions = false, bool caseSensitive = false) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
             //If We are dealing with virutal item. No need to think a lot, as there is no path.
             if (nObj.IsVirtual) return (nObj.Name, "");
-            IVaultUID uidInfo = null;
+            IVaultBase uidInfo = null;
 
             //Partially or fully managed
             if (nObj.DisplayName.TryPopulateControlledID(out uidInfo, nObj.ControlMode, parse_overwrite ?? nObj.ParseMode, uidManager, nObj, throwExceptions)) {
-                nObj.SaveAsName = (nObj.ControlMode == VaultControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
+                nObj.StorageName = (nObj.ControlMode == VaultControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
             }
 
-            var result = PreparePath(nObj.SaveAsName, splitProvider, nObj.ControlMode,suffix,Path.GetExtension(nObj.Name));
+            var result = PreparePath(nObj.StorageName, splitProvider, nObj.ControlMode,suffix,Path.GetExtension(nObj.Name));
 
             //We add suffix for all controlled paths.
-            return (nObj.SaveAsName, result);
+            return (nObj.StorageName, result);
         }
 
         public static string PreparePath(string input, Func<bool, (int length, int depth)> splitProvider = null, VaultControlMode control_mode = VaultControlMode.Number, string suffix = null, string extension = null) {
@@ -70,15 +70,15 @@ namespace Haley.Utils
             return result;
         }
 
-        public static string GenerateCuid(this IVaultReadRequest input, Enums.VaultComponent type) {
+        public static string GenerateCuid(this IVaultReadRequest input, Enums.VaultObjectType type) {
             if (input == null) throw new ArgumentNullException("Inputs cannot be null or empty for CUID generation.");
             List<string> names = new List<string>();
-            if (type == Enums.VaultComponent.Client) {
+            if (type == Enums.VaultObjectType.Client) {
                 names.Add(input.Client.Name);
-            } else if (type == Enums.VaultComponent.Module) {
+            } else if (type == Enums.VaultObjectType.Module) {
                 names.Add(input.Client.Name);
                 names.Add(input.Module.Name);
-            } else if (type == Enums.VaultComponent.WorkSpace) {
+            } else if (type == Enums.VaultObjectType.WorkSpace) {
                 names.Add(input.Client.Name);
                 names.Add(input.Module.Name);
                 names.Add(input.Workspace.Name);
@@ -98,7 +98,7 @@ namespace Haley.Utils
         }
 
         public static string BuildStoragePath(this IVaultReadRequest input, string basePath, bool allowRootAccess = false) {
-            bool readOnlyMode = input.ReadOnlyMode || !(input is IVaultWriteRequest); //If the input is osswrite, then we are trying to upload a file or else we deliberately set the input as readonly
+            bool readOnlyMode = input.ReadOnlyMode || !(input is IVaultFileWriteRequest); //If the input is osswrite, then we are trying to upload a file or else we deliberately set the input as readonly
             bool forFile = false;
             //While building storage path, may be we are building only the 
             if (input == null || !(input is StorageReadRequest req)) throw new ArgumentNullException($@"{nameof(IVaultReadRequest)} cannot be null. It has to be of type {nameof(StorageReadRequest)}");
@@ -163,7 +163,7 @@ namespace Haley.Utils
             return value; //Dont' return the full path as we will be joining this result with other base path outside this function.
         }
        
-        public static bool TryPopulateControlledID(this string value, out IVaultUID result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultProfile, (long id, Guid guid)> idManager, IVaultProfile holder, bool throwExceptions = false) {
+        public static bool TryPopulateControlledID(this string value, out IVaultBase result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultInfo, (long id, Guid guid)> idManager, IVaultInfo holder, bool throwExceptions = false) {
             result = null;
             
             if (string.IsNullOrWhiteSpace(value)) {
@@ -188,7 +188,7 @@ namespace Haley.Utils
             return true;
         }
         
-        static (bool status, long id, Guid guid) HandleParseUID(this string value, VaultControlMode cmode, Func<IVaultProfile,(long id, Guid guid)> idManager, IVaultProfile holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleParseUID(this string value, VaultControlMode cmode, Func<IVaultInfo,(long id, Guid guid)> idManager, IVaultInfo holder, bool throwExceptions = false) {
             //PARTIALLY MANAGED. IT SHOULD ALSO ALLOW ME TO STORE THE INFORMATION IN THE DATABASE??
 
             long resNumber = 0;
@@ -210,7 +210,7 @@ namespace Haley.Utils
             return (true, resNumber, resGuid);
         }
         
-        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, VaultControlMode cmode, Func<IVaultProfile,(long id, Guid guid)> idManager, IVaultProfile holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, VaultControlMode cmode, Func<IVaultInfo,(long id, Guid guid)> idManager, IVaultInfo holder, bool throwExceptions = false) {
             long resNumber = 0;
             Guid resGuid = Guid.Empty;
             (long id, Guid guid)? dbInfo = null;

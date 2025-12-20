@@ -7,7 +7,7 @@ using Haley.Enums;
 using System.Linq;
 
 namespace Haley.Models {
-    public class VaultUID : IVaultUID {
+    public class VaultUID : IVaultBase {
         public long Id { get; set; }
         public Guid Guid { get; set; }
         public VaultUID(long id, Guid uid) {

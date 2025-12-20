@@ -6,13 +6,13 @@ using System.Text;
 
 namespace Haley.Models {
     public class StorageModule : VaultComponent, IVaultModule {
-        public IVaultProfile Client { get; set; }
+        public IVaultInfo Client { get; set; }
         public string DatabaseName { get; set; }
         public string StorageProfileName { get; set; }
         public override bool TryValidate(out string message) {
             message = string.Empty;
             if (!base.TryValidate(out message)) return false;
-            if (string.IsNullOrEmpty(SaveAsName) || string.IsNullOrEmpty(Path)) {
+            if (string.IsNullOrEmpty(StorageName) || string.IsNullOrEmpty(Path)) {
                 message = "Name & Path Cannot be empty";
                 return false;
             }

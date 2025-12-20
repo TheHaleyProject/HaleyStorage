@@ -6,15 +6,15 @@ using System.Text;
 
 namespace Haley.Models {
     public class StorageWorkspace : VaultComponent, IVaultWorkSpace {
-        public IVaultProfile Client { get; set; }
-        public IVaultProfile Module { get; set; }
+        public IVaultInfo Client { get; set; }
+        public IVaultInfo Module { get; set; }
         public string DatabaseName { get; set; }
         public VaultControlMode ContentControl { get; set; }
         public VaultParseMode ContentParse { get; set; }
         
         public void Assert() {
             if (string.IsNullOrWhiteSpace(DisplayName)) throw new ArgumentNullException("Name cannot be empty");
-            if (!IsVirtual &&  (string.IsNullOrEmpty(SaveAsName)  || string.IsNullOrEmpty(Path))) throw new ArgumentNullException("Path Cannot be empty");
+            if (!IsVirtual &&  (string.IsNullOrEmpty(StorageName)  || string.IsNullOrEmpty(Path))) throw new ArgumentNullException("Path Cannot be empty");
             if ( string.IsNullOrEmpty(Client?.Name) || string.IsNullOrWhiteSpace(Module?.Name)) throw new ArgumentNullException("Client & Module information cannot be empty");
         }
         public StorageWorkspace(string clientName, string moduleName, string displayName, bool is_virtual = false):base(displayName) {

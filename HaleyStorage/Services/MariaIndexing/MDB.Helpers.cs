@@ -148,7 +148,7 @@ namespace Haley.Utils {
             return $@"{callid}###{dbid.ToLower()}";
         }
 
-        async Task<(long id,Guid guid)> RegisterDocumentsInternal(IVaultReadRequest request, IVaultProfile holder) {
+        async Task<(long id,Guid guid)> RegisterDocumentsInternal(IVaultReadRequest request, IVaultInfo holder) {
             try {
                 if (request.ReadOnlyMode) throw new ArgumentException("Cannot register a document in readonly mode");
                 //If we are in ParseMode, we still do all the process, but, store the file as is with Parsing information.
@@ -228,7 +228,7 @@ namespace Haley.Utils {
                 return (0, Guid.Empty);
             }
         }
-        async Task CreateModuleDBInstance(IVaultComponent dirInfo) {
+        async Task CreateModuleDBInstance(IVaultObject dirInfo) {
             if (!(dirInfo is IVaultModule info)) return;
             if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid}";
             //What if the CUID is changed? Should we use the guid instead? 

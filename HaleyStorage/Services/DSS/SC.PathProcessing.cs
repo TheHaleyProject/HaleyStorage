@@ -9,25 +9,25 @@ using System.Threading.Tasks;
 namespace Haley.Services {
     public partial class StorageCoordinator : IStorageCoordinator {
         ConcurrentDictionary<string, string> _pathCache = new ConcurrentDictionary<string, string>(); //Let us store the paths of all places.
-        public (string name, string path) GenerateBasePath(IVaultProfile input, Enums.VaultComponent component) {
+        public (string name, string path) GenerateBasePath(IVaultInfo input, Enums.VaultObjectType component) {
             string suffix = string.Empty;
             int length = 2;
             int depth = 0;
             bool case_sensitive = false;
 
             switch (component) {
-                case Enums.VaultComponent.Client: //We might have very limited number of clients.
+                case Enums.VaultObjectType.Client: //We might have very limited number of clients.
                 suffix = Config.SuffixClient;
                 length = 0; depth = 0;
                 case_sensitive = _caseSensitivePairs.Any(p => input.Name.ToDBName().Equals(p.client, StringComparison.OrdinalIgnoreCase));
                 break;
-                case Enums.VaultComponent.Module:
+                case Enums.VaultObjectType.Module:
                 suffix = Config.SuffixModule;
                 length = 0; depth = 0;
                 case_sensitive = _caseSensitivePairs.Any(p => input.Name.ToDBName().Equals(p.module, StringComparison.OrdinalIgnoreCase));
                 break;
 
-                case Enums.VaultComponent.WorkSpace:
+                case Enums.VaultObjectType.WorkSpace:
                 //Only if the parase mode is generate, it is managed.
                 string suffixAddon =string.Empty;
 
@@ -40,7 +40,7 @@ namespace Haley.Services {
                 suffix = suffixAddon + Config.SuffixWorkSpace;
                 length = 1; depth = 5;
                 break;
-                case Enums.VaultComponent.File:
+                case Enums.VaultObjectType.File:
                 suffix = Config.SuffixFile;
                 throw new NotImplementedException("No method implemented for handling BasePath generation for File Component type.");
             }
@@ -50,21 +50,21 @@ namespace Haley.Services {
             return BasePath;
         }
 
-        (IVaultProfile target, Enums.VaultComponent type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultComponent {
-            IVaultProfile target = null;
-            Enums.VaultComponent targetType = Enums.VaultComponent.Client;
+        (IVaultInfo target, Enums.VaultObjectType type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultObject {
+            IVaultInfo target = null;
+            Enums.VaultObjectType targetType = Enums.VaultObjectType.Client;
             string metaFilePath = string.Empty;
 
             if (typeof(IVaultClient).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultComponent.Client;
+                targetType = Enums.VaultObjectType.Client;
                 metaFilePath = CLIENTMETAFILE;
                 target = input.Client;
             } else if (typeof(IVaultModule).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultComponent.Module;
+                targetType = Enums.VaultObjectType.Module;
                 metaFilePath = MODULEMETAFILE;
                 target = input.Module;
             } else if (typeof(IVaultWorkSpace).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultComponent.WorkSpace;
+                targetType = Enums.VaultObjectType.WorkSpace;
                 metaFilePath = WORKSPACEMETAFILE;
                 target = input.Workspace;
             }
@@ -73,7 +73,7 @@ namespace Haley.Services {
             return (target, targetType, metaFilePath, cuid);
         }
 
-        void AddBasePath<T>(IVaultReadRequest input, List<string> paths) where T : IVaultComponent {
+        void AddBasePath<T>(IVaultReadRequest input, List<string> paths) where T : IVaultObject {
             //We try to take the paths for all the components.
             if (paths == null) paths = new List<string>();
 
@@ -195,7 +195,7 @@ namespace Haley.Services {
             if (!string.IsNullOrWhiteSpace(input.TargetPath)) return; // End goal is to have this path defined.
             if (input.File != null && !string.IsNullOrWhiteSpace(input.File.Path)) return; //Our end goal is to generate this path.
 
-            IVaultWriteRequest inputW = input as IVaultWriteRequest;
+            IVaultFileWriteRequest inputW = input as IVaultFileWriteRequest;
             bool forupload = inputW != null;
 
             //If a component information is not avaialble for the workspace, we should not proceed.
@@ -264,13 +264,13 @@ namespace Haley.Services {
                     .path;
 
                 if (input.File == null) {
-                    input.SetFile(new StorageFileRoute(targetFileName, targetFilePath) { Id = holder.Id, Cuid = holder.Cuid, Version = holder.Version, SaveAsName = holder.SaveAsName });
+                    input.SetFile(new StorageFileRoute(targetFileName, targetFilePath) { Id = holder.Id, Cuid = holder.Cuid, Version = holder.Version, SaveAsName = holder.StorageName });
                 }
 
                 input.File.Path = targetFilePath;
                 if (string.IsNullOrWhiteSpace(input.File.Name)) input.File.SetName(input.TargetName);
                 if (string.IsNullOrWhiteSpace(input.File.Cuid)) input.File.SetCuid(holder.Cuid);
-                if (string.IsNullOrWhiteSpace(input.File.SaveAsName)) input.File.SaveAsName = holder.SaveAsName;
+                if (string.IsNullOrWhiteSpace(input.File.SaveAsName)) input.File.SaveAsName = holder.StorageName;
                 if (input.File.Id < 1) input.File.SetId(holder.Id);
                 if (forupload) {
                     input.File.Size = inputW!.FileStream?.Length ?? 0;
@@ -283,7 +283,7 @@ namespace Haley.Services {
         public (string basePath, string targetPath) ProcessAndBuildStoragePath(IVaultReadRequest input, bool allowRootAccess = false) {
             var bpath = FetchBasePath(input);
             //For the Virtual or default workspaces, the CUID could end up being wrong. So, ensure and set it here.
-            input.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultComponent.WorkSpace)); //CUID might be wrong before this. Let us force set it.
+            input.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace)); //CUID might be wrong before this. Let us force set it.
             if (input is IVaultFileReadRequest fileRead) ProcessFileRoute(fileRead).Wait();
             if (input.Folder != null) {
                 //Find out if the workspace is managed or not. So that, we can set the folder as Virtual

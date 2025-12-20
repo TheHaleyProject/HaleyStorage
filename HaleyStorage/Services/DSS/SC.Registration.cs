@@ -20,14 +20,14 @@ namespace Haley.Services {
             return RegisterWorkSpace(new VaultProfile(workspace_name, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:is_virtual), new VaultProfile(client_name), new VaultProfile(module_name), content_control, content_pmode);
         }
 
-        public async Task<IFeedback> RegisterClient(IVaultProfile client, string password = null) {
+        public async Task<IFeedback> RegisterClient(IVaultInfo client, string password = null) {
             var result = new Feedback();
             //Password will be stored in the .dss.meta file
             if (client == null) return new Feedback(false, "Name cannot be empty");
             if (!client.TryValidate(out var msg)) return new Feedback(false, msg);
             client.ControlMode = VaultControlMode.Guid; //Either we allow as is, or we go with GUID. no numbers allowed.
             if (string.IsNullOrWhiteSpace(password)) password = DEFAULTPWD;
-            var cInput = GenerateBasePath(client, Enums.VaultComponent.Client); //For client, we only prefer hash mode.
+            var cInput = GenerateBasePath(client, Enums.VaultObjectType.Client); //For client, we only prefer hash mode.
             var path = Path.Combine(BasePath, cInput.path);
 
             //Thins is we are not allowing any path to be provided by user. Only the name is allowed.
@@ -58,19 +58,19 @@ namespace Haley.Services {
             await RegisterModule(new VaultProfile(null), client);
             return result;
         }
-        public async Task<IFeedback> RegisterModule(IVaultProfile module, IVaultProfile client) {
+        public async Task<IFeedback> RegisterModule(IVaultInfo module, IVaultInfo client) {
             //AssertValues(true, (client_name,"client name"), (name,"module name")); //uses reflection and might carry performance penalty
             string msg = string.Empty;
             if (!module.TryValidate(out msg)) new Feedback(false, msg);
             if (!client.TryValidate(out msg)) new Feedback(false, msg);
 
-            var client_path = GenerateBasePath(client, Enums.VaultComponent.Client).path; //For client, we only prefer hash mode.
+            var client_path = GenerateBasePath(client, Enums.VaultObjectType.Client).path; //For client, we only prefer hash mode.
             var bPath = Path.Combine(BasePath, client_path);
             if (!Directory.Exists(bPath)) return new Feedback(false, $@"Directory not found for the client {client.DisplayName}");
             if (client_path.Contains("..")) return new Feedback(false, "Client Path contains invalid characters");
 
             //MODULE INFORMATION BASIC VALIDATION
-            var modPath = GenerateBasePath(module, Enums.VaultComponent.Module).path; //For client, we only prefer hash mode.
+            var modPath = GenerateBasePath(module, Enums.VaultObjectType.Module).path; //For client, we only prefer hash mode.
             bPath = Path.Combine(bPath, modPath); //Including Client Path
 
             //Create these folders and then register them.
@@ -95,15 +95,15 @@ namespace Haley.Services {
             await RegisterWorkSpace(new VaultProfile(null, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:true), client, module);
             return result;
         }
-        public async Task<IFeedback> RegisterWorkSpace(IVaultProfile wspace, IVaultProfile client, IVaultProfile module, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate) {
+        public async Task<IFeedback> RegisterWorkSpace(IVaultInfo wspace, IVaultInfo client, IVaultInfo module, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate) {
             string msg = string.Empty;
             if (!wspace.TryValidate(out msg)) throw new Exception(msg);
             if (!client.TryValidate(out msg)) throw new Exception(msg);
             if (!module.TryValidate(out msg)) throw new Exception(msg);
             module.UpdateCUID(client.Name,module.Name);
 
-            var cliPath = GenerateBasePath(client, Enums.VaultComponent.Client).path;
-            var modPath = GenerateBasePath(module, Enums.VaultComponent.Module).path;
+            var cliPath = GenerateBasePath(client, Enums.VaultObjectType.Client).path;
+            var modPath = GenerateBasePath(module, Enums.VaultObjectType.Module).path;
 
             var path = Path.Combine(BasePath, cliPath, modPath);
             if (!Directory.Exists(path)) return new Feedback(false, $@"Unable to lcoate the basepath for the Client : {client.DisplayName}, Module : {module.DisplayName}");
@@ -111,7 +111,7 @@ namespace Haley.Services {
             string wsPath = string.Empty;
             if (!wspace.IsVirtual) {
                 //MODULE INFORMATION BASIC VALIDATION
-                wsPath = GenerateBasePath(wspace, Enums.VaultComponent.WorkSpace).path; //For client, we only prefer hash mode.
+                wsPath = GenerateBasePath(wspace, Enums.VaultObjectType.WorkSpace).path; //For client, we only prefer hash mode.
                 path = Path.Combine(path, wsPath); //Including Base Paths
 
                 //Create these folders and then register them.

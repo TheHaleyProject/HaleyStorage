@@ -10,14 +10,14 @@ using System.Threading.Tasks;
 using System.Xml;
 
 namespace Haley.Models {
-    public class StorageWriteRequest : StorageReadFileRequest, IVaultWriteRequest {
+    public class StorageWriteRequest : StorageReadFileRequest, IVaultFileWriteRequest {
         public string FileOriginalName { get; set; } //actual file name.
         public ExistConflictResolveMode ResolveMode { get; set; } = ExistConflictResolveMode.ReturnError;
         public int BufferSize { get; set; } = 1024 * 80; //Default to 80KB
         public string Id { get; set; }
         public Stream FileStream { get; set; }
 
-        public new StorageWriteRequest SetComponent(VaultProfile input, Enums.VaultComponent type) {
+        public new StorageWriteRequest SetComponent(VaultProfile input, Enums.VaultObjectType type) {
              base.SetComponent(input,type);
             return this;
         }
@@ -41,7 +41,7 @@ namespace Haley.Models {
             return cloned ;
         }
 
-        public IVaultWriteRequest SetFileOriginalName(string name) {
+        public IVaultFileWriteRequest SetFileOriginalName(string name) {
             if (string.IsNullOrWhiteSpace(name)) return this;
             FileOriginalName = name;
             return this;

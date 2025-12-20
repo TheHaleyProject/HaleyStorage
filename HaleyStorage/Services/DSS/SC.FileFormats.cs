@@ -64,22 +64,22 @@ namespace Haley.Services {
             }
         }
 
-        IDocFormatControl ModifyFormat(string format, FormatControlMode type, bool isAdd, bool restricted) {
+        IFileFormatPolicy ModifyFormat(string format, FormatControlMode type, bool isAdd, bool restricted) {
             if (!TrySanitizeFormat(format, out var sanitized)) return this;
             var source = GetSource(type, restricted);
             if (isAdd && !source.Contains(sanitized)) source.Add(sanitized);
             if (!isAdd && source.Contains(sanitized)) source.Remove(sanitized);
             return this;
         }
-        IDocFormatControl ModifyFormatRange(List<string> formats, FormatControlMode type, bool isAdd, bool restricted) {
+        IFileFormatPolicy ModifyFormatRange(List<string> formats, FormatControlMode type, bool isAdd, bool restricted) {
             foreach (var format in formats) {
                 ModifyFormat(format, type,isAdd,restricted); //Add only the allowed formats.
             }
             return this;
         }
-        public IDocFormatControl AddFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format,type,true,restricted);
-        public IDocFormatControl AddFormatRange(List<string> formats, FormatControlMode type, bool restricted = false) => ModifyFormatRange(formats, type, true, restricted);
-        public IDocFormatControl RemoveFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format, type, false, restricted);
+        public IFileFormatPolicy AddFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format,type,true,restricted);
+        public IFileFormatPolicy AddFormatRange(List<string> formats, FormatControlMode type, bool restricted = false) => ModifyFormatRange(formats, type, true, restricted);
+        public IFileFormatPolicy RemoveFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format, type, false, restricted);
 
         public bool IsFormatAllowed(string format, FormatControlMode type) {
             if (!TrySanitizeFormat(format, out var sanitized)) return false;

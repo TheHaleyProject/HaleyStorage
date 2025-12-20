@@ -8,7 +8,7 @@ namespace Haley.Services {
 
     //We can store the version either as separate files or as individual versions. Its totally upto us.
     public partial class StorageCoordinator : IStorageCoordinator {
-        public async Task<IVaultResponse> Upload(IVaultWriteRequest input) {
+        public async Task<IVaultResponse> Upload(IVaultFileWriteRequest input) {
             VaultResponse result = new VaultResponse() {
                 Status = false,
                 RawName = input.FileOriginalName
@@ -204,7 +204,7 @@ namespace Haley.Services {
         }
 
         public async Task<IFeedback<string>> GetParent(IVaultFileReadRequest input) {
-            input.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultComponent.WorkSpace));
+            input.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
             return await Indexer?.GetParentName(input);
         }
 

@@ -7,7 +7,7 @@ using Haley.Enums;
 using System.Linq;
 
 namespace Haley.Models {
-    public class VaultInfo : IVaultInfo {
+    public class VaultInfo : IVaultBase {
         public string Name { get; protected set; }
         public long Id { get; protected set; }
         [IgnoreMapping] //Important.. should not map this.
@@ -52,7 +52,7 @@ namespace Haley.Models {
             }
         }
 
-        public virtual IVaultInfo UpdateCUID(params string[] parentNames) {
+        public virtual IVaultBase UpdateCUID(params string[] parentNames) {
             if (parentNames == null) return this;
             var inputList = parentNames.ToList();
             if (inputList.Count == 0 || inputList.Last().ToDBName() != Name) {
@@ -61,22 +61,22 @@ namespace Haley.Models {
             Cuid = StorageUtils.GenerateCuid(inputList.ToArray());
             return this;
         }
-        public IVaultInfo SetId(long setId) {
+        public IVaultBase SetId(long setId) {
             Id = setId;
             return this;
         }
-        public IVaultInfo SetName(string name) {
+        public IVaultBase SetName(string name) {
             Name = name;
             return this;
         }
 
-        public IVaultInfo SetCuid(Guid guid) {
+        public IVaultBase SetCuid(Guid guid) {
             //if (guid == System.Guid.Empty) throw new Exception("Cannot set CUID. Input cannot be an empty GUID.");
             Cuid = guid.ToString("N");
             return this;
         }
 
-        public IVaultInfo SetCuid(string guid) {
+        public IVaultBase SetCuid(string guid) {
             if (string.IsNullOrWhiteSpace(guid)) throw new Exception("Cannot set CUID with empty value");
             var res = System.Guid.Empty;
             if (guid.IsCompactGuid(out res) || guid.IsValidGuid(out res)) {

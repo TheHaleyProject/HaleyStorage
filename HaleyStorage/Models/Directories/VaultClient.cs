@@ -19,7 +19,7 @@ namespace Haley.Models {
                 return false;   
             }
 
-            if (string.IsNullOrEmpty(SaveAsName) || string.IsNullOrEmpty(Path)) {
+            if (string.IsNullOrEmpty(StorageName) || string.IsNullOrEmpty(Path)) {
                 message = "Name & Path Cannot be empty";
                 return false;
             }

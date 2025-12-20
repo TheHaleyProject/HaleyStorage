@@ -9,9 +9,9 @@ namespace Haley.Models {
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
         public string TargetPath { get; protected set; }
         public string TargetName { get; protected set; }
-        public IVaultProfile Client { get; protected set; } 
-        public IVaultProfile Module { get; protected set; }
-        public IVaultProfile Workspace { get; protected set; } 
+        public IVaultInfo Client { get; protected set; } 
+        public IVaultInfo Module { get; protected set; }
+        public IVaultInfo Workspace { get; protected set; } 
         public IVaultFolderRoute Folder { get; protected set; }
         public bool ReadOnlyMode { get; protected set; }
         public bool GenerateCallId() {
@@ -21,15 +21,15 @@ namespace Haley.Models {
             return true;
         }
 
-        public virtual IVaultReadRequest SetComponent(IVaultProfile input, Enums.VaultComponent type) {
+        public virtual IVaultReadRequest SetComponent(IVaultInfo input, Enums.VaultObjectType type) {
             switch (type) {
-                case Enums.VaultComponent.Client:
+                case Enums.VaultObjectType.Client:
                 Client = input;
                 break;
-                case Enums.VaultComponent.Module:
+                case Enums.VaultObjectType.Module:
                 Module = input; 
                 break;
-                case Enums.VaultComponent.WorkSpace:
+                case Enums.VaultObjectType.WorkSpace:
                 Workspace = input;
                 break;
             }

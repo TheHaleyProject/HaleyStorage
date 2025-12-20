@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Models {
-    public abstract class VaultComponent : VaultProfile , IVaultComponent{
+    public abstract class VaultComponent : VaultProfile , IVaultObject{
         public string Path { get; set; }
         public VaultComponent(string displayName):base(displayName) { }
     }
