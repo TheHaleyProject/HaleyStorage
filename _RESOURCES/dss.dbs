@@ -391,7 +391,7 @@ We would have anyhow created the guid based on the provided name. If the client 
 			<fk name="fk_direcory_client" to_schema="dss_core" to_table="client" >
 				<fk_column name="parent" pk="id" />
 			</fk>
-			<fk name="fk_module_profile" to_schema="dss_core" to_table="profile" >
+			<fk name="fk_module_profile_info" to_schema="dss_core" to_table="profile_info" >
 				<fk_column name="storage_profile" pk="id" />
 			</fk>
 			<options><![CDATA[engine=InnoDB
@@ -698,10 +698,10 @@ ALTER TABLE dss_client.document MODIFY deleted BIT  NOT NULL DEFAULT 0  COMMENT 
 		<entity schema="dss_core" name="client" color="3986C1" x="76" y="304" />
 		<entity schema="dss_core" name="client_keys" color="C1D8EE" x="76" y="513" />
 		<entity schema="dss_core" name="workspace" color="C1D8EE" x="494" y="304" />
-		<entity schema="dss_core" name="module" color="C1D8EE" x="266" y="304" />
 		<entity schema="dss_core" name="profile" color="C1D8EE" x="95" y="665" />
 		<entity schema="dss_core" name="profile_info" color="C1D8EE" x="266" y="608" />
 		<entity schema="dss_core" name="provider" color="C1D8EE" x="494" y="627" />
+		<entity schema="dss_core" name="module" color="C1D8EE" x="266" y="304" />
 		<shape x="57" y="57" style="Rectangle" color="FF0000" >
 			<comment><![CDATA[The concept of 'CONTROLLED' is that it expects all the names to be in either
 GUID or number format such that the application expects that the name related
