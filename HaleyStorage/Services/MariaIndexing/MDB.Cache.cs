@@ -1,29 +1,6 @@
 ﻿using Haley.Abstractions;
-using Haley.Enums;
 using Haley.Models;
-using Haley.Utils;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
-using System.Security.AccessControl;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using System.Xml.XPath;
-using static Haley.Internal.IndexingConstant;
-using static Haley.Internal.IndexingQueries;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
     public partial class MariaDBIndexing : IVaultIndexing {
@@ -31,7 +8,7 @@ namespace Haley.Utils {
         ConcurrentDictionary<string, IVaultObject> _cache = new ConcurrentDictionary<string, IVaultObject>();
         public bool TryAddInfo(IVaultObject dirInfo, bool replace = false) {
             if (dirInfo == null || !dirInfo.Name.AssertValue(false) || !dirInfo.Cuid.AssertValue(false)) return false;
-            if (_cache.ContainsKey(dirInfo.Cuid)) {
+            if (_cache.ContainsKey(dirInfo.Cuid.ToString())) {
                 if (!replace) return false;
                 return _cache.TryUpdate(dirInfo.Cuid, dirInfo, _cache[dirInfo.Cuid]);
             } else {

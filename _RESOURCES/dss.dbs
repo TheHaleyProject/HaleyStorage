@@ -23,12 +23,10 @@
 				<column name="id" />
 			</index>
 			<constraint name="cns_chunk_info" >
-				<string><![CDATA[parts > 1]]></string>
-				<comment><![CDATA[At least two parts are needed for a chunked upload]]></comment>
+				<string><![CDATA[`parts` > 1]]></string>
 			</constraint>
 			<constraint name="cns_chunk_info_0" >
-				<string><![CDATA[size > 1]]></string>
-				<comment><![CDATA[Size of splitter should be at least 1 MB]]></comment>
+				<string><![CDATA[`size` > 1]]></string>
 			</constraint>
 			<fk name="fk_chunk_info_doc_version" to_schema="dss_client" to_table="doc_version" >
 				<fk_column name="id" pk="id" />
@@ -43,13 +41,16 @@
 				<comment><![CDATA[in MB]]></comment>
 			</column>
 			<column name="uplodaed" type="DATETIME" mandatory="y" >
-				<defo><![CDATA[CURRENT_TIMESTAMP]]></defo>
+				<defo><![CDATA[current_timestamp()]]></defo>
+			</column>
+			<column name="hash" type="VARCHAR" length="128" >
+				<comment><![CDATA[SHA-256 hash of this individual chunk for per-chunk integrity verification]]></comment>
 			</column>
 			<index name="pk_chunked_files" unique="PRIMARY_KEY" >
 				<column name="id" />
 				<column name="part" />
 			</index>
-			<fk name="fk_chunked_files_chunk_info" to_schema="dss_client" to_table="chunk_info" >
+			<fk name="fk_chunked_files_doc_version" to_schema="dss_client" to_table="doc_version" >
 				<fk_column name="id" pk="id" />
 			</fk>
 			<options><![CDATA[engine=InnoDB]]></options>
@@ -79,7 +80,7 @@
 				<comment><![CDATA[Can be null for root folders. We mark it as 0 for root folders]]></comment>
 			</column>
 			<column name="workspace" type="BIGINT" mandatory="y" />
-			<index name="pk_directory_0" unique="PRIMARY_KEY" >
+			<index name="pk_directory" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<index name="unq_directory" unique="UNIQUE_KEY" >
@@ -100,7 +101,7 @@
 		<table name="doc_info" prior="doc_name" >
 			<column name="file" type="BIGINT" mandatory="y" />
 			<column name="display_name" prior="name" type="VARCHAR" length="200" mandatory="y" />
-			<index name="pk_file_info_0" unique="PRIMARY_KEY" >
+			<index name="pk_doc_info" unique="PRIMARY_KEY" >
 				<column name="file" />
 			</index>
 			<index name="idx_doc_info" unique="NORMAL" >
@@ -125,7 +126,7 @@
 				<defo><![CDATA[1]]></defo>
 			</column>
 			<column name="parent" prior="doc" type="BIGINT" mandatory="y" />
-			<index name="pk_file_version" unique="PRIMARY_KEY" >
+			<index name="pk_doc_version" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<index name="unq_file_version" unique="UNIQUE_KEY" >
@@ -156,18 +157,18 @@
 			<column name="created" prior="created_at" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 			</column>
-			<column name="parent" prior="dir" type="BIGINT" mandatory="y" />
-			<column name="name" prior="saveas_name" type="BIGINT" mandatory="y" />
 			<column name="modified" prior="modified_on" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 				<column_options><![CDATA[ON UPDATE CURRENT_TIMESTAMP]]></column_options>
 			</column>
+			<column name="parent" prior="dir" type="BIGINT" mandatory="y" />
+			<column name="name" prior="saveas_name" type="BIGINT" mandatory="y" />
 			<column name="deleted" type="BIT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 				<comment><![CDATA[Soft delete]]></comment>
 			</column>
 			<column name="workspace" prior="parent" type="BIGINT" mandatory="y" />
-			<index name="pk_fileindex" unique="PRIMARY_KEY" >
+			<index name="pk_document" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<index name="unq_file_index" unique="UNIQUE_KEY" >
@@ -204,7 +205,7 @@
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
 			</column>
 			<column name="name" type="VARCHAR" length="100" mandatory="y" />
-			<index name="pk_file_extensions" unique="PRIMARY_KEY" >
+			<index name="pk_extension" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<index name="idx_extension" unique="NORMAL" >
@@ -220,7 +221,7 @@
 			</column>
 			<column name="extension" type="INT" mandatory="y" />
 			<column name="name" type="BIGINT" mandatory="y" />
-			<index name="pk_name_store_0" unique="PRIMARY_KEY" >
+			<index name="pk_name_store" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<index name="unq_name_store" unique="UNIQUE_KEY" >
@@ -246,7 +247,7 @@
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
 			</column>
 			<column name="name" type="VARCHAR" length="200" mandatory="y" />
-			<index name="pk_name_store" unique="PRIMARY_KEY" >
+			<index name="pk_vault" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<index name="idx_name_store" unique="NORMAL" >
@@ -280,7 +281,14 @@
 8 - Uploaded to Storage Area (Final)
 16 - Deleted Chunked Files (Mandatory)
 32 - Deleted Staging Copy (Optional)
-64 - Upload Process Completed]]></comment>
+64 - Upload Process Completed
+128 - Synced to Internal Storage (was ExternalTemp, now pulled to local disk)]]></comment>
+			</column>
+			<column name="hash" type="VARCHAR" length="128" >
+				<comment><![CDATA[SHA-256 hash of the fully assembled/final file for integrity verification and sync validation]]></comment>
+			</column>
+			<column name="synced_at" type="TIMESTAMP" >
+				<comment><![CDATA[Timestamp set by background sync worker when file is successfully pulled from external storage to internal disk. NULL means file was always internal or sync has not completed yet.]]></comment>
 			</column>
 			<index name="pk_version_info" unique="PRIMARY_KEY" >
 				<column name="id" />
@@ -295,7 +303,7 @@
 		</table>
 		<table name="workspace" prior="module" >
 			<column name="id" type="BIGINT" length="20" mandatory="y" />
-			<index name="pk_directory" unique="PRIMARY_KEY" >
+			<index name="pk_workspace" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<options><![CDATA[engine=InnoDB]]></options>
@@ -371,7 +379,7 @@ We would have anyhow created the guid based on the provided name. If the client 
 				<column_options><![CDATA[ON UPDATE CURRENT_TIMESTAMP]]></column_options>
 			</column>
 			<column name="storage_profile" type="INT" />
-			<index name="pk_direcory" unique="PRIMARY_KEY" >
+			<index name="pk_module" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<index name="unq_directory_01" unique="UNIQUE_KEY" >
@@ -425,18 +433,24 @@ We would have anyhow created the guid based on the provided name. If the client 
 			<column name="storage_provider" type="INT" unsigned="y" />
 			<column name="staging_provider" type="INT" unsigned="y" />
 			<column name="created" type="TIMESTAMP" mandatory="y" >
-				<defo><![CDATA[CURRENT_TIMESTAMP]]></defo>
+				<defo><![CDATA[current_timestamp()]]></defo>
 			</column>
 			<column name="metadata" type="TEXT" mandatory="y" >
 				<comment><![CDATA[Full config, including the information present in the profile (like storage provider name, id, staging provider info, profile mode etc)>
 Additionaly, for each provider configuration like region name, bucket name (if applicable) etc and whatever..]]></comment>
 			</column>
-			<index name="pk_profile_config" unique="PRIMARY_KEY" >
+			<index name="pk_profile_info" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<index name="unq_profile_config" unique="UNIQUE_KEY" >
 				<column name="profile" />
 				<column name="version" />
+			</index>
+			<index name="fk_profile_info_provider" unique="NORMAL" >
+				<column name="storage_provider" />
+			</index>
+			<index name="fk_profile_info_provider_0" unique="NORMAL" >
+				<column name="staging_provider" />
 			</index>
 			<fk name="fk_profile_config_profile" to_schema="dss_core" to_table="profile" >
 				<fk_column name="profile" pk="id" />
@@ -555,24 +569,25 @@ END]]></string>
 			<input_param name="prefix" jt="12" type="varchar" inOut="1" />
 		</procedure>
 	</schema>
-	<layout name="mssclient" id="3ffb53d2-b523-405c-b56e-4864481bd7c9" joined_routing="y" show_relation="cascade" >
-		<entity schema="dss_client" name="workspace" color="C1D8EE" x="342" y="703" />
-		<entity schema="dss_client" name="vault" color="C1D8EE" x="171" y="684" />
-		<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="684" />
-		<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="475" />
-		<entity schema="dss_client" name="directory" color="C1D8EE" x="532" y="551" />
-		<entity schema="dss_client" name="doc_info" color="C1D8EE" x="532" y="437" />
-		<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="551" />
-		<entity schema="dss_client" name="doc_version" color="C1D8EE" x="342" y="304" />
-		<entity schema="dss_client" name="chunk_info" color="C1D8EE" x="171" y="209" />
-		<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="152" y="399" />
-		<entity schema="dss_client" name="version_info" color="C1D8EE" x="532" y="209" />
-		<shape x="114" y="57" style="Rectangle" color="FF0000" >
-			<comment><![CDATA[If the workspace is controlled, then the directories are LOGICAL or else 
+	<diagram_group name="Default" id="c381e35f-7de5-4ee4-bfab-d640639ddcc2" >
+		<diagram name="mssclient" id="3ffb53d2-b523-405c-b56e-4864481bd7c9" joined_routing="y" show_relation="cascade" >
+			<entity schema="dss_client" name="chunk_info" color="C1D8EE" x="95" y="209" />
+			<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="95" y="418" />
+			<entity schema="dss_client" name="directory" color="C1D8EE" x="551" y="570" />
+			<entity schema="dss_client" name="doc_info" color="C1D8EE" x="551" y="456" />
+			<entity schema="dss_client" name="doc_version" color="C1D8EE" x="323" y="304" />
+			<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="494" />
+			<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="722" />
+			<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="589" />
+			<entity schema="dss_client" name="vault" color="C1D8EE" x="171" y="722" />
+			<entity schema="dss_client" name="version_info" color="C1D8EE" x="532" y="209" />
+			<entity schema="dss_client" name="workspace" color="C1D8EE" x="342" y="722" />
+			<shape x="114" y="57" style="Rectangle" color="FF0000" >
+				<comment><![CDATA[If the workspace is controlled, then the directories are LOGICAL or else 
 the directories are PHYSICAL]]></comment>
-		</shape>
-		<script name="SQL_Editor" id="f44a5401-dafa-4db1-8900-c55a7e22ddcf" language="SQL" >
-			<string><![CDATA[DROP TABLE dss_client.file_name;
+			</shape>
+			<script name="SQL_Editor" id="f44a5401-dafa-4db1-8900-c55a7e22ddcf" language="SQL" >
+				<string><![CDATA[DROP TABLE dss_client.file_name;
 
 DROP TABLE dss_client.file_path;
 
@@ -595,17 +610,17 @@ Each client should be aware that if their base name is managed or not. So, that 
 ALTER TABLE dss_core.module MODIFY hash_guid VARCHAR(48)  NOT NULL   COMMENT 'same like the client. Guid is created based on the hash of the entered name';
 
 ALTER TABLE dss_core.module MODIFY path VARCHAR(200)     COMMENT 'Path is not mandatory. Sometimes if it is not present, we just assume that the data is present in the base directory level. As file ids are created at client level (and not at directory level), not having a path will not create any conflicts. Only file ids will not create issues. However, storing the file itself might create conflicts. So need to be careful with that approach.';]]></string>
-		</script>
-		<script name="SQL_Editor_001" id="e63c2285-e928-4550-bcbf-3014cbb871c6" language="SQL" >
-			<string><![CDATA[ALTER TABLE dss_core.client ALTER COLUMN modified SET DEFAULT CURRENT_TIMESTAMP;
+			</script>
+			<script name="SQL_Editor_001" id="e63c2285-e928-4550-bcbf-3014cbb871c6" language="SQL" >
+				<string><![CDATA[ALTER TABLE dss_core.client ALTER COLUMN modified SET DEFAULT CURRENT_TIMESTAMP;
 ]]></string>
-		</script>
-		<script name="SQL_Editor_002" id="a898431d-5c20-41c2-b8e3-7df07855365f" language="SQL" >
-			<string><![CDATA[ALTER TABLE dss_core.client ALTER COLUMN modified SET DEFAULT CURRENT_TIMESTAMP;
+			</script>
+			<script name="SQL_Editor_002" id="a898431d-5c20-41c2-b8e3-7df07855365f" language="SQL" >
+				<string><![CDATA[ALTER TABLE dss_core.client ALTER COLUMN modified SET DEFAULT CURRENT_TIMESTAMP;
 ]]></string>
-		</script>
-		<script name="directory" id="12f227f9-d56a-4368-8054-12f97ec56667" language="SQL" >
-			<string><![CDATA[CREATE  TABLE dss_client.directory ( 
+			</script>
+			<script name="directory" id="12f227f9-d56a-4368-8054-12f97ec56667" language="SQL" >
+				<string><![CDATA[CREATE  TABLE dss_client.directory ( 
 	id                   BIGINT    NOT NULL AUTO_INCREMENT  PRIMARY KEY,
 	display_name         VARCHAR(120)    NOT NULL   ,
 	created              TIMESTAMP  DEFAULT current_timestamp()  NOT NULL   ,
@@ -627,9 +642,9 @@ ALTER TABLE dss_client.directory MODIFY deleted BIT  NOT NULL DEFAULT 0  COMMENT
 ALTER TABLE dss_client.directory MODIFY parent BIGINT  NOT NULL DEFAULT 0  COMMENT 'Can be null for root folders. We mark it as 0 for root folders';
 
 ]]></string>
-		</script>
-		<script name="document" id="6aa03fd5-fe58-466c-a196-a1ca1c86e830" language="SQL" >
-			<string><![CDATA[CREATE  TABLE dss_client.document ( 
+			</script>
+			<script name="document" id="6aa03fd5-fe58-466c-a196-a1ca1c86e830" language="SQL" >
+				<string><![CDATA[CREATE  TABLE dss_client.document ( 
 	id                   BIGINT    NOT NULL AUTO_INCREMENT  PRIMARY KEY,
 	parent               BIGINT    NOT NULL   ,
 	name                 BIGINT    NOT NULL   ,
@@ -659,9 +674,9 @@ ALTER TABLE dss_client.document MODIFY cuid VARCHAR(48)  NOT NULL DEFAULT 'uuid(
 ALTER TABLE dss_client.document MODIFY deleted BIT  NOT NULL DEFAULT 0  COMMENT 'Soft delete';
 
 ]]></string>
-		</script>
-		<script name="document_001" id="a622f845-2b99-4b26-b08e-13f79073bf5a" language="SQL" >
-			<string><![CDATA[CREATE  TABLE dss_client.document ( 
+			</script>
+			<script name="document_001" id="a622f845-2b99-4b26-b08e-13f79073bf5a" language="SQL" >
+				<string><![CDATA[CREATE  TABLE dss_client.document ( 
 	id                   BIGINT    NOT NULL AUTO_INCREMENT  PRIMARY KEY,
 	parent               BIGINT    NOT NULL   ,
 	name                 BIGINT    NOT NULL   ,
@@ -692,18 +707,18 @@ ALTER TABLE dss_client.document MODIFY cuid VARCHAR(48)  NOT NULL DEFAULT 'uuid(
 ALTER TABLE dss_client.document MODIFY deleted BIT  NOT NULL DEFAULT 0  COMMENT 'Soft delete';
 
 ]]></string>
-		</script>
-	</layout>
-	<layout name="msscore" id="24f2626d-ccb2-494d-bd2e-79024c8a6535" joined_routing="y" show_relation="cascade" >
-		<entity schema="dss_core" name="client" color="3986C1" x="76" y="304" />
-		<entity schema="dss_core" name="client_keys" color="C1D8EE" x="76" y="513" />
-		<entity schema="dss_core" name="workspace" color="C1D8EE" x="494" y="304" />
-		<entity schema="dss_core" name="profile" color="C1D8EE" x="95" y="665" />
-		<entity schema="dss_core" name="profile_info" color="C1D8EE" x="266" y="608" />
-		<entity schema="dss_core" name="provider" color="C1D8EE" x="494" y="627" />
-		<entity schema="dss_core" name="module" color="C1D8EE" x="266" y="304" />
-		<shape x="57" y="57" style="Rectangle" color="FF0000" >
-			<comment><![CDATA[The concept of 'CONTROLLED' is that it expects all the names to be in either
+			</script>
+		</diagram>
+		<diagram name="msscore" id="24f2626d-ccb2-494d-bd2e-79024c8a6535" joined_routing="y" show_relation="cascade" >
+			<entity schema="dss_core" name="client" color="3986C1" x="76" y="304" />
+			<entity schema="dss_core" name="client_keys" color="C1D8EE" x="76" y="513" />
+			<entity schema="dss_core" name="module" color="C1D8EE" x="266" y="304" />
+			<entity schema="dss_core" name="profile" color="C1D8EE" x="95" y="684" />
+			<entity schema="dss_core" name="profile_info" color="C1D8EE" x="266" y="608" />
+			<entity schema="dss_core" name="provider" color="C1D8EE" x="494" y="627" />
+			<entity schema="dss_core" name="workspace" color="C1D8EE" x="494" y="304" />
+			<shape x="57" y="57" style="Rectangle" color="FF0000" >
+				<comment><![CDATA[The concept of 'CONTROLLED' is that it expects all the names to be in either
 GUID or number format such that the application expects that the name related
 information is maintained outside of the application. Application or the file system
 itself will have no knowledge about the original name. It knows only the guid or 
@@ -711,9 +726,9 @@ the number.
 If any name is provided in a format other than the guid or number, the application
 will try to generate a sha-256 hash based GUID and consider it as the name.
 Taking this name, the application will then try to split and create a hierarchy]]></comment>
-		</shape>
-		<script name="SQL_Editor" id="f80e7f7d-fc4b-4812-a3fe-2074b7ae5f8a" language="SQL" >
-			<string><![CDATA[DROP TABLE dss_client.file_extension;
+			</shape>
+			<script name="SQL_Editor" id="f80e7f7d-fc4b-4812-a3fe-2074b7ae5f8a" language="SQL" >
+				<string><![CDATA[DROP TABLE dss_client.file_extension;
 
 DROP INDEX idx_file_name_0 ON dss_client.file_name;
 
@@ -724,14 +739,14 @@ ALTER TABLE dss_client.file_info MODIFY name VARCHAR(60)  NOT NULL   COMMENT 'we
 ALTER TABLE dss_client.file_info MODIFY original_name VARCHAR(300)  NOT NULL   COMMENT 'Example : "hello text company 12.pdf". However, ths file upon being saved should be managed';
 
 ALTER TABLE dss_client.file_path MODIFY path TEXT  NOT NULL   COMMENT 'this path is the full absolute path inside this directory.. not just the path of the file alone. which means, if it is inside any sub directory even that path has to be included.';]]></string>
-		</script>
-		<script name="SQL_Editor_001" id="5be1cf4a-ef97-416b-96c4-f19e4f124e35" language="SQL" >
-			<string><![CDATA[ALTER TABLE dss_client.file_info MODIFY name VARCHAR(60)  NOT NULL   COMMENT 'we should not allow the saving any file with actual name. If the file name is in number, save it as number based structure. If not then create a hash based guid and save it .';
+			</script>
+			<script name="SQL_Editor_001" id="5be1cf4a-ef97-416b-96c4-f19e4f124e35" language="SQL" >
+				<string><![CDATA[ALTER TABLE dss_client.file_info MODIFY name VARCHAR(60)  NOT NULL   COMMENT 'we should not allow the saving any file with actual name. If the file name is in number, save it as number based structure. If not then create a hash based guid and save it .';
 
 ALTER TABLE dss_client.file_info MODIFY original_name VARCHAR(300)  NOT NULL   COMMENT 'Example : "hello text company 12.pdf". However, ths file upon being saved should be managed';]]></string>
-		</script>
-		<script name="directory" id="7fc0b169-ec56-418c-9cdc-0d7e32d8d37a" language="SQL" >
-			<string><![CDATA[CREATE  TABLE dss_core.directory ( 
+			</script>
+			<script name="directory" id="7fc0b169-ec56-418c-9cdc-0d7e32d8d37a" language="SQL" >
+				<string><![CDATA[CREATE  TABLE dss_core.directory ( 
 	id                   BIGINT    NOT NULL AUTO_INCREMENT  PRIMARY KEY,
 	parent_id            INT    NOT NULL   ,
 	name                 VARCHAR(120)    NOT NULL   ,
@@ -744,6 +759,7 @@ ALTER TABLE dss_client.file_info MODIFY original_name VARCHAR(300)  NOT NULL   C
 CREATE INDEX fk_direcory_client ON dss_core.directory ( parent_id );
 
 ALTER TABLE dss_core.directory ADD CONSTRAINT fk_direcory_client FOREIGN KEY ( parent_id ) REFERENCES dss_core.client( id ) ON DELETE NO ACTION ON UPDATE NO ACTION;]]></string>
-		</script>
-	</layout>
+			</script>
+		</diagram>
+	</diagram_group>
 </project>

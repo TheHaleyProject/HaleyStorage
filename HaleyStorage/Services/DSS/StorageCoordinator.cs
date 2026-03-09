@@ -36,6 +36,7 @@ namespace Haley.Services {
                 BasePath = AssemblyUtils.GetBaseDirectory(parentFolder: "DataStore");
             }
             //BasePath = BasePath?.ToLower(); //In Linux, we might end up having case sensitivity issue.
+            RegisterProvider(new FileSystemStorageProvider(), setAsDefault: true);
             SetIndexer(indexer);
             _logger = logger;
 
@@ -43,8 +44,12 @@ namespace Haley.Services {
         }
         async Task Initialize(bool force = false) {
             if (_isInitialized && !force) return;
-            var defObj = new VaultProfile(VaultConstants.DEFAULT_NAME);
-            await RegisterClient(defObj); //Registers defaul client, with default module and default workspace
+            // In ReadOnly mode, skip creating default structures.
+            // Path resolution falls back to existing .meta files and the indexer.
+            if (WriteMode) {
+                var defObj = new VaultProfile(VaultConstants.DEFAULT_NAME);
+                await RegisterClient(defObj); //Registers default client, module and workspace
+            }
             _isInitialized = true;
         }
 
@@ -89,6 +94,26 @@ namespace Haley.Services {
         public string BasePath { get; }
         public bool WriteMode { get; set; }
         IVaultIndexing Indexer;
+
+        // --- IStorageProviderRegistry ---
+        readonly Dictionary<string, IStorageProvider> _providers = new Dictionary<string, IStorageProvider>(StringComparer.OrdinalIgnoreCase);
+        string _defaultProviderKey;
+
+        public IStorageProviderRegistry RegisterProvider(IStorageProvider provider, bool setAsDefault = false) {
+            if (provider == null || string.IsNullOrWhiteSpace(provider.Key)) return this;
+            _providers[provider.Key] = provider;
+            if (setAsDefault || _defaultProviderKey == null) _defaultProviderKey = provider.Key;
+            return this;
+        }
+
+        public bool TryGetProvider(string key, out IStorageProvider provider) {
+            return _providers.TryGetValue(key, out provider);
+        }
+
+        public IStorageProvider GetDefaultProvider() {
+            if (_defaultProviderKey != null && _providers.TryGetValue(_defaultProviderKey, out var p)) return p;
+            return null;
+        }
 
         public StorageCoordinator SetWriteMode(bool mode) {
             WriteMode = mode;

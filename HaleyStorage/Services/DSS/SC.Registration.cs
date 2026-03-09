@@ -48,9 +48,12 @@ namespace Haley.Services {
                 var metaFile = Path.Combine(path, CLIENTMETAFILE);
                 File.WriteAllText(metaFile, clientInfo.ToJson());   // Over-Write the keys here.
             }
+            // Only set success if the directory actually exists at this point.
+            if (!Directory.Exists(path)) return result; // false status already set above
             result.SetStatus(true).SetMessage($@"Client {client.DisplayName} is registered");
 
-            if (!result.Status || Indexer == null) return result;
+            // Indexer registration is a write operation — skip in ReadOnly mode.
+            if (Indexer == null || !WriteMode) return result;
             var idxResult = await Indexer.RegisterClient(clientInfo);
             result.Result = idxResult.Result;
 
@@ -85,9 +88,10 @@ namespace Haley.Services {
             }
 
             var result = new Feedback(true, $@"Module {module.DisplayName} is registered");
-            if (!Directory.Exists(bPath)) result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is availalbe.");
+            if (!Directory.Exists(bPath)) result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
 
-            if (Indexer == null) return result;
+            // Indexer registration is a write operation — skip in ReadOnly mode or if dir setup failed.
+            if (Indexer == null || !WriteMode || !result.Status) return result;
             var idxResult = await Indexer.RegisterModule(moduleInfo);
             result.Result = idxResult.Result;
 
@@ -127,9 +131,10 @@ namespace Haley.Services {
             }
 
             var result = new Feedback(true, $@"Workspace {wspace.DisplayName} is registered");
-            if (!Directory.Exists(path)) result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is availalbe.");
+            if (!Directory.Exists(path)) result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
 
-            if (Indexer == null) return result;
+            // Indexer registration is a write operation — skip in ReadOnly mode or if dir setup failed.
+            if (Indexer == null || !WriteMode || !result.Status) return result;
             var idxResult = await Indexer.RegisterWorkspace(wsInfo);
             result.Result = idxResult.Result;
             return result;

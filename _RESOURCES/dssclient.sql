@@ -25,8 +25,9 @@ CREATE TABLE IF NOT EXISTS `chunked_files` (
   `part` bigint(20) NOT NULL,
   `size` int(11) NOT NULL DEFAULT 0 COMMENT 'in MB',
   `uplodaed` datetime NOT NULL DEFAULT current_timestamp(),
+  `hash` varchar(128) DEFAULT NULL COMMENT 'SHA-256 hash of this individual chunk for per-chunk integrity verification',
   PRIMARY KEY (`id`,`part`),
-  CONSTRAINT `fk_chunked_files_chunk_info` FOREIGN KEY (`id`) REFERENCES `chunk_info` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  CONSTRAINT `fk_chunked_files_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
@@ -158,7 +159,9 @@ CREATE TABLE IF NOT EXISTS `version_info` (
   `staging_path` varchar(300) DEFAULT NULL COMMENT 'Optional Staging path, if present.',
   `size` bigint(20) NOT NULL DEFAULT 0 COMMENT 'SIZE IN BYTES',
   `metadata` text DEFAULT NULL,
-  `flags` int(11) NOT NULL DEFAULT 0 COMMENT 'Flags:\n0 - None\n1 - Chunked-Upload Mode (Marked)\n2 - Uploaded to Chunking Area (Chunks are always deleted upon moving out)\n4 - Uploaded to Staging Area (Optional)\n8 - Uploaded to Storage Area (Final)\n16 - Deleted Chunked Files (Mandatory)\n32 - Deleted Staging Copy (Optional)\n64 - Upload Process Completed',
+  `flags` int(11) NOT NULL DEFAULT 0 COMMENT 'Flags:\n0 - None\n1 - Chunked-Upload Mode (Marked)\n2 - Uploaded to Chunking Area (Chunks are always deleted upon moving out)\n4 - Uploaded to Staging Area (Optional)\n8 - Uploaded to Storage Area (Final)\n16 - Deleted Chunked Files (Mandatory)\n32 - Deleted Staging Copy (Optional)\n64 - Upload Process Completed\n128 - Synced to Internal Storage (was ExternalTemp, now pulled to local disk)',
+  `hash` varchar(128) DEFAULT NULL COMMENT 'SHA-256 hash of the fully assembled/final file for integrity verification and sync validation',
+  `synced_at` timestamp NULL DEFAULT NULL COMMENT 'Timestamp set by background sync worker when file is successfully pulled from external storage to internal disk. NULL means file was always internal or sync has not completed yet.',
   PRIMARY KEY (`id`),
   KEY `idx_version_info` (`storage_name`),
   CONSTRAINT `fk_version_info_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION

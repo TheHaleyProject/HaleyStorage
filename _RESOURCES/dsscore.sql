@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS `module` (
   UNIQUE KEY `unq_module_0` (`cuid`),
   KEY `fk_module_profile` (`storage_profile`),
   CONSTRAINT `fk_direcory_client` FOREIGN KEY (`parent`) REFERENCES `client` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `fk_module_profile` FOREIGN KEY (`storage_profile`) REFERENCES `profile` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+  CONSTRAINT `fk_module_profile_info` FOREIGN KEY (`storage_profile`) REFERENCES `profile_info` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1966 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
