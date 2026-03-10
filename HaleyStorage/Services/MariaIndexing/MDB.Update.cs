@@ -39,20 +39,29 @@ namespace Haley.Utils {
                 var docvExists = await _agw.Scalar(new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.EXISTS_BY_ID }.ForTransaction(handler), (ID, file.Id));
                 if (docvExists == null) return result.SetMessage($@"Unable to find any document version with cuid {file.Cuid} and id {file.Id} in DB {moduleCuid}");
 
-                // Core upsert: storage_name/storage_path/size (mapped from existing route fields)
+                // Extract hash and synced_at — nullable, pass DBNull when not provided.
+                object hashVal = DBNull.Value;
+                object syncedAtVal = DBNull.Value;
+                if (file.TryGetProp<string>(out var hv, "Hash", "hash") && !string.IsNullOrWhiteSpace(hv)) hashVal = hv;
+                if (file.TryGetProp<DateTime>(out var sav, "SyncedAt", "synced_at")) syncedAtVal = sav;
+
+                // Core upsert: storage_name/storage_path/size/hash/synced_at
                 await _agw.NonQuery(
                     new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.INSERT_INFO }.ForTransaction(handler),
                     (ID, file.Id),
                     (SAVENAME, file.SaveAsName),
                     (PATH, file.Path),
-                    (SIZE, file.Size)
+                    (SIZE, file.Size),
+                    (HASH, hashVal),
+                    (SYNCED_AT, syncedAtVal)
                 );
 
                 // Optional extended update (only if caller provides these fields)
                 // This avoids forcing existing apps to suddenly send flags/metadata etc.
                 if (file.TryGetProp<string>(out var stagingPath, "StagingPath", "staging_path") ||
                     file.TryGetProp<string>(out var metadata, "Metadata", "metadata") ||
-                    file.TryGetProp<int>(out var flags, "Flags", "flags")) {
+                    file.TryGetProp<int>(out var flags, "Flags", "flags") ||
+                    !(hashVal is DBNull) || !(syncedAtVal is DBNull)) {
 
                     object sp = DBNull.Value;
                     object md = DBNull.Value;
@@ -63,13 +72,15 @@ namespace Haley.Utils {
                     if (file.TryGetProp<int>(out var flv, "Flags", "flags")) fl = flv;
 
                     // Only run if at least one field is actually populated.
-                    if (!(sp is DBNull) || !(md is DBNull) || !(fl is DBNull)) {
+                    if (!(sp is DBNull) || !(md is DBNull) || !(fl is DBNull) || !(hashVal is DBNull) || !(syncedAtVal is DBNull)) {
                         await _agw.NonQuery(
                             new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.UPDATE_INFO_EXT }.ForTransaction(handler),
                             (ID, file.Id),
                             (STAGINGPATH, sp),
                             (METADATA, md),
-                            (FLAGS, fl)
+                            (FLAGS, fl),
+                            (HASH, hashVal),
+                            (SYNCED_AT, syncedAtVal)
                         );
                     }
                 }

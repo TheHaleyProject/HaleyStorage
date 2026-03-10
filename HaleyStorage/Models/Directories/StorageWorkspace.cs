@@ -6,8 +6,8 @@ using System.Text;
 
 namespace Haley.Models {
     public class StorageWorkspace : VaultComponent, IVaultWorkSpace {
-        public IVaultInfo Client { get; set; }
-        public IVaultInfo Module { get; set; }
+        public IVaultBase Client { get; set; }      // IVaultWorkSpace requires IVaultBase
+        public IVaultBase Module { get; set; }      // IVaultWorkSpace requires IVaultBase
         public string DatabaseName { get; set; }
         public VaultControlMode ContentControl { get; set; }
         public VaultParseMode ContentParse { get; set; }
@@ -19,8 +19,8 @@ namespace Haley.Models {
         }
         public StorageWorkspace(string clientName, string moduleName, string displayName, bool is_virtual = false):base(displayName) {
             IsVirtual = is_virtual;
-            Client = new StorageInfoBase(clientName) {  };
-            Module = new StorageInfoBase(moduleName).UpdateCUID(clientName,moduleName);
+            Client = new VaultInfo(clientName);
+            Module = new VaultInfo(moduleName).UpdateCUID(clientName, moduleName);
             UpdateCUID(Client.Name, Module.Name, Name); //With all other names
         }
     }

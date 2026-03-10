@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `directory` (
   `display_name` varchar(120) NOT NULL,
   `created` timestamp NOT NULL DEFAULT current_timestamp(),
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `cuid` varchar(48) NOT NULL DEFAULT 'uuid()',
+  `cuid` varchar(48) NOT NULL DEFAULT uuid(),
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT 'soft delete',
   `name` varchar(120) NOT NULL,
   `parent` bigint(20) NOT NULL DEFAULT 0 COMMENT 'Can be null for root folders. We mark it as 0 for root folders',
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS `directory` (
 -- Dumping structure for table dss_client.document
 CREATE TABLE IF NOT EXISTS `document` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `cuid` varchar(48) NOT NULL DEFAULT 'uuid()' COMMENT 'Collision Resistant Global unique identifier',
+  `cuid` varchar(48) NOT NULL DEFAULT uuid() COMMENT 'Collision Resistant Global unique identifier',
   `created` timestamp NOT NULL DEFAULT current_timestamp(),
   `parent` bigint(20) NOT NULL,
   `name` bigint(20) NOT NULL,
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS `doc_info` (
 -- Dumping structure for table dss_client.doc_version
 CREATE TABLE IF NOT EXISTS `doc_version` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `cuid` varchar(48) NOT NULL DEFAULT 'uuid()',
+  `cuid` varchar(48) NOT NULL DEFAULT uuid(),
   `created` timestamp NOT NULL DEFAULT current_timestamp(),
   `ver` int(11) NOT NULL DEFAULT 1,
   `parent` bigint(20) NOT NULL,

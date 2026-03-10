@@ -61,6 +61,7 @@ namespace Haley.Utils {
             long docVersionId,
             long partNumber,
             int sizeMb,
+            string hash = null,
             string callId = null
         ) {
             var fb = new Feedback();
@@ -84,7 +85,8 @@ namespace Haley.Utils {
                     new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.FILE_UPSERT }.ForTransaction(handler),
                     (ID, docVersionId),
                     (PART, partNumber),
-                    (FILESIZE_MB, sizeMb)
+                    (FILESIZE_MB, sizeMb),
+                    (HASH, string.IsNullOrWhiteSpace(hash) ? (object)DBNull.Value : hash)
                 );
 
                 return fb.SetStatus(true).SetMessage("chunked_files upserted.");

@@ -5,9 +5,7 @@ namespace Haley.Models {
     //Thus, when you modify it, you need to return the modified struct.
     //This is useful for immutability and functional programming paradigms.
     public class StorageFolderRoute : StorageRoute, IVaultFolderRoute {
-        public bool IsVirutal { get; set; }
-        public bool CreateIfMissing { get; set; }
-        public IVaultRoute Parent { get; set; }
+        public IVaultFolderRoute Parent { get; set; }
         public StorageFolderRoute() { }
         public StorageFolderRoute(string name, string path) : base(name,path) { 
         }

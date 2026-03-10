@@ -1,19 +1,23 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 using System.Collections.Generic;
 using Haley.Enums;
 using Haley.Utils;
 
 namespace Haley.Models {
-    public class StorageReadRequest : IVaultReadRequest {
+    public class StorageReadRequest : IVaultReadRequest, IVaultScope {
         bool callIdGenerated;
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
         public string TargetPath { get; protected set; }
         public string TargetName { get; protected set; }
-        public IVaultInfo Client { get; protected set; } 
+        public IVaultInfo Client { get; protected set; }
         public IVaultInfo Module { get; protected set; }
-        public IVaultInfo Workspace { get; protected set; } 
+        public IVaultInfo Workspace { get; protected set; }
         public IVaultFolderRoute Folder { get; protected set; }
         public bool ReadOnlyMode { get; protected set; }
+
+        // IVaultReadRequest.Scope — this class is itself the scope implementation.
+        public IVaultScope Scope => this;
+
         public bool GenerateCallId() {
             if (callIdGenerated) return false;
             CallID = Guid.NewGuid().ToString();
@@ -27,7 +31,7 @@ namespace Haley.Models {
                 Client = input;
                 break;
                 case Enums.VaultObjectType.Module:
-                Module = input; 
+                Module = input;
                 break;
                 case Enums.VaultObjectType.WorkSpace:
                 Workspace = input;
@@ -69,7 +73,7 @@ namespace Haley.Models {
         public  StorageReadRequest(string client_name, string module_name, string workspace_name) {
             Client = new VaultProfile(client_name);
             Module = new VaultProfile(module_name).UpdateCUID(Client.DisplayName,module_name);
-            Workspace = new VaultProfile(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName); //Here nothing matters, because it is an input request. // We need to fetch the information from database and then update this workspace information.
+            Workspace = new VaultProfile(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName);
         }
     }
 }

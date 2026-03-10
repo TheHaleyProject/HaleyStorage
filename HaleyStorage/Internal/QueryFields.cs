@@ -48,6 +48,10 @@ namespace Haley.Internal {
         public const string STAGINGPATH = $@"@{nameof(STAGINGPATH)}";
         public const string FLAGS = $@"@{nameof(FLAGS)}";
 
+        // CLIENT : VERSION INFO (new columns)
+        public const string HASH = $@"@{nameof(HASH)}";             // version_info.hash / chunked_files.hash
+        public const string SYNCED_AT = $@"@{nameof(SYNCED_AT)}";   // version_info.synced_at
+
         // CLIENT : CHUNKING
         public const string CHUNK_SIZE = $@"@{nameof(CHUNK_SIZE)}";     // chunk_info.size (MB)
         public const string CHUNK_PARTS = $@"@{nameof(CHUNK_PARTS)}";   // chunk_info.parts

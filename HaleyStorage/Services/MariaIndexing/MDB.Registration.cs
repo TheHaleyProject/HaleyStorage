@@ -27,8 +27,8 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
     public partial class MariaDBIndexing : IVaultIndexing {
-        public (long id, Guid guid) RegisterDocuments(IVaultReadRequest request, IVaultInfo holder) {
-            return RegisterDocumentsInternal(request,holder).Result;
+        public async Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultInfo holder) {
+            return await RegisterDocumentsInternal(request, holder);
         }
         public async Task<IFeedback> RegisterClient(IVaultClient info) {
             if (info == null) throw new ArgumentNullException("Input client directory info cannot be null");
@@ -40,21 +40,19 @@ namespace Haley.Utils {
 
             var exists = await _agw.Scalar(new AdapterArgs(_key) { Query = CLIENT.EXISTS }, (NAME, info.Name));
             var thandler = _agw.GetTransactionHandler(_key); //For both cases, update or upsert, we use inside a transaction.
-            if (exists != null && exists is int cliId) {
+            if (exists != null && long.TryParse(exists.ToString(), out var cliId)) {
                 //Client exists. We just need to update.
                 using (thandler.Begin()) {
                     //Register client
-                    await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPDATE }).ForTransaction(thandler), (DNAME, info.DisplayName), (PATH, info.Path),(ID, cliId));
+                    await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPDATE }).ForTransaction(thandler), (DNAME, info.DisplayName), (PATH, info.Path), (ID, cliId));
                     await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPSERTKEYS }).ForTransaction(thandler), (ID, cliId), (SIGNKEY, info.SigningKey), (ENCRYPTKEY, info.EncryptKey), (PASSWORD, info.PasswordHash));
                 }
             } else {
-                
                 using (thandler.Begin()) {
                     //Register client
-                    await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPSERT }).ForTransaction(thandler), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid), (PATH, info.Path));
+                    await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPSERT }).ForTransaction(thandler), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (PATH, info.Path));
                     exists = await _agw.Scalar((new AdapterArgs(_key) { Query = CLIENT.EXISTS }).ForTransaction(thandler), (NAME, info.Name));
-                    if (exists != null && exists is int clientId) {
-                        //await _agw.Read(new AdapterArgs(_key) { Query = $@"select * from client as c where c.id = {clientId};" });
+                    if (exists != null && long.TryParse(exists.ToString(), out var clientId)) {
                         //Add Info
                         await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPSERTKEYS }).ForTransaction(thandler), (ID, clientId), (SIGNKEY, info.SigningKey), (ENCRYPTKEY, info.EncryptKey), (PASSWORD, info.PasswordHash));
                     }
@@ -72,16 +70,16 @@ namespace Haley.Utils {
             //var cexists = await _agw.Scalar(new AdapterArgs(_key) { Query = CLIENT.EXISTS }, (NAME, info.Client.Name));
             //if (cexists == null || !(cexists is int clientId)) throw new ArgumentException($@"Client {info.Client.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
             //var mexists = await _agw.Scalar(new AdapterArgs(_key) { Query = MODULE.EXISTS }, (NAME, info.Name), (PARENT, clientId));
-            var exists = await _agw.Scalar(new AdapterArgs(_key) { Query = MODULE.EXISTS_BY_CUID }, (CUID,info.Cuid));
+            var exists = await _agw.Scalar(new AdapterArgs(_key) { Query = MODULE.EXISTS_BY_CUID }, (CUID, info.Cuid.ToString("N")));
             if (exists != null && long.TryParse(exists.ToString(),out var mId)) {
                 //Module exists. .just update it.
                 await _agw.NonQuery(new AdapterArgs(_key) { Query = MODULE.UPDATE }, (DNAME, info.DisplayName), (PATH, info.Path), (ID, mId));
             } else {
                 var cexists = await _agw.Scalar(new AdapterArgs(_key) { Query = CLIENT.EXISTS }, (NAME, info.Client.Name));
-                if (cexists == null || !(cexists is int clientId)) throw new ArgumentException($@"Client {info.Client.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = MODULE.UPSERT }, (PARENT, clientId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid), (PATH, info.Path), (CUID, info.Cuid));
+                if (cexists == null || !long.TryParse(cexists.ToString(), out var clientId)) throw new ArgumentException($@"Client {info.Client.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = MODULE.UPSERT }, (PARENT, clientId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (PATH, info.Path), (CUID, info.Cuid.ToString("N")));
             }
-            return await ValidateAndCache(MODULE.EXISTS_BY_CUID, "Module", info, CreateModuleDBInstance, (CUID, info.Cuid));
+            return await ValidateAndCache(MODULE.EXISTS_BY_CUID, "Module", info, CreateModuleDBInstance, (CUID, info.Cuid.ToString("N")));
         }
         public async Task<IFeedback> RegisterWorkspace(IVaultWorkSpace info) {
             if (info == null) throw new ArgumentNullException("Input Module directory info cannot be null");
@@ -89,17 +87,17 @@ namespace Haley.Utils {
             //We generate the hash_guid ourselves for the client.
             await EnsureValidation();
 
-            var exists = await _agw.Scalar(new AdapterArgs(_key) { Query = WORKSPACE.EXISTS_BY_CUID }, (CUID, info.Cuid));
-            if (exists != null && exists is long wsId) {
+            var exists = await _agw.Scalar(new AdapterArgs(_key) { Query = WORKSPACE.EXISTS_BY_CUID }, (CUID, info.Cuid.ToString("N")));
+            if (exists != null && long.TryParse(exists.ToString(), out var wsId)) {
                 //Module exists. .just update it.
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPDATE }, (DNAME, info.DisplayName), (PATH, info.Path), (CONTROLMODE, (int)info.ControlMode), (PARSEMODE, (int)info.ParseMode),(ID, wsId));
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPDATE }, (DNAME, info.DisplayName), (PATH, info.Path), (CONTROLMODE, (int)info.ContentControl), (PARSEMODE, (int)info.ContentParse),(ID, wsId));
             } else {
                 var moduleCuid = StorageUtils.GenerateCuid(info.Client.Name, info.Module.Name);
                 var mexists = await _agw.Scalar(new AdapterArgs(_key) { Query = MODULE.EXISTS_BY_CUID }, (CUID, moduleCuid));
-                if (mexists == null || !(mexists is int modId)) throw new ArgumentException($@"Module {info.Module.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPSERT }, (PARENT, modId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid), (PATH, info.Path), (CUID, info.Cuid), (CONTROLMODE, (int)info.ControlMode), (PARSEMODE, (int)info.ParseMode));
+                if (mexists == null || !long.TryParse(mexists.ToString(), out var modId)) throw new ArgumentException($@"Module {info.Module.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPSERT }, (PARENT, modId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (PATH, info.Path), (CUID, info.Cuid.ToString("N")), (CONTROLMODE, (int)info.ContentControl), (PARSEMODE, (int)info.ContentParse));
             }
-            return await ValidateAndCache(WORKSPACE.EXISTS_BY_CUID, "Workspace", info, null, (CUID, info.Cuid));
+            return await ValidateAndCache(WORKSPACE.EXISTS_BY_CUID, "Workspace", info, null, (CUID, info.Cuid.ToString("N")));
         }
         public async Task Validate() {
             //var toReplace = new Dictionary<string, string> { ["lifecycle_state"] = }

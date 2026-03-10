@@ -78,10 +78,10 @@ namespace Haley.Utils {
             var fb = new Feedback<string>();
             try {
                 if (request == null) return fb.SetMessage("Input request cannot be empty");
-                if (string.IsNullOrWhiteSpace(request.Workspace?.Cuid)) return fb.SetMessage("Workspace CUID cannot be empty to find the parent name");
-                if (string.IsNullOrWhiteSpace(request.Module?.Cuid)) return fb.SetMessage($@"Module CUID is mandatory to fetch parent info");
+                if (request.Scope?.Workspace == null || request.Scope.Workspace.Cuid == Guid.Empty) return fb.SetMessage("Workspace CUID cannot be empty to find the parent name");
+                if (request.Scope?.Module == null || request.Scope.Module.Cuid == Guid.Empty) return fb.SetMessage($@"Module CUID is mandatory to fetch parent info");
                 if (string.IsNullOrWhiteSpace(request.File?.Cuid)) return fb.SetMessage($@"File CUID is mandatory to fetch parent info");
-                var moduleCuid = request.Module.Cuid;
+                var moduleCuid = request.Scope.Module.Cuid.ToString("N");
 
                 if (!_agw.ContainsKey(moduleCuid)) return fb.SetMessage($@"No adapter found for the key {moduleCuid}");
 

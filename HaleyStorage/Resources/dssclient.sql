@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
 -- Host:                         127.0.0.1
--- Server version:               11.7.2-MariaDB - mariadb.org binary distribution
+-- Server version:               11.8.2-MariaDB - mariadb.org binary distribution
 -- Server OS:                    Win64
--- HeidiSQL Version:             12.7.0.6850
+-- HeidiSQL Version:             12.10.0.7000
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -16,8 +16,37 @@
 
 
 -- Dumping database structure for dss_client
-CREATE DATABASE IF NOT EXISTS `dss_client` /*!40100 DEFAULT CHARACTER SET latin1 COLLATE latin1_swedish_ci */;
+CREATE DATABASE IF NOT EXISTS `dss_client` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
 USE `dss_client`;
+
+-- Dumping structure for table dss_client.chunked_files
+CREATE TABLE IF NOT EXISTS `chunked_files` (
+  `id` bigint(20) NOT NULL,
+  `part` bigint(20) NOT NULL,
+  `size` int(11) NOT NULL DEFAULT 0 COMMENT 'in MB',
+  `uplodaed` datetime NOT NULL DEFAULT current_timestamp(),
+  `hash` varchar(128) DEFAULT NULL COMMENT 'SHA-256 hash of this individual chunk for per-chunk integrity verification',
+  PRIMARY KEY (`id`,`part`),
+  CONSTRAINT `fk_chunked_files_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_client.chunk_info
+CREATE TABLE IF NOT EXISTS `chunk_info` (
+  `id` bigint(20) NOT NULL,
+  `size` bigint(20) NOT NULL DEFAULT 1 COMMENT 'in MB',
+  `parts` int(11) NOT NULL DEFAULT 2,
+  `name` varchar(64) NOT NULL COMMENT 'directory name for the for the chunked_files. Inside the directory, we create files with just numbers. file.mp4.001, file.mp4.002 etc.',
+  `path` varchar(400) NOT NULL COMMENT 'chunked directory full path (including folder name)',
+  `is_completed` bit(1) NOT NULL DEFAULT b'0',
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_chunk_info_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `cns_chunk_info` CHECK (`parts` > 1),
+  CONSTRAINT `cns_chunk_info_0` CHECK (`size` > 1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Data exporting was unselected.
 
 -- Dumping structure for table dss_client.directory
 CREATE TABLE IF NOT EXISTS `directory` (
@@ -34,17 +63,17 @@ CREATE TABLE IF NOT EXISTS `directory` (
   UNIQUE KEY `unq_directory` (`workspace`,`parent`,`name`),
   UNIQUE KEY `unq_directory_0` (`cuid`),
   CONSTRAINT `fk_directory_workspace` FOREIGN KEY (`workspace`) REFERENCES `workspace` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=1000 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1000 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 
 -- Dumping structure for table dss_client.document
 CREATE TABLE IF NOT EXISTS `document` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `parent` bigint(20) NOT NULL,
-  `name` bigint(20) NOT NULL,
   `cuid` varchar(48) NOT NULL DEFAULT uuid() COMMENT 'Collision Resistant Global unique identifier',
   `created` timestamp NOT NULL DEFAULT current_timestamp(),
+  `parent` bigint(20) NOT NULL,
+  `name` bigint(20) NOT NULL,
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT 'Soft delete',
   `workspace` bigint(20) NOT NULL,
@@ -57,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `document` (
   CONSTRAINT `fk_document_directory` FOREIGN KEY (`parent`) REFERENCES `directory` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_document_name_store` FOREIGN KEY (`name`) REFERENCES `name_store` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_document_workspace` FOREIGN KEY (`workspace`) REFERENCES `workspace` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=1988 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1988 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 
@@ -68,7 +97,7 @@ CREATE TABLE IF NOT EXISTS `doc_info` (
   PRIMARY KEY (`file`),
   KEY `idx_doc_info` (`display_name`),
   CONSTRAINT `fk_file_info_file_index_0` FOREIGN KEY (`file`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 
@@ -84,7 +113,7 @@ CREATE TABLE IF NOT EXISTS `doc_version` (
   UNIQUE KEY `unq_doc_version` (`cuid`),
   KEY `idx_file_version_0` (`created`),
   CONSTRAINT `fk_doc_version_document` FOREIGN KEY (`parent`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=1996 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1996 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 
@@ -94,21 +123,21 @@ CREATE TABLE IF NOT EXISTS `extension` (
   `name` varchar(100) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_extension` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=1000 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=1000 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 
 -- Dumping structure for table dss_client.name_store
 CREATE TABLE IF NOT EXISTS `name_store` (
-  `extension` int(11) NOT NULL,
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `extension` int(11) NOT NULL,
   `name` bigint(20) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_name_store` (`name`,`extension`),
   KEY `idx_name_store_0` (`extension`,`name`),
   CONSTRAINT `fk_name_store_extension` FOREIGN KEY (`extension`) REFERENCES `extension` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_name_store_name_vault` FOREIGN KEY (`name`) REFERENCES `vault` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB AUTO_INCREMENT=900 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=900 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 
@@ -118,20 +147,25 @@ CREATE TABLE IF NOT EXISTS `vault` (
   `name` varchar(200) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_name_store` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=500 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=500 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 
 -- Dumping structure for table dss_client.version_info
 CREATE TABLE IF NOT EXISTS `version_info` (
   `id` bigint(20) NOT NULL,
-  `saveas_name` varchar(200) NOT NULL,
-  `path` text NOT NULL,
+  `storage_name` varchar(200) NOT NULL COMMENT 'name with which the storage provider identifies it.. For FS, provider, it might be a  number or a GUID. For B2 , S3 , Azure provider or something else, it might be the refernce id provided by that service',
+  `storage_path` text NOT NULL,
+  `staging_path` varchar(300) DEFAULT NULL COMMENT 'Optional Staging path, if present.',
   `size` bigint(20) NOT NULL DEFAULT 0 COMMENT 'SIZE IN BYTES',
+  `metadata` text DEFAULT NULL,
+  `flags` int(11) NOT NULL DEFAULT 0 COMMENT 'Flags:\n0 - None\n1 - Chunked-Upload Mode (Marked)\n2 - Uploaded to Chunking Area (Chunks are always deleted upon moving out)\n4 - Uploaded to Staging Area (Optional)\n8 - Uploaded to Storage Area (Final)\n16 - Deleted Chunked Files (Mandatory)\n32 - Deleted Staging Copy (Optional)\n64 - Upload Process Completed\n128 - Synced to Internal Storage (was ExternalTemp, now pulled to local disk)',
+  `hash` varchar(128) DEFAULT NULL COMMENT 'SHA-256 hash of the fully assembled/final file for integrity verification and sync validation',
+  `synced_at` timestamp NULL DEFAULT NULL COMMENT 'Timestamp set by background sync worker when file is successfully pulled from external storage to internal disk. NULL means file was always internal or sync has not completed yet.',
   PRIMARY KEY (`id`),
-  KEY `idx_version_info` (`saveas_name`),
+  KEY `idx_version_info` (`storage_name`),
   CONSTRAINT `fk_version_info_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 
@@ -139,7 +173,7 @@ CREATE TABLE IF NOT EXISTS `version_info` (
 CREATE TABLE IF NOT EXISTS `workspace` (
   `id` bigint(20) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
 

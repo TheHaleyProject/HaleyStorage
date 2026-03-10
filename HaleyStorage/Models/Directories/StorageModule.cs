@@ -6,9 +6,11 @@ using System.Text;
 
 namespace Haley.Models {
     public class StorageModule : VaultComponent, IVaultModule {
-        public IVaultInfo Client { get; set; }
+        public IVaultBase Client { get; set; }      // IVaultModule requires IVaultBase
         public string DatabaseName { get; set; }
         public string StorageProfileName { get; set; }
+        public string StorageProviderKey { get; set; }
+        public string StagingProviderKey { get; set; }
         public override bool TryValidate(out string message) {
             message = string.Empty;
             if (!base.TryValidate(out message)) return false;
@@ -23,8 +25,8 @@ namespace Haley.Models {
             return true;
         }
         public StorageModule(string clientName, string displayName) : base(displayName) {
-            Client = new StorageInfoBase(clientName) {};
-            UpdateCUID(Client.Name, Name); //With all other names
+            Client = new VaultInfo(clientName);
+            UpdateCUID(Client.Name, Name);
         }
     }
 }

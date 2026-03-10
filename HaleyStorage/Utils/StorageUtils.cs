@@ -34,18 +34,19 @@ namespace Haley.Utils
             return input;
         }
 
-        public static (string name, string path) GenerateFileSystemSavePath(this IVaultInfo nObj,VaultParseMode? parse_overwrite = null, Func<bool,(int length,int depth)> splitProvider = null, string suffix = null, Func<IVaultInfo,(long id, Guid guid)> uidManager = null,bool throwExceptions = false, bool caseSensitive = false) {
+        public static (string name, string path) GenerateFileSystemSavePath(this IVaultInfo nObj, VaultParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultInfo, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
-            //If We are dealing with virutal item. No need to think a lot, as there is no path.
-            if (nObj.IsVirtual) return (nObj.Name, "");
+            // ControlMode, ParseMode, IsVirtual live on VaultProfile (not on IVaultInfo).
+            if (!(nObj is VaultProfile profile)) return (string.Empty, string.Empty);
+            if (profile.IsVirtual) return (nObj.Name, "");
             IVaultBase uidInfo = null;
 
             //Partially or fully managed
-            if (nObj.DisplayName.TryPopulateControlledID(out uidInfo, nObj.ControlMode, parse_overwrite ?? nObj.ParseMode, uidManager, nObj, throwExceptions)) {
-                nObj.StorageName = (nObj.ControlMode == VaultControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
+            if (nObj.DisplayName.TryPopulateControlledID(out uidInfo, profile.ControlMode, parse_overwrite ?? profile.ParseMode, uidManager, nObj, throwExceptions)) {
+                nObj.StorageName = (profile.ControlMode == VaultControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
             }
 
-            var result = PreparePath(nObj.StorageName, splitProvider, nObj.ControlMode,suffix,Path.GetExtension(nObj.Name));
+            var result = PreparePath(nObj.StorageName, splitProvider, profile.ControlMode, suffix, Path.GetExtension(nObj.Name));
 
             //We add suffix for all controlled paths.
             return (nObj.StorageName, result);
@@ -74,14 +75,14 @@ namespace Haley.Utils
             if (input == null) throw new ArgumentNullException("Inputs cannot be null or empty for CUID generation.");
             List<string> names = new List<string>();
             if (type == Enums.VaultObjectType.Client) {
-                names.Add(input.Client.Name);
+                names.Add(input.Scope.Client.Name);
             } else if (type == Enums.VaultObjectType.Module) {
-                names.Add(input.Client.Name);
-                names.Add(input.Module.Name);
+                names.Add(input.Scope.Client.Name);
+                names.Add(input.Scope.Module.Name);
             } else if (type == Enums.VaultObjectType.WorkSpace) {
-                names.Add(input.Client.Name);
-                names.Add(input.Module.Name);
-                names.Add(input.Workspace.Name);
+                names.Add(input.Scope.Client.Name);
+                names.Add(input.Scope.Module.Name);
+                names.Add(input.Scope.Workspace.Name);
             }
             if (names.Any(p=> string.IsNullOrWhiteSpace(p))) {
                 throw new ArgumentNullException("Unable to generate CUID. One of the inputs is null or empty.");
@@ -110,9 +111,7 @@ namespace Haley.Utils
             if (string.IsNullOrWhiteSpace(req.TargetPath)) {
                 //Now we have two items to build. Directory path and file path. May be we are just building a directory here.
                   req.SetTargetPath(basePath);
-                if (input.Folder != null && !input.Folder.IsVirutal) {
-                    req.SetTargetPath(Path.Combine(req.TargetPath, input.Folder.FetchRoutePath(req.TargetPath,!forFile,allowRootAccess, readOnlyMode)));
-                }
+                // All folders are virtual (DB-only); they never contribute a physical path segment.
                 if (fileReq != null && fileReq.File != null) {
                     req.SetTargetPath(Path.Combine(req.TargetPath, fileReq.File.FetchRoutePath(req.TargetPath, true, allowRootAccess, readOnlyMode)));
                 }
@@ -139,28 +138,8 @@ namespace Haley.Utils
             //Route is expected to have one or more parents.
             // So we loop through the routes and reach the last route without any parent and start building from there.
             string value = SanitizePath(route.Path);
-            if (finalDestination || !(route is IVaultFolderRoute fldrRoute) || fldrRoute.IsVirutal) return value; //If the route is for file or else the folder route is only for virtual situation then we just return as is.
-
-            if (string.IsNullOrWhiteSpace(value) && !allow_root_access) throw new AccessViolationException("Root directory access is not allowed."); //We should not access the root folder. It's like the path was kept deliberately empty so that the workspace location can be accessed.
-
-            path = Path.Combine(path, value); //Combing with the base path.
-            
-            //1. a) Dir Creation disallowed b) Dir doesn't exists 
-            if (!Directory.Exists(path) && !fldrRoute.CreateIfMissing) {
-                //Whether it is a file or a directory, if user doesn't have access to create it, throw exception.
-                //We cannot allow to create Client & Module paths.
-                string errMsg = $@"Directory doesn't exists : {route.Name ?? route.Path}";
-                //2.1 ) Are we in the middle, trying to ensure some directory exists?
-                if (!readonlyMode) errMsg = $@"Access denied to create/delete the directory :{route.Name ?? route.Path}";
-                throw new ArgumentException(errMsg);
-            }
-
-            //3. Are we trying to create a directory as our main goal?? If yes, then we should not try to create here.. It will be created outside of this .
-
-            if (!(path?.TryCreateDirectory().Result ?? false)) throw new ArgumentException($@"Unable to create the directory : {route.Name ?? route.Path}");
-
-            if (!path.StartsWith(basePath)) throw new ArgumentOutOfRangeException("The generated path is not accessible. Please check the inputs.");
-            return value; //Dont' return the full path as we will be joining this result with other base path outside this function.
+            // Files use finalDestination=true; all folder routes are virtual (DB-only) — always return the sanitized path as-is.
+            return value;
         }
        
         public static bool TryPopulateControlledID(this string value, out IVaultBase result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultInfo, (long id, Guid guid)> idManager, IVaultInfo holder, bool throwExceptions = false) {

@@ -67,7 +67,7 @@ namespace Haley.Utils {
             await _agw.NonQuery(
                 new AdapterArgs(_key) { Query = MODULE.UPDATE_STORAGE_PROFILE_BY_CUID },
                 (CUID, moduleCuid),
-                (STORAGE_PROFILE, profileId)
+                (PROFILE_ID, profileId)
             );
             return true;
         }

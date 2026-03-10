@@ -25,7 +25,7 @@ namespace Haley.Services {
             //Password will be stored in the .dss.meta file
             if (client == null) return new Feedback(false, "Name cannot be empty");
             if (!client.TryValidate(out var msg)) return new Feedback(false, msg);
-            client.ControlMode = VaultControlMode.Guid; //Either we allow as is, or we go with GUID. no numbers allowed.
+            if (client is VaultProfile cp) cp.ControlMode = VaultControlMode.Guid; //Either we allow as is, or we go with GUID. no numbers allowed.
             if (string.IsNullOrWhiteSpace(password)) password = DEFAULTPWD;
             var cInput = GenerateBasePath(client, Enums.VaultObjectType.Client); //For client, we only prefer hash mode.
             var path = Path.Combine(BasePath, cInput.path);
@@ -113,7 +113,7 @@ namespace Haley.Services {
             if (!Directory.Exists(path)) return new Feedback(false, $@"Unable to lcoate the basepath for the Client : {client.DisplayName}, Module : {module.DisplayName}");
             if (path.Contains("..")) return new Feedback(false, "Invalid characters found in the base path.");
             string wsPath = string.Empty;
-            if (!wspace.IsVirtual) {
+            if (!(wspace is VaultProfile wp && wp.IsVirtual)) {
                 //MODULE INFORMATION BASIC VALIDATION
                 wsPath = GenerateBasePath(wspace, Enums.VaultObjectType.WorkSpace).path; //For client, we only prefer hash mode.
                 path = Path.Combine(path, wsPath); //Including Base Paths

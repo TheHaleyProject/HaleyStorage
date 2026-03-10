@@ -44,12 +44,9 @@ namespace Haley.Services {
         /// - Folders in a managed workspace are marked virtual (DB-only, no physical directory).
         /// </summary>
         void PrepareRequestContext(IVaultReadRequest input) {
-            input.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
-
-            if (input.Folder != null && Indexer != null &&
-                Indexer.TryGetComponentInfo<StorageWorkspace>(input.Workspace.Cuid, out _)) {
-                input.Folder.IsVirutal = true;
-            }
+            // Workspace CUID is always re-derived deterministically from names.
+            input.Scope?.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+            // All folders are virtual (DB-only). No physical directory marking needed.
         }
 
         // ─────────────────────────────────────────────────────────────────────
@@ -66,7 +63,7 @@ namespace Haley.Services {
             string result;
 
             if (!ignoreCache
-                && _pathCache.TryGetValue(request.Workspace.Cuid, out var cached)
+                && _pathCache.TryGetValue(request.Scope.Workspace.Cuid.ToString("N"), out var cached)
                 && !string.IsNullOrWhiteSpace(cached)) {
                 result = cached;
             } else {
@@ -102,14 +99,14 @@ namespace Haley.Services {
             IVaultFileWriteRequest inputW = input as IVaultFileWriteRequest;
             bool forupload = inputW != null;
 
-            if (!Indexer.TryGetComponentInfo<StorageWorkspace>(input.Workspace.Cuid, out StorageWorkspace wInfo) && forupload) {
-                throw new Exception($"Unable to find workspace info. Name: {input.Workspace.Name} — Cuid: {input.Workspace.Cuid}.");
+            if (!Indexer.TryGetComponentInfo<StorageWorkspace>(input.Scope.Workspace.Cuid.ToString("N"), out StorageWorkspace wInfo) && forupload) {
+                throw new Exception($"Unable to find workspace info. Name: {input.Scope.Workspace.Name} — Cuid: {input.Scope.Workspace.Cuid}.");
             }
 
             // Attempt to resolve path without generating a new one.
             if ((!forupload || !string.IsNullOrWhiteSpace(input.File?.Cuid)) && input.File != null) {
                 if (PopulateFromSavedPath(input, forupload, wInfo)) return;
-                if (await GetPathFromIndexer(input, forupload, input.Workspace.Cuid)) return;
+                if (await GetPathFromIndexer(input, forupload, input.Scope.Workspace.Cuid.ToString("N"))) return;
             }
 
             // ── Determine the target filename ──────────────────────────────
@@ -155,7 +152,7 @@ namespace Haley.Services {
                     uidManager: (h) => {
                         // Only register in indexer when uploading — reads never create DB entries.
                         if (Indexer == null || !forupload) return (0, Guid.Empty);
-                        return Indexer.RegisterDocuments(input, h);
+                        return Indexer.RegisterDocuments(input, h).GetAwaiter().GetResult();
                     },
                     splitProvider: SplitProvider,
                     suffix: Config.SuffixFile,
@@ -164,7 +161,7 @@ namespace Haley.Services {
 
                 if (input.File == null)
                     input.SetFile(new StorageFileRoute(targetFileName, targetFilePath) {
-                        Id = holder.Id, Cuid = holder.Cuid, Version = holder.Version, SaveAsName = holder.StorageName
+                        Id = holder.Id, Cuid = holder.Cuid.ToString("N"), Version = holder.Version, SaveAsName = holder.StorageName
                     });
 
                 input.File.Path = targetFilePath;
@@ -199,7 +196,7 @@ namespace Haley.Services {
                 break;
 
                 case Enums.VaultObjectType.WorkSpace:
-                var suffixAddon = input.ParseMode == VaultParseMode.Generate ? "f" : "p";
+                var suffixAddon = (input is VaultProfile pp && pp.ParseMode == VaultParseMode.Generate) ? "f" : "p";
                 suffix = suffixAddon + Config.SuffixWorkSpace;
                 length = 1; depth = 5;
                 break;
@@ -221,11 +218,11 @@ namespace Haley.Services {
             string metaFilePath = string.Empty;
 
             if (typeof(IVaultClient).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultObjectType.Client; metaFilePath = CLIENTMETAFILE; target = input.Client;
+                targetType = Enums.VaultObjectType.Client; metaFilePath = CLIENTMETAFILE; target = input.Scope.Client;
             } else if (typeof(IVaultModule).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultObjectType.Module; metaFilePath = MODULEMETAFILE; target = input.Module;
+                targetType = Enums.VaultObjectType.Module; metaFilePath = MODULEMETAFILE; target = input.Scope.Module;
             } else if (typeof(IVaultWorkSpace).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultObjectType.WorkSpace; metaFilePath = WORKSPACEMETAFILE; target = input.Workspace;
+                targetType = Enums.VaultObjectType.WorkSpace; metaFilePath = WORKSPACEMETAFILE; target = input.Scope.Workspace;
             }
 
             return (target, targetType, metaFilePath, StorageUtils.GenerateCuid(input, targetType));
@@ -266,8 +263,8 @@ namespace Haley.Services {
         async Task<bool> GetPathFromIndexer(IVaultFileReadRequest input, bool forupload, string workspaceCuid) {
             if (!string.IsNullOrWhiteSpace(input.File?.Cuid) || input.File?.Id > 0) {
                 var existing = input.File.Id > 0
-                    ? await Indexer.GetDocVersionInfo(input.Module.Cuid, input.File.Id)
-                    : await Indexer.GetDocVersionInfo(input.Module.Cuid, input.File.Cuid);
+                    ? await Indexer.GetDocVersionInfo(input.Scope.Module.Cuid.ToString("N"), input.File.Id)
+                    : await Indexer.GetDocVersionInfo(input.Scope.Module.Cuid.ToString("N"), input.File.Cuid);
 
                 if (existing?.Status == true && existing.Result is Dictionary<string, object> dic
                     && dic.TryGetValue("path", out var p) && !string.IsNullOrWhiteSpace(p?.ToString())) {
@@ -278,9 +275,9 @@ namespace Haley.Services {
                 }
             } else if (!string.IsNullOrWhiteSpace(input.File?.Name) || !string.IsNullOrWhiteSpace(input.TargetName)) {
                 var searchName = input.File?.Name ?? input.TargetName;
-                var dirName = input.Folder?.Name ?? VaultConstants.DEFAULT_NAME;
-                var dirParent = input.Folder?.Parent?.Id ?? 0;
-                var existing = await Indexer.GetDocVersionInfo(input.Module.Cuid, workspaceCuid, searchName, dirName, dirParent);
+                var dirName = input.Scope.Folder?.Name ?? VaultConstants.DEFAULT_NAME;
+                var dirParent = input.Scope.Folder?.Parent?.Id ?? 0;
+                var existing = await Indexer.GetDocVersionInfo(input.Scope.Module.Cuid.ToString("N"), workspaceCuid, searchName, dirName, dirParent);
 
                 if (existing?.Status == true && existing.Result is Dictionary<string, object> dic
                     && dic.TryGetValue("path", out var p) && !string.IsNullOrWhiteSpace(p?.ToString())) {

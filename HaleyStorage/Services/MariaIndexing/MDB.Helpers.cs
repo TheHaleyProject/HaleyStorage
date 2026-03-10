@@ -28,13 +28,23 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 namespace Haley.Utils {
     public partial class MariaDBIndexing : IVaultIndexing {
         async Task EnsureValidation() {
-            if (!isValidated) await Validate();
+            if (isValidated) return;
+            await _validateLock.WaitAsync();
+            try {
+                if (!isValidated) {
+                    await Validate();
+                    isValidated = true;
+                }
+            } finally {
+                _validateLock.Release();
+            }
         }
 
         async Task<(bool status, long id)> EnsureWorkSpace(IVaultReadRequest request) {
-            if (!_cache.ContainsKey(request.Workspace.Cuid)) throw new ArgumentNullException($@"Unable to find any workspace for {request?.Workspace?.Cuid}");
-            var dbid = request.Module.Cuid;
-            var wspace = _cache[request.Workspace.Cuid];
+            var wsCuidKey = request.Scope.Workspace.Cuid.ToString("N");
+            if (!_cache.ContainsKey(wsCuidKey)) throw new ArgumentNullException($@"Unable to find any workspace for {wsCuidKey}");
+            var dbid = request.Scope.Module.Cuid.ToString("N");
+            var wspace = _cache[wsCuidKey];
             //Check if workspace exists in the database.
             var ws = await InsertAndFetchIDScalar(dbid,
                 () => (INSTANCE.WORKSPACE.EXISTS, Consolidate((ID, wspace.Id))),
@@ -46,14 +56,13 @@ namespace Haley.Utils {
 
         async Task<(bool status, (long id, string uid) result)> EnsureDirectory(IVaultReadRequest request, long ws_id) {
             if (ws_id == 0) return (false, (0, string.Empty));
-            var dbid = request.Module.Cuid;
+            var dbid = request.Scope.Module.Cuid.ToString("N");
             //If directory name is not provided, then go for "default" as usual
-            var dirId = request.Folder?.Id ?? 0;
-            var dirCuid = request.Folder?.Cuid ?? string.Empty;
-            
+            var dirId = request.Scope.Folder?.Id ?? 0;
+            var dirCuid = request.Scope.Folder?.Cuid ?? string.Empty;
 
-            var dirParent = request.Folder?.Parent?.Id ?? 0;
-            var dirName = request.Folder?.Name ?? VaultConstants.DEFAULT_NAME;
+            var dirParent = request.Scope.Folder?.Parent?.Id ?? 0;
+            var dirName = request.Scope.Folder?.Name ?? VaultConstants.DEFAULT_NAME;
             var dirDbName = dirName.ToDBName();
 
             var dirInfo = await InsertAndFetchIDRead(dbid,
@@ -130,7 +139,7 @@ namespace Haley.Utils {
             name = name.ToDBName();
             ext = ext.ToDBName();
 
-            var dbid = request.Module.Cuid;
+            var dbid = request.Scope.Module.Cuid.ToString("N");
 
             //Extension Exists?
             long extId = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.EXTENSION.EXISTS, Consolidate((NAME, ext))), () => (INSTANCE.EXTENSION.INSERT, Consolidate((NAME, ext))), readOnly: request.ReadOnlyMode, $@"Unable to fetch extension id for {ext}");
@@ -148,13 +157,14 @@ namespace Haley.Utils {
             return $@"{callid}###{dbid.ToLower()}";
         }
 
-        async Task<(long id,Guid guid)> RegisterDocumentsInternal(IVaultReadRequest request, IVaultInfo holder) {
+        async Task<(long id, Guid guid)> RegisterDocumentsInternal(IVaultReadRequest request, IVaultInfo holder) {
             try {
                 if (request.ReadOnlyMode) throw new ArgumentException("Cannot register a document in readonly mode");
+                CleanupStaleHandlers();
                 //If we are in ParseMode, we still do all the process, but, store the file as is with Parsing information.
                 //For parse mode, let us not throw any exception.
                 //Generate a handler.
-                var dbid = request.Module.Cuid;
+                var dbid = request.Scope.Module.Cuid.ToString("N");
                 var handlerKey = GetHandlerKey(request.CallID, dbid);
                 var handler = _agw.GetTransactionHandler(dbid);
 
@@ -211,14 +221,14 @@ namespace Haley.Utils {
                 
                 if (holder != null) {
                     holder.SetCuid(result.guid);
-                    holder.SetId(result.id);
+                    holder.Id = result.id;   // IIdentityBase.Id has public setter
                     holder.Version = version;
                 }
 
                 return result;
             } catch (Exception ex) {
                 _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
-                var dbid = request.Module.Cuid;
+                var dbid = request.Scope.Module.Cuid.ToString("N");
                 var handlerKey = GetHandlerKey(request.CallID, dbid);
                 if (!string.IsNullOrWhiteSpace(handlerKey) && _handlers.ContainsKey(handlerKey)) {
                     _handlers[handlerKey].handler?.Rollback(); //roll everything back.
@@ -230,7 +240,7 @@ namespace Haley.Utils {
         }
         async Task CreateModuleDBInstance(IVaultObject dirInfo) {
             if (!(dirInfo is IVaultModule info)) return;
-            if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid}";
+            if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid.ToString("N")}";
             //What if the CUID is changed? Should we use the guid instead? 
             //But, guid is not unique across clients. So, we use cuid.
             //So, when we create the module, we use the cuid as the database name.
@@ -249,7 +259,7 @@ namespace Haley.Utils {
             exists = await _agw.Scalar(new AdapterArgs(_key) { ExcludeDBInConString = true, Query = GENERAL.SCHEMA_EXISTS }, (NAME, info.DatabaseName));
             if (exists == null) throw new ArgumentException($@"Unable to generate the database {info.DatabaseName}");
             //We create an adapter with this Cuid and store them.
-            _agw.DuplicateAdapter(_key, info.Cuid, ("database",info.DatabaseName));
+            _agw.DuplicateAdapter(_key, info.Cuid.ToString("N"), ("database",info.DatabaseName));
             
         }
     }

@@ -2,6 +2,8 @@ using Haley.Abstractions;
 using Haley.Enums;
 using Haley.Models;
 using Haley.Utils;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace Haley.Services {
 
@@ -52,9 +54,9 @@ namespace Haley.Services {
                 result.Status = false;
             } finally {
                 IFeedback upInfo = null;
-                if (WriteMode && Indexer != null && input != null && input.Module != null) {
+                if (WriteMode && Indexer != null && input != null && input.Scope?.Module != null) {
                     if (input.File != null && result.Status) {
-                        upInfo = await Indexer.UpdateDocVersionInfo(input.Module.Cuid, input.File, input.CallID);
+                        upInfo = await Indexer.UpdateDocVersionInfo(input.Scope.Module.Cuid.ToString("N"), input.File, input.CallID);
                     }
                     if (Indexer is MariaDBIndexing mdIdx) {
                         mdIdx.FinalizeTransaction(input.CallID, result.Status && !(upInfo == null || upInfo.Status == false));
@@ -73,7 +75,7 @@ namespace Haley.Services {
             var path = ProcessAndBuildStoragePath(input, true).targetPath;
             if (string.IsNullOrWhiteSpace(path)) return result;
 
-            var comparison = _caseSensitivePairs.Any(p => p.client.Equals(input.Client.Name.ToDBName()))
+            var comparison = _caseSensitivePairs.Any(p => p.client.Equals(input.Scope.Client.Name.ToDBName()))
                 ? StringComparison.InvariantCulture
                 : StringComparison.OrdinalIgnoreCase;
 
@@ -161,7 +163,7 @@ namespace Haley.Services {
         // ─── GetParent ────────────────────────────────────────────────────────
 
         public async Task<IFeedback<string>> GetParent(IVaultFileReadRequest input) {
-            input.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+            input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
             return await Indexer?.GetParentName(input);
         }
 

@@ -68,15 +68,15 @@ namespace Haley.Internal {
             }
 
             public class DIRECTORY {
-                public const string EXISTS = $@"select dir.id, dir.cuid as uid from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME};";
-                public const string EXISTS_BY_CUID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.cuid = {VALUE};";
-                public const string EXISTS_BY_ID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.id = {VALUE};";
+                public const string EXISTS = $@"select dir.id, dir.cuid as uid from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME} and dir.deleted = 0;";
+                public const string EXISTS_BY_CUID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.cuid = {VALUE} and dir.deleted = 0;";
+                public const string EXISTS_BY_ID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.id = {VALUE} and dir.deleted = 0;";
                 public const string INSERT = $@"insert ignore into directory (workspace,parent,name,display_name) values ({WSPACE},{PARENT},{NAME},{DNAME});";
-                public const string GET = $@"select dir.id from directory as dir where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={NAME};";
-                public const string GET_BY_CUID = $@"select dir.id from directory as dir where dir.cuid = {CUID};";
+                public const string GET = $@"select dir.id from directory as dir where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={NAME} and dir.deleted = 0;";
+                public const string GET_BY_CUID = $@"select dir.id from directory as dir where dir.cuid = {CUID} and dir.deleted = 0;";
                 public const string GET_BY_DOC_VERSION_CUID = $@"SELECT dir.display_name,dir.cuid,dir.name FROM doc_version AS dv
-                    JOIN document AS d ON d.id = dv.parent
-                    JOIN directory AS dir ON dir.id = d.parent
+                    JOIN document AS d ON d.id = dv.parent AND d.deleted = 0
+                    JOIN directory AS dir ON dir.id = d.parent AND dir.deleted = 0
                     WHERE dv.cuid= {CUID}";
             }
             public class EXTENSION {
@@ -99,21 +99,22 @@ namespace Haley.Internal {
             }
 
             public class DOCUMENT {
-                public const string EXISTS = $@"select doc.id , doc.cuid as uid from document as doc where doc.parent = {PARENT} and doc.name = {NAME};";
-                public const string EXISTS_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID};";
+                public const string EXISTS = $@"select doc.id , doc.cuid as uid from document as doc where doc.parent = {PARENT} and doc.name = {NAME} and doc.deleted = 0;";
+                public const string EXISTS_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.deleted = 0;";
                 public const string INSERT = $@"insert ignore into document (workspace,parent,name) values ({WSPACE},{PARENT},{NAME});";
                 public const string INSERT_INFO = $@"insert into doc_info (file,display_name) values ({PARENT}, {DNAME}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name);";
-                public const string GET_BY_PARENT = $@"select doc.id from document as doc where doc.parent= {PARENT} and doc.name = {NAME};";
-                public const string GET_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID};";
+                public const string GET_BY_PARENT = $@"select doc.id from document as doc where doc.parent= {PARENT} and doc.name = {NAME} and doc.deleted = 0;";
+                public const string GET_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.deleted = 0;";
                 public const string GET_BY_NAME = $@"SELECT dv.id FROM document AS dv
-                        INNER JOIN 
-                            (SELECT ns.id FROM name_store AS ns 
+                        INNER JOIN
+                            (SELECT ns.id FROM name_store AS ns
                             INNER JOIN ( SELECT vin.id FROM vault AS vin WHERE vin.name = {NAME}) AS v ON v.id = ns.name
                             INNER JOIN extension AS ext ON ext.id = ns.extension
                             WHERE ext.name = {EXT}) AS ons ON ons.id = dv.name
                         INNER join
-                            (select dir.id from directory as dir 
-                            where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={DIRNAME}) AS odir ON odir.id = dv.parent";
+                            (select dir.id from directory as dir
+                            where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={DIRNAME} and dir.deleted = 0) AS odir ON odir.id = dv.parent
+                        WHERE dv.deleted = 0";
             }
             
             public class DOCVERSION {
@@ -123,17 +124,19 @@ namespace Haley.Internal {
                 public const string INSERT = $@"insert ignore into doc_version (parent,ver) values({PARENT},{VERSION});";
                 public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT};";
 
-                // UPDATED: version_info column rename. Keep old param names (SAVENAME/PATH/SIZE) to avoid touching callers.
-                // Writes -> storage_name/storage_path/size
+                // Writes -> storage_name/storage_path/size/hash/synced_at
+                // hash and synced_at are nullable — pass DBNull.Value when not available.
                 public const string INSERT_INFO =
-                    $@"insert into version_info (id, storage_name, storage_path, size)
-                       values({ID},{SAVENAME},{PATH},{SIZE})
+                    $@"insert into version_info (id, storage_name, storage_path, size, hash, synced_at)
+                       values({ID},{SAVENAME},{PATH},{SIZE},{HASH},{SYNCED_AT})
                        ON DUPLICATE KEY UPDATE
                             storage_name = VALUES(storage_name),
                             storage_path = VALUES(storage_path),
-                            size = VALUES(size);";
+                            size = VALUES(size),
+                            hash = COALESCE(VALUES(hash), hash),
+                            synced_at = COALESCE(VALUES(synced_at), synced_at);";
 
-                // UPDATED: select with aliases so old readers still see `path` and `saveas_name`
+                // Aliases keep backward compat: storage_name→saveas_name, storage_path→path
                 public const string GET_INFO =
                     $@"select
                             id,
@@ -141,12 +144,13 @@ namespace Haley.Internal {
                             storage_path as path,
                             staging_path,
                             size,
+                            hash,
+                            synced_at,
                             metadata,
                             flags
                        from version_info
                        where id = {ID};";
 
-                // UPDATED: aliases used (`storage_path as path`)
                 public const string GET_FULL_BY_CUID =
                     $@"SELECT
                             dv.id,
@@ -157,6 +161,8 @@ namespace Haley.Internal {
                             vi.size,
                             vi.storage_name as saveas_name,
                             vi.staging_path,
+                            vi.hash,
+                            vi.synced_at,
                             vi.flags,
                             vi.metadata,
                             di.display_name as dname
@@ -175,6 +181,8 @@ namespace Haley.Internal {
                             vi.size,
                             vi.storage_name as saveas_name,
                             vi.staging_path,
+                            vi.hash,
+                            vi.synced_at,
                             vi.flags,
                             vi.metadata,
                             di.display_name as dname
@@ -193,6 +201,8 @@ namespace Haley.Internal {
                             vi.size,
                             vi.storage_name as saveas_name,
                             vi.staging_path,
+                            vi.hash,
+                            vi.synced_at,
                             vi.flags,
                             vi.metadata,
                             di.display_name as dname
@@ -202,12 +212,15 @@ namespace Haley.Internal {
                       LEFT JOIN doc_info as di on di.file = {PARENT}
                       WHERE dv.parent = {PARENT};";
 
-                // NEW: optional extended updates (only call when you actually want to set these)
+                // Optional extended update — only called when caller explicitly provides these fields.
+                // hash/synced_at use COALESCE so a NULL param leaves the existing value unchanged.
                 public const string UPDATE_INFO_EXT =
                     $@"update version_info
                        set staging_path = {STAGINGPATH},
                            metadata     = {METADATA},
-                           flags        = {FLAGS}
+                           flags        = {FLAGS},
+                           hash         = COALESCE({HASH}, hash),
+                           synced_at    = COALESCE({SYNCED_AT}, synced_at)
                        where id = {ID};";
             }
             public class CHUNK {
@@ -224,11 +237,12 @@ namespace Haley.Internal {
                             is_completed = VALUES(is_completed);";
 
                 public const string FILE_UPSERT =
-                    $@"insert into chunked_files (id, part, size)
-                       values ({ID},{PART},{FILESIZE_MB})
+                    $@"insert into chunked_files (id, part, size, hash)
+                       values ({ID},{PART},{FILESIZE_MB},{HASH})
                        ON DUPLICATE KEY UPDATE
                             size = VALUES(size),
-                            uplodaed = current_timestamp();";
+                            hash = COALESCE(VALUES(hash), hash),
+                            uploaded = current_timestamp();";
 
                 public const string MARK_COMPLETED =
                     $@"update chunk_info set is_completed = b'1' where id = {ID};";
