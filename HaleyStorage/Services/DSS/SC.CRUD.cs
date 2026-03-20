@@ -7,10 +7,22 @@ using Microsoft.Extensions.Logging;
 
 namespace Haley.Services {
 
+    /// <summary>
+    /// Partial class — CRUD operations (Upload, Download, Delete, Exists, GetSize, directory stubs).
+    /// Handles staging vs direct-save routing and delegates byte I/O to the resolved <see cref="IStorageProvider"/>.
+    /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
 
         // ─── Upload ───────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Uploads a file from <see cref="IVaultFileWriteRequest.FileStream"/> to the resolved storage provider.
+        /// When the module's <see cref="StorageProfileMode"/> is not <c>DirectSave</c> and a staging provider
+        /// is configured, the file is written to staging first with <c>flags=4</c> (InStaging);
+        /// direct-save sets <c>flags=8|64</c> (InStorage|Completed) immediately.
+        /// </summary>
+        /// <param name="input">Write request including scope (client/module/workspace), file stream, and conflict resolve mode.</param>
+        /// <returns>An <see cref="IVaultResponse"/> indicating success, size, and DB indexer update status.</returns>
         public async Task<IVaultResponse> Upload(IVaultFileWriteRequest input) {
             var result = new VaultResponse() { Status = false, RawName = input?.FileOriginalName };
             try {
@@ -29,16 +41,48 @@ namespace Haley.Services {
                 if (input.FileStream == null)
                     throw new ArgumentException("File stream is null. Nothing to save.");
 
-                // Security: ensure target is within the storage root (path traversal guard).
-                if (!input.TargetPath.StartsWith(BasePath)) {
+                // ── Staging vs direct-save decision ───────────────────────────────
+                var moduleCuid = input.Scope?.Module?.Cuid.ToString("N");
+                var profileMode = ResolveProfileMode(moduleCuid);
+                var stagingProvider = ResolveStagingProvider(input);
+                bool useStaging = profileMode != StorageProfileMode.DirectSave && stagingProvider != null
+                                  && input.File != null && !string.IsNullOrWhiteSpace(input.File.SaveAsName);
+
+                IStorageProvider writeProvider;
+                string writePath;
+
+                if (useStaging) {
+                    // Build a key for the staging provider using the logical ID extracted from SaveAsName.
+                    var logicalId = Path.GetFileNameWithoutExtension(input.File.SaveAsName);
+                    var ext = Path.GetExtension(input.File.SaveAsName);
+                    var stagingKey = stagingProvider.BuildStorageRef(logicalId, ext, SplitProvider, Config.SuffixFile);
+                    writeProvider = stagingProvider;
+                    writePath = stagingKey;
+
+                    // Annotate the file route so the DB update records staging_path and flags.
+                    if (input.File is StorageFileRoute sfr) {
+                        sfr.StagingPath = stagingKey;
+                        sfr.Flags = 4; // InStaging — promote will set InStorage|Completed later
+                    }
+                    // Clear the primary storage path: storage_path stays null in DB until promoted.
+                    input.File.Path = string.Empty;
+                } else {
+                    // DirectSave — write to primary provider and mark as complete immediately.
+                    writeProvider = ResolveProvider(input);
+                    writePath = input.TargetPath;
+                    if (input.File is StorageFileRoute sfr)
+                        sfr.Flags = 8 | 64; // InStorage | Completed
+                }
+
+                // Security: for FS, ensure target path stays within the storage root.
+                if (writeProvider is FileSystemStorageProvider && !writePath.StartsWith(BasePath)) {
                     result.Message = "Not authorized for this path. Please check the inputs.";
                     return result;
                 }
 
                 if (input.BufferSize < (1024 * 80)) input.BufferSize = (1024 * 80);
 
-                var writeResult = await GetDefaultProvider().WriteAsync(
-                    input.TargetPath, input.FileStream, input.BufferSize, input.ResolveMode);
+                var writeResult = await writeProvider.WriteAsync(writePath, input.FileStream, input.BufferSize, input.ResolveMode);
 
                 result.Status = writeResult.Success;
                 result.PhysicalObjectExists = writeResult.AlreadyExisted;
@@ -69,6 +113,14 @@ namespace Haley.Services {
 
         // ─── Download ─────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Downloads a file for the given read request.
+        /// If the file is still in staging (flags bit 4 set, bit 8 not set), the staging provider is
+        /// queried first. Cloud staging providers may return a pre-signed <see cref="IVaultStreamResponse.RedirectUrl"/>;
+        /// callers should redirect the HTTP response rather than stream bytes when that URL is non-null.
+        /// </summary>
+        /// <param name="input">Read request that identifies the client/module/workspace and the specific file.</param>
+        /// <param name="auto_search_extension">When <c>true</c>, scans the target directory for a matching file if no extension is specified.</param>
         public async Task<IVaultStreamResponse> Download(IVaultFileReadRequest input, bool auto_search_extension = true) {
             var result = new VaultStreamResponse() { Status = false, Stream = Stream.Null };
 
@@ -79,7 +131,40 @@ namespace Haley.Services {
                 ? StringComparison.InvariantCulture
                 : StringComparison.OrdinalIgnoreCase;
 
-            var readResult = await GetDefaultProvider().ReadAsync(path, auto_search_extension, comparison);
+            // ── Staging-aware read ─────────────────────────────────────────────
+            // If the file is still in staging (InStaging bit set, InStorage bit clear),
+            // read from the staging provider. Cloud staging providers return a pre-signed
+            // redirect URL via GetAccessUrl; FS staging falls back to streaming.
+            if (input.File is StorageFileRoute sfr
+                && (sfr.Flags & 4) != 0          // InStaging
+                && (sfr.Flags & 8) == 0           // not yet InStorage
+                && !string.IsNullOrWhiteSpace(sfr.StagingPath)) {
+
+                var stagingProvider = ResolveStagingProvider(input);
+                if (stagingProvider != null) {
+                    // Try a pre-signed URL redirect first (zero-bytes-through-server for cloud).
+                    var accessUrl = await stagingProvider.GetAccessUrl(sfr.StagingPath, TimeSpan.FromHours(1));
+                    if (!string.IsNullOrWhiteSpace(accessUrl)) {
+                        result.Status = true;
+                        result.RedirectUrl = accessUrl;
+                        result.Stream = Stream.Null;
+                        result.SaveName = input.File.SaveAsName;
+                        return result;
+                    }
+
+                    // No redirect — stream bytes from staging.
+                    var stagingRead = await stagingProvider.ReadAsync(sfr.StagingPath, auto_search_extension, comparison);
+                    if (!stagingRead.Success) { result.Message = stagingRead.Message; return result; }
+                    result.SaveName = input.File.SaveAsName;
+                    result.Status = true;
+                    result.Extension = stagingRead.Extension;
+                    result.Stream = stagingRead.Stream;
+                    return result;
+                }
+            }
+
+            // ── Normal read from primary provider ─────────────────────────────
+            var readResult = await ResolveProvider(input).ReadAsync(path, auto_search_extension, comparison);
 
             if (!readResult.Success) { result.Message = readResult.Message; return result; }
 
@@ -90,6 +175,11 @@ namespace Haley.Services {
             return result;
         }
 
+        /// <summary>
+        /// Downloads a file directly from an <see cref="IVaultFileRoute"/> without a full scope context.
+        /// Uses the default provider and combines <see cref="StorageCoordinator.BasePath"/> with
+        /// <see cref="IVaultRoute.Path"/> when the path is not already rooted.
+        /// </summary>
         public async Task<IVaultStreamResponse> Download(IVaultFileRoute input, bool auto_search_extension = true) {
             var result = new VaultStreamResponse() { Status = false, Stream = Stream.Null };
 
@@ -99,6 +189,7 @@ namespace Haley.Services {
             }
 
             // input.Path is the relative storage reference. Combine with BasePath for FS provider.
+            // For cloud providers the coordinator's default is used since there is no request scope.
             var path = Path.IsPathRooted(input.Path) ? input.Path : Path.Combine(BasePath, input.Path);
 
             var readResult = await GetDefaultProvider().ReadAsync(path, auto_search_extension);
@@ -114,6 +205,10 @@ namespace Haley.Services {
 
         // ─── Delete ───────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Deletes a file from its resolved storage provider path.
+        /// Returns an error feedback when <see cref="WriteMode"/> is <c>false</c> or the file does not exist.
+        /// </summary>
         public async Task<IFeedback> Delete(IVaultFileReadRequest input) {
             var feedback = new Feedback() { Status = false };
             if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
@@ -124,7 +219,7 @@ namespace Haley.Services {
                 return feedback;
             }
 
-            var provider = GetDefaultProvider();
+            var provider = ResolveProvider(input);
             if (!provider.Exists(path)) {
                 feedback.Message = $"File does not exist: {path}.";
                 return feedback;
@@ -139,6 +234,13 @@ namespace Haley.Services {
 
         // ─── Exists / GetSize ─────────────────────────────────────────────────
 
+        /// <summary>
+        /// Checks whether a file or directory exists at the resolved path.
+        /// </summary>
+        /// <param name="isFilePath">
+        /// <c>true</c> to check for a file via the resolved <see cref="IStorageProvider"/>;
+        /// <c>false</c> to check for a physical directory (FS only).
+        /// </param>
         public IFeedback Exists(IVaultReadRequest input, bool isFilePath = false) {
             var feedback = new Feedback() { Status = false };
             var path = ProcessAndBuildStoragePath(input, isFilePath).targetPath;
@@ -149,19 +251,24 @@ namespace Haley.Services {
 
             // For files: ask the provider.
             // For directories: virtual dirs are in DB (TODO: query indexer); physical workspace dirs checked via FS.
-            feedback.Status = isFilePath ? GetDefaultProvider().Exists(path) : Directory.Exists(path);
+            feedback.Status = isFilePath ? ResolveProvider(input).Exists(path) : Directory.Exists(path);
             if (!feedback.Status) feedback.Message = $"Does not exist: {path}";
             return feedback;
         }
 
+        /// <summary>Returns the byte size of the file at the resolved path, or 0 if it does not exist.</summary>
         public long GetSize(IVaultReadRequest input) {
             var path = ProcessAndBuildStoragePath(input, true).targetPath;
             if (string.IsNullOrWhiteSpace(path)) return 0;
-            return GetDefaultProvider().GetSize(path);
+            return ResolveProvider(input).GetSize(path);
         }
 
         // ─── GetParent ────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Returns the display name of the parent directory for the given file.
+        /// Requires a non-empty workspace CUID and file CUID; delegates to <see cref="IVaultIndexing"/>.
+        /// </summary>
         public async Task<IFeedback<string>> GetParent(IVaultFileReadRequest input) {
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
             return await Indexer?.GetParentName(input);
@@ -169,6 +276,10 @@ namespace Haley.Services {
 
         // ─── Directory operations (virtual — pending MariaDB phase) ───────────
 
+        /// <summary>
+        /// Returns directory metadata. Currently a stub — returns a failure response until
+        /// the MariaDB directory-query phase is implemented.
+        /// </summary>
         public Task<IVaultDirResponse> GetDirectoryInfo(IVaultReadRequest input) {
             // TODO: virtual directories live in MariaDB — query Indexer.GetDirectoryInfo once available.
             return Task.FromResult<IVaultDirResponse>(new VaultDirResponse() {
@@ -177,6 +288,9 @@ namespace Haley.Services {
             });
         }
 
+        /// <summary>
+        /// Creates a virtual directory entry in MariaDB. Currently a stub — not yet implemented.
+        /// </summary>
         public Task<IVaultResponse> CreateDirectory(IVaultReadRequest input, string rawname) {
             // TODO: register virtual directory in MariaDB via Indexer.RegisterDirectory.
             return Task.FromResult<IVaultResponse>(new VaultResponse() {
@@ -185,6 +299,9 @@ namespace Haley.Services {
             });
         }
 
+        /// <summary>
+        /// Soft-deletes a virtual directory in MariaDB. Currently a stub — not yet implemented.
+        /// </summary>
         public Task<IFeedback> DeleteDirectory(IVaultReadRequest input, bool recursive) {
             // TODO: soft-delete virtual directory in MariaDB via Indexer.DeleteDirectory.
             return Task.FromResult<IFeedback>(new Feedback() {

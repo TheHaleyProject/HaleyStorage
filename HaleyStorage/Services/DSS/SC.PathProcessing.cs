@@ -7,6 +7,11 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
 namespace Haley.Services {
+    /// <summary>
+    /// Partial class — path resolution pipeline.
+    /// Converts a <see cref="IVaultReadRequest"/> into the fully-qualified storage path (or object key)
+    /// used by a provider. Steps: prepare context → resolve workspace base path → resolve file route.
+    /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
         ConcurrentDictionary<string, string> _pathCache = new ConcurrentDictionary<string, string>();
 
@@ -19,16 +24,24 @@ namespace Haley.Services {
         /// Single responsibility: orchestrate the three steps below and return both paths.
         /// </summary>
         public (string basePath, string targetPath) ProcessAndBuildStoragePath(IVaultReadRequest input, bool allowRootAccess = false) {
-            PrepareRequestContext(input);                // 1. Normalise CUID, mark virtual folder
-            var bpath = FetchWorkspaceBasePath(input);  // 2. Resolve workspace base path (cached)
+            PrepareRequestContext(input);                          // 1. Normalise CUID, mark virtual folder
+            var provider = ResolveProvider(input);                 // 2. Resolve provider once for all steps
+            var bpath = FetchWorkspaceBasePath(input, provider);   // 3. Resolve workspace base path (cached)
             if (input is IVaultFileReadRequest fileRead)
-                ProcessFileRoute(fileRead).Wait();       // 3. Resolve file path (may query/register indexer)
-            var path = input?.BuildStoragePath(bpath, allowRootAccess); // 4. Build final target path
+                ProcessFileRoute(fileRead, provider).Wait();       // 4. Resolve file path (may query/register indexer)
+            var path = input?.BuildStoragePath(bpath, allowRootAccess, provider is FileSystemStorageProvider);
             return (bpath, path);
         }
 
+        /// <summary>Returns the root storage directory used by the FileSystem provider.</summary>
         public string GetStorageRoot() => BasePath;
 
+        /// <summary>
+        /// Returns the sharding parameters (split length and depth) for a given identifier type.
+        /// Numeric IDs use <see cref="IVaultRegistryConfig.SplitLengthNumber"/> /
+        /// <see cref="IVaultRegistryConfig.DepthNumber"/>; hash/GUID IDs use the hash variants.
+        /// </summary>
+        /// <param name="isNumber"><c>true</c> for auto-increment IDs; <c>false</c> for compact-N GUIDs.</param>
         public (int length, int depth) SplitProvider(bool isNumber) {
             if (isNumber) return (Config.SplitLengthNumber, Config.DepthNumber);
             return (Config.SplitLengthHash, Config.DepthHash);
@@ -54,12 +67,14 @@ namespace Haley.Services {
         // ─────────────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Returns the fully-qualified base path for the workspace (BasePath/client/module/workspace).
+        /// Returns the fully-qualified base path (or key prefix) for the workspace.
         /// Results are cached by workspace CUID after the first resolution.
-        /// For the FileSystem provider the resolved path is verified to exist on disk.
+        /// For the FileSystem provider the resolved path is verified to exist on disk;
+        /// cloud providers use the same string as an object-key prefix — no directory check.
         /// </summary>
-        string FetchWorkspaceBasePath(IVaultReadRequest request, bool ignoreCache = false) {
+        string FetchWorkspaceBasePath(IVaultReadRequest request, IStorageProvider provider = null, bool ignoreCache = false) {
             Initialize().Wait(); // Ensures default structures exist. No-op in ReadOnly mode.
+            provider ??= ResolveProvider(request);
             string result;
 
             if (!ignoreCache
@@ -68,9 +83,9 @@ namespace Haley.Services {
                 result = cached;
             } else {
                 var paths = new List<string> { BasePath };
-                AddComponentPath<VaultClient>(request, paths);
-                AddComponentPath<StorageModule>(request, paths);
-                AddComponentPath<StorageWorkspace>(request, paths);
+                AddComponentPath<VaultClient>(request, paths, provider);
+                AddComponentPath<StorageModule>(request, paths, provider);
+                AddComponentPath<StorageWorkspace>(request, paths, provider);
                 result = Path.Combine(paths.ToArray());
             }
 
@@ -78,7 +93,7 @@ namespace Haley.Services {
 
             // Directory existence is only meaningful for the FileSystem provider.
             // Cloud providers use object keys — no directories to verify.
-            if (GetDefaultProvider() is FileSystemStorageProvider && !Directory.Exists(result)) {
+            if (provider is FileSystemStorageProvider && !Directory.Exists(result)) {
                 throw new DirectoryNotFoundException(
                     $"Workspace base path '{result}' does not exist. " +
                     $"Ensure the client/module/workspace are registered and the storage root is accessible.");
@@ -91,7 +106,15 @@ namespace Haley.Services {
         // Step 3 — File route resolution
         // ─────────────────────────────────────────────────────────────────────
 
-        public async Task ProcessFileRoute(IVaultFileReadRequest input) {
+        /// <summary>
+        /// Resolves <see cref="IVaultFileReadRequest.File"/>.Path for the given request.
+        /// For FS reads where the logical ID is already known, uses a DB-free sharded-path reconstruction.
+        /// Otherwise queries the indexer by ID, CUID, or display name, calling
+        /// <see cref="PopulateFileFromDic"/> to fill the route. For uploads, also registers
+        /// the document with the indexer via <c>StorageUtils.GenerateFileSystemSavePath</c>.
+        /// </summary>
+        public async Task ProcessFileRoute(IVaultFileReadRequest input, IStorageProvider provider = null) {
+            provider ??= ResolveProvider(input);
             if (input == null) return;
             if (!string.IsNullOrWhiteSpace(input.TargetPath)) return;
             if (input.File != null && !string.IsNullOrWhiteSpace(input.File.Path)) return;
@@ -103,9 +126,32 @@ namespace Haley.Services {
                 throw new Exception($"Unable to find workspace info. Name: {input.Scope.Workspace.Name} — Cuid: {input.Scope.Workspace.Cuid}.");
             }
 
-            // Attempt to resolve path without generating a new one.
+            // ── FS read-only fast path ─────────────────────────────────────
+            // When the file ID (Number mode) or CUID (Guid mode) is already known and the
+            // provider is local FileSystem, reconstruct the sharded path directly without
+            // any DB round-trip. This is the "DB-free read" the design intends for FS.
+            if (!forupload && provider is FileSystemStorageProvider && wInfo != null && input.File != null) {
+                string logicalId = null;
+                string ext = Path.GetExtension(input.File.SaveAsName ?? input.TargetName ?? string.Empty);
+
+                if (wInfo.ContentControl == VaultControlMode.Number && input.File.Id > 0)
+                    logicalId = input.File.Id.ToString();
+                else if (wInfo.ContentControl == VaultControlMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
+                    // Storage names are always generated as compact-N (no dashes).
+                    // Normalize regardless of what form the caller provided (dashed, braced, compact).
+                    if (Guid.TryParse(input.File.Cuid, out var g))
+                        logicalId = g.ToString("N");
+                }
+
+                if (!string.IsNullOrWhiteSpace(logicalId)) {
+                    input.File.Path = provider.BuildStorageRef(logicalId, ext, SplitProvider, Config.SuffixFile);
+                    return; // DB-free — no indexer query needed
+                }
+            }
+
+            // Attempt to resolve path without generating a new one (DB-backed).
             if ((!forupload || !string.IsNullOrWhiteSpace(input.File?.Cuid)) && input.File != null) {
-                if (PopulateFromSavedPath(input, forupload, wInfo)) return;
+                if (PopulateFromSavedPath(input, forupload, wInfo, provider)) return;
                 if (await GetPathFromIndexer(input, forupload, input.Scope.Workspace.Cuid.ToString("N"))) return;
             }
 
@@ -147,7 +193,11 @@ namespace Haley.Services {
                     throw new ArgumentNullException("No target file name specified for this request.");
 
                 var holder = new VaultProfile(targetFileName, wInfo.ContentControl, wInfo.ContentParse, isVirtual: false);
-                var targetFilePath = StorageUtils.GenerateFileSystemSavePath(
+
+                // Step A: register with indexer and populate holder.Id / holder.Cuid / holder.StorageName.
+                // GenerateFileSystemSavePath is reused here only for the ID-registration side-effect;
+                // the path it returns is only used for FS providers.
+                var logicalResult = StorageUtils.GenerateFileSystemSavePath(
                     holder,
                     uidManager: (h) => {
                         // Only register in indexer when uploading — reads never create DB entries.
@@ -156,8 +206,17 @@ namespace Haley.Services {
                     },
                     splitProvider: SplitProvider,
                     suffix: Config.SuffixFile,
-                    throwExceptions: true)
-                    .path;
+                    throwExceptions: true);
+
+                // Step B: build the actual storage reference via the resolved provider.
+                // FS: sharded path (same as before). Cloud: flat object key.
+                var targetFilePath = provider is FileSystemStorageProvider
+                    ? logicalResult.path
+                    : provider.BuildStorageRef(
+                        logicalResult.name,
+                        Path.GetExtension(targetFileName),
+                        SplitProvider,
+                        Config.SuffixFile);
 
                 if (input.File == null)
                     input.SetFile(new StorageFileRoute(targetFileName, targetFilePath) {
@@ -177,6 +236,11 @@ namespace Haley.Services {
         // Helpers
         // ─────────────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Generates the storage name and relative directory path for a hierarchy component
+        /// (client, module, or workspace). Throws <see cref="InvalidOperationException"/> for
+        /// <c>VaultObjectType.File</c> — use <c>StorageUtils.GenerateFileSystemSavePath</c> instead.
+        /// </summary>
         public (string name, string path) GenerateBasePath(IVaultInfo input, Enums.VaultObjectType component) {
             string suffix = string.Empty;
             int length = 2, depth = 0;
@@ -212,6 +276,11 @@ namespace Haley.Services {
                 (n) => (length, depth), suffix: suffix, throwExceptions: false, caseSensitive: case_sensitive);
         }
 
+        /// <summary>
+        /// Extracts the relevant <see cref="IVaultInfo"/> target, its object type, the corresponding
+        /// meta-file name, and the CUID string for a hierarchy type <typeparamref name="T"/>.
+        /// Used by <see cref="AddComponentPath{T}"/> to dispatch between client, module, and workspace.
+        /// </summary>
         (IVaultInfo target, Enums.VaultObjectType type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultObject {
             IVaultInfo target = null;
             Enums.VaultObjectType targetType = Enums.VaultObjectType.Client;
@@ -231,9 +300,10 @@ namespace Haley.Services {
         /// <summary>
         /// Resolves the stored path for a hierarchy component (client/module/workspace)
         /// and appends it to <paramref name="paths"/>.
-        /// When the indexer cache is cold, falls back to reading the .meta file from disk (FS-specific).
+        /// For the FileSystem provider, falls back to reading the .meta file from disk when
+        /// the indexer cache is cold. Cloud providers have no on-disk meta files.
         /// </summary>
-        void AddComponentPath<T>(IVaultReadRequest input, List<string> paths) where T : IVaultObject {
+        void AddComponentPath<T>(IVaultReadRequest input, List<string> paths, IStorageProvider provider) where T : IVaultObject {
             if (Indexer == null) return;
             var info = GetTargetInfo<T>(input);
             if (info.target == null) return;
@@ -244,15 +314,17 @@ namespace Haley.Services {
                 var tuple = GenerateBasePath(info.target, info.type);
                 paths.Add(tuple.path);
 
-                // FS-specific: warm the indexer cache from the on-disk .meta file.
-                try {
-                    var metafile = Path.Combine(BasePath, tuple.path, info.metaFilePath);
-                    if (File.Exists(metafile)) {
-                        var mfileInfo = File.ReadAllText(metafile).FromJson<T>();
-                        if (mfileInfo != null) Indexer?.TryAddInfo(mfileInfo);
+                // .meta file warm-up is FileSystem-specific: cloud providers have no physical meta files.
+                if (provider is FileSystemStorageProvider) {
+                    try {
+                        var metafile = Path.Combine(BasePath, tuple.path, info.metaFilePath);
+                        if (File.Exists(metafile)) {
+                            var mfileInfo = File.ReadAllText(metafile).FromJson<T>();
+                            if (mfileInfo != null) Indexer?.TryAddInfo(mfileInfo);
+                        }
+                    } catch (Exception) {
+                        // .meta file is a convenience cache — failure is non-fatal.
                     }
-                } catch (Exception) {
-                    // .meta file is a convenience cache — failure is non-fatal.
                 }
             }
 
@@ -260,35 +332,33 @@ namespace Haley.Services {
             _pathCache.TryUpdate(info.cuid, Path.Combine(paths.ToArray()), string.Empty);
         }
 
+        /// <summary>
+        /// Queries the indexer for an existing doc_version record and populates the file route.
+        /// Looks up by ID or CUID first; falls back to name+directory search.
+        /// Returns <c>true</c> when the file route was populated from the DB.
+        /// Throws <see cref="ArgumentException"/> on reads when the file is not found.
+        /// </summary>
         async Task<bool> GetPathFromIndexer(IVaultFileReadRequest input, bool forupload, string workspaceCuid) {
             if (!string.IsNullOrWhiteSpace(input.File?.Cuid) || input.File?.Id > 0) {
                 var existing = input.File.Id > 0
                     ? await Indexer.GetDocVersionInfo(input.Scope.Module.Cuid.ToString("N"), input.File.Id)
                     : await Indexer.GetDocVersionInfo(input.Scope.Module.Cuid.ToString("N"), input.File.Cuid);
 
-                if (existing?.Status == true && existing.Result is Dictionary<string, object> dic
-                    && dic.TryGetValue("path", out var p) && !string.IsNullOrWhiteSpace(p?.ToString())) {
-                    input.File.Path = p.ToString();
-                    if (long.TryParse(dic["size"]?.ToString(), out var size)) input.File.Size = size;
-                    input.File.SaveAsName = dic["dname"]?.ToString() ?? string.Empty;
-                    return true;
-                }
+                if (existing?.Status == true && existing.Result is Dictionary<string, object> dic && dic.Count > 0)
+                    return PopulateFileFromDic(input, dic);
+
             } else if (!string.IsNullOrWhiteSpace(input.File?.Name) || !string.IsNullOrWhiteSpace(input.TargetName)) {
                 var searchName = input.File?.Name ?? input.TargetName;
                 var dirName = input.Scope.Folder?.Name ?? VaultConstants.DEFAULT_NAME;
                 var dirParent = input.Scope.Folder?.Parent?.Id ?? 0;
                 var existing = await Indexer.GetDocVersionInfo(input.Scope.Module.Cuid.ToString("N"), workspaceCuid, searchName, dirName, dirParent);
 
-                if (existing?.Status == true && existing.Result is Dictionary<string, object> dic
-                    && dic.TryGetValue("path", out var p) && !string.IsNullOrWhiteSpace(p?.ToString())) {
+                if (existing?.Status == true && existing.Result is Dictionary<string, object> dic && dic.Count > 0) {
                     if (input.File == null)
                         input.SetFile(new StorageFileRoute(input.TargetName, string.Empty) { Cuid = dic["uid"]?.ToString() });
                     if (string.IsNullOrWhiteSpace(input.File.Cuid)) input.File.SetCuid(dic["uid"]?.ToString());
                     if (string.IsNullOrWhiteSpace(input.File.Name)) input.File.SetName(searchName);
-                    input.File.Path = p.ToString();
-                    if (long.TryParse(dic["size"]?.ToString(), out var size)) input.File.Size = size;
-                    input.File.SaveAsName = dic["dname"]?.ToString() ?? string.Empty;
-                    return true;
+                    return PopulateFileFromDic(input, dic);
                 } else {
                     if (!forupload) throw new ArgumentException("File not found in the indexer.");
                 }
@@ -296,7 +366,45 @@ namespace Haley.Services {
             return false;
         }
 
-        bool PopulateFromSavedPath(IVaultFileReadRequest input, bool forupload, StorageWorkspace wInfo) {
+        /// <summary>
+        /// Populates path, size, save-as name, staging path, and lifecycle flags on the file route
+        /// from a <c>version_info</c> dictionary row returned by the indexer.
+        /// Returns <c>true</c> if the file was located (storage or staging path was found).
+        /// A file that is still in staging (flags bit 4 set, bit 8 not yet set) will have
+        /// <see cref="IVaultFileRoute.Path"/> set to the staging key so the coordinator
+        /// can decide whether to stream from staging or redirect to a pre-signed URL.
+        /// </summary>
+        bool PopulateFileFromDic(IVaultFileReadRequest input, Dictionary<string, object> dic) {
+            var storagePath = dic.TryGetValue("path", out var p) ? p?.ToString() : null;
+            var stagingPath = dic.TryGetValue("staging_path", out var sp) ? sp?.ToString() : null;
+
+            // A row exists but neither path is populated — treat as not found.
+            if (string.IsNullOrWhiteSpace(storagePath) && string.IsNullOrWhiteSpace(stagingPath))
+                return false;
+
+            // Prefer the promoted storage path; fall back to staging path if file is still in staging.
+            input.File.Path = !string.IsNullOrWhiteSpace(storagePath) ? storagePath : stagingPath;
+
+            if (long.TryParse(dic["size"]?.ToString(), out var size)) input.File.Size = size;
+            // saveas_name = vi.storage_name alias; dname = di.display_name (human readable)
+            input.File.SaveAsName = dic.TryGetValue("saveas_name", out var sn) ? sn?.ToString() ?? string.Empty : string.Empty;
+
+            // Flags and staging path are carried on StorageFileRoute (concrete type).
+            if (input.File is StorageFileRoute sfr) {
+                if (int.TryParse(dic["flags"]?.ToString(), out var flags)) sfr.Flags = flags;
+                sfr.StagingPath = stagingPath ?? string.Empty;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Fast-path for reads where <see cref="IVaultFileRoute.SaveAsName"/> is already known.
+        /// Validates the name matches the workspace's <see cref="VaultControlMode"/> then calls
+        /// <see cref="IStorageProvider.BuildStorageRef"/> to reconstruct the sharded/flat key without a DB round-trip.
+        /// Returns <c>false</c> for uploads or when SaveAsName is empty.
+        /// </summary>
+        bool PopulateFromSavedPath(IVaultFileReadRequest input, bool forupload, StorageWorkspace wInfo, IStorageProvider provider) {
             if (forupload || string.IsNullOrWhiteSpace(input?.File?.SaveAsName)) return false;
             var sname = Path.GetFileNameWithoutExtension(input.File.SaveAsName);
             var extension = Path.GetExtension(input.File.SaveAsName);
@@ -311,7 +419,8 @@ namespace Haley.Services {
                     throw new ArgumentException("SaveAsName must be a valid GUID for this workspace.");
             }
 
-            input.File.Path = StorageUtils.PreparePath(sname, SplitProvider, wInfo.ContentControl, Config.SuffixFile, extension);
+            // Use provider's key format: FS applies sharding, cloud returns a flat key.
+            input.File.Path = provider.BuildStorageRef(sname, extension, SplitProvider, Config.SuffixFile);
             return true;
         }
     }

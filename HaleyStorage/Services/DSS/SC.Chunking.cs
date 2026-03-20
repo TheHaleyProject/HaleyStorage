@@ -9,6 +9,11 @@ using System.Threading.Tasks;
 
 namespace Haley.Services {
 
+    /// <summary>
+    /// Partial class — multi-part (chunked) upload pipeline.
+    /// Manages in-memory chunk sessions, writes individual parts to a temp directory, and
+    /// assembles them into the final storage path once all parts arrive.
+    /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
 
         // ── In-memory session cache ───────────────────────────────────────────
@@ -23,6 +28,18 @@ namespace Haley.Services {
 
         // ── 1. Initiate ───────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Initiates a multi-part upload session. Registers a doc/doc_version record in the DB,
+        /// creates a temp chunk directory under <c>{BasePath}/_chunks/{fileCuid}/</c>, and
+        /// registers the session in <c>chunk_info</c> via the indexer.
+        /// </summary>
+        /// <param name="request">Write request providing scope, file name, and conflict mode.</param>
+        /// <param name="chunkSizeMb">Expected size of each individual part in megabytes (must be ≥ 1).</param>
+        /// <param name="totalParts">Total number of parts expected (must be ≥ 2).</param>
+        /// <returns>
+        /// On success: the <c>docVersionId</c> (used for subsequent part and complete calls)
+        /// and the <c>fileCuid</c> (compact-N GUID identifying the file version).
+        /// </returns>
         public async Task<IFeedback<(long docVersionId, string fileCuid)>> InitiateChunkedUpload(
             IVaultFileWriteRequest request,
             long chunkSizeMb,
@@ -89,6 +106,14 @@ namespace Haley.Services {
 
         // ── 2. Upload Part ────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Writes a single chunk part to the temp directory as a zero-padded file (e.g. <c>000003</c>)
+        /// and records it in the <c>chunked_files</c> DB table.
+        /// </summary>
+        /// <param name="docVersionId">Session identifier returned by <see cref="InitiateChunkedUpload"/>.</param>
+        /// <param name="partNumber">1-based index of this part (must be between 1 and totalParts).</param>
+        /// <param name="chunkStream">Raw bytes for this part.</param>
+        /// <param name="hash">Optional SHA-256 hash of the part bytes for integrity checking.</param>
         public async Task<IFeedback> UploadChunkPart(long docVersionId, int partNumber, Stream chunkStream, string hash = null) {
             var fb = new Feedback();
             try {
@@ -124,6 +149,13 @@ namespace Haley.Services {
 
         // ── 3. Complete ───────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Validates all parts are present, assembles them sequentially into the final storage path,
+        /// updates <c>version_info</c> with flags=91 (ChunkedMode|ChunkArea|InStorage|ChunksDeleted|Completed),
+        /// marks <c>chunk_info</c> complete, and deletes the temp chunk directory.
+        /// </summary>
+        /// <param name="docVersionId">Session identifier returned by <see cref="InitiateChunkedUpload"/>.</param>
+        /// <param name="finalHash">Optional SHA-256 of the fully assembled file.</param>
         public async Task<IFeedback> CompleteChunkedUpload(long docVersionId, string finalHash = null) {
             var fb = new Feedback();
             try {
@@ -137,6 +169,30 @@ namespace Haley.Services {
 
                 if (partFiles.Count < 1)
                     return fb.SetMessage("No chunk parts found in temp directory. Nothing to assemble.");
+
+                // ── Integrity: validate every expected part is present ────────────
+                // Parse filenames as integers (zero-padded, e.g. "000003" → 3).
+                // Report explicit gaps rather than silently assembling an incomplete file.
+                var received = new System.Collections.Generic.HashSet<int>();
+                foreach (var f in partFiles) {
+                    if (int.TryParse(Path.GetFileName(f), out int pn))
+                        received.Add(pn);
+                }
+
+                var missing = new System.Collections.Generic.List<int>();
+                for (int i = 1; i <= session.TotalParts; i++) {
+                    if (!received.Contains(i)) missing.Add(i);
+                }
+
+                if (missing.Count > 0)
+                    return fb.SetMessage(
+                        $"Cannot assemble: {missing.Count} part(s) missing out of {session.TotalParts}. " +
+                        $"Missing parts: [{string.Join(", ", missing)}].");
+
+                if (received.Count > session.TotalParts)
+                    return fb.SetMessage(
+                        $"Cannot assemble: received {received.Count} parts but session expects {session.TotalParts}. " +
+                        "Abort and re-initiate the session.");
 
                 // Ensure final destination directory exists.
                 var finalDir = Path.GetDirectoryName(session.FinalPath);
@@ -192,6 +248,10 @@ namespace Haley.Services {
 
         // ── 4. Status ─────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Returns a JSON result with <c>TotalParts</c>, <c>ReceivedParts</c>, and <c>Pending</c>
+        /// for an active chunk session, or an error if the session is not found.
+        /// </summary>
         public Task<IFeedback> GetChunkStatus(long docVersionId) {
             var fb = new Feedback();
             if (!_chunkSessions.TryGetValue(docVersionId, out var session))

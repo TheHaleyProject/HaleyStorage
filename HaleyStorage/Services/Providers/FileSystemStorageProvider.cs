@@ -121,5 +121,24 @@ namespace Haley.Services {
             if (!File.Exists(storagePath)) return 0;
             return new FileInfo(storagePath).Length;
         }
+
+        // ─── Storage reference builder ────────────────────────────────────────
+
+        /// <summary>
+        /// Applies directory sharding to the logical ID so related files are spread
+        /// across a balanced directory tree instead of a single flat folder.
+        /// Example: logicalId="1234567", depth=2, len=2 → "12/34/1234567.mp4"
+        /// </summary>
+        public string BuildStorageRef(string logicalId, string extension,
+            Func<bool, (int length, int depth)> splitProvider, string suffix) {
+            return StorageUtils.PreparePath(logicalId, splitProvider, suffix: suffix, extension: extension);
+        }
+
+        /// <summary>
+        /// Local filesystem has no URL concept — returns null.
+        /// Callers must fall back to streaming bytes through the server.
+        /// </summary>
+        public Task<string> GetAccessUrl(string storageRef, TimeSpan expiry)
+            => Task.FromResult<string>(null);
     }
 }

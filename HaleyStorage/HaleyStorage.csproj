@@ -41,7 +41,15 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.9" />
   </ItemGroup>
   <Import Project="$(SolutionDir)ProjectReferences_$(SolutionName).txt" Condition="Exists('$(SolutionDir)ProjectReferences_$(SolutionName).txt')" />
-  <!--<Choose>
+
+  <!-- Standalone-build fallback: if the solution-level import did not define $(HaleyAbstractions)
+       but the sibling project folder exists on disk, resolve via relative path so developer-machine
+       builds find the local source instead of the (potentially stale) NuGet package. -->
+  <PropertyGroup>
+    <HaleyAbstractions Condition="'$(HaleyAbstractions)' == '' AND Exists('..\..\HaleyAbstractions\HaleyAbstractions\HaleyAbstractions.csproj')">..\..\HaleyAbstractions\HaleyAbstractions</HaleyAbstractions>
+  </PropertyGroup>
+
+  <Choose>
     <When Condition="Exists($(HaleyAbstractions))">
       <ItemGroup>
         <ProjectReference Include="$(HaleyAbstractions)\HaleyAbstractions.csproj">
@@ -51,10 +59,10 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <PackageReference Include="Haley.Abstractions" Version="1.2.8" />
+        <PackageReference Include="Haley.Abstractions" Version="$(HaleyAbstractionsVersion)" />
       </ItemGroup>
     </Otherwise>
-  </Choose>-->
+  </Choose>
   <Choose>
     <When Condition="Exists($(HaleyHelpers))">
       <ItemGroup>

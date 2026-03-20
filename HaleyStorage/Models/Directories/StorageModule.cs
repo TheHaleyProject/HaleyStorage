@@ -11,6 +11,12 @@ namespace Haley.Models {
         public string StorageProfileName { get; set; }
         public string StorageProviderKey { get; set; }
         public string StagingProviderKey { get; set; }
+        /// <summary>
+        /// Determines where new uploads are first written.
+        /// DirectSave (default): straight to primary provider.
+        /// StageAndMove / StageAndRetainCopy: first to staging provider; background worker promotes to primary.
+        /// </summary>
+        public StorageProfileMode ProfileMode { get; set; } = StorageProfileMode.DirectSave;
         public override bool TryValidate(out string message) {
             message = string.Empty;
             if (!base.TryValidate(out message)) return false;

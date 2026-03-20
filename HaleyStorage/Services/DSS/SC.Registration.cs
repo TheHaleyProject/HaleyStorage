@@ -8,132 +8,139 @@ using System.Diagnostics;
 using System.Xml;
 
 namespace Haley.Services {
+    /// <summary>
+    /// Partial class — vault hierarchy registration (client, module, workspace) and seed-config loading.
+    /// On the FileSystem provider, each registration creates a physical directory and writes a
+    /// <c>.dss.meta</c> file; with the MariaDB indexer the record is also persisted in the database.
+    /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
         List<(string client, string module)> _caseSensitivePairs = new List<(string client, string module)>();
+
+        /// <summary>Convenience overload — registers a client by name with an optional password.</summary>
         public Task<IFeedback> RegisterClient(string client_name, string password = null) {
             return RegisterClient(new VaultProfile(client_name) { });
         }
+        /// <summary>Convenience overload — registers a module by name under the given client.</summary>
         public Task<IFeedback> RegisterModule(string module_name=null, string client_name = null) {
             return RegisterModule(new VaultProfile(module_name), new VaultProfile(client_name));
         }
+        /// <summary>Convenience overload — registers a workspace by name under the given client and module.</summary>
         public Task<IFeedback> RegisterWorkSpace(string workspace_name=null, string client_name = null, string module_name = null, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate, bool is_virtual = false) {
             return RegisterWorkSpace(new VaultProfile(workspace_name, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:is_virtual), new VaultProfile(client_name), new VaultProfile(module_name), content_control, content_pmode);
         }
 
         public async Task<IFeedback> RegisterClient(IVaultInfo client, string password = null) {
             var result = new Feedback();
-            //Password will be stored in the .dss.meta file
             if (client == null) return new Feedback(false, "Name cannot be empty");
             if (!client.TryValidate(out var msg)) return new Feedback(false, msg);
-            if (client is VaultProfile cp) cp.ControlMode = VaultControlMode.Guid; //Either we allow as is, or we go with GUID. no numbers allowed.
+            if (client is VaultProfile cp) cp.ControlMode = VaultControlMode.Guid;
             if (string.IsNullOrWhiteSpace(password)) password = DEFAULTPWD;
-            var cInput = GenerateBasePath(client, Enums.VaultObjectType.Client); //For client, we only prefer hash mode.
+            var cInput = GenerateBasePath(client, Enums.VaultObjectType.Client);
             var path = Path.Combine(BasePath, cInput.path);
 
-            //Thins is we are not allowing any path to be provided by user. Only the name is allowed.
+            bool isFs = GetDefaultProvider() is FileSystemStorageProvider;
 
-            //Create these folders and then register them.
-            if (!Directory.Exists(path) && WriteMode) {
-                Directory.CreateDirectory(path); //Create the directory only if write mode is enabled or else, we just try to store the information in cache.
+            if (isFs) {
+                if (!Directory.Exists(path) && WriteMode)
+                    Directory.CreateDirectory(path);
+                if (!Directory.Exists(path))
+                    result.SetStatus(false).SetMessage("Directory was not created. Check if WriteMode is ON or ensure proper access is available.");
             }
-            
-            if (!Directory.Exists(path)) result.SetStatus(false).SetMessage("Directory was not created. Check if WriteMode is ON Or make sure proper access is availalbe");
+
             var signing = RandomUtils.GetString(512);
             var encrypt = RandomUtils.GetString(512);
             var pwdHash = HashUtils.ComputeHash(password, HashMethod.Sha256);
-            
 
-            var clientInfo = client.MapProperties(new VaultClient(pwdHash, signing, encrypt,client.DisplayName) { Path = cInput.path });
-            if (WriteMode) {
+            var clientInfo = client.MapProperties(new VaultClient(pwdHash, signing, encrypt, client.DisplayName) { Path = cInput.path });
+            if (WriteMode && isFs) {
                 var metaFile = Path.Combine(path, CLIENTMETAFILE);
-                File.WriteAllText(metaFile, clientInfo.ToJson());   // Over-Write the keys here.
+                File.WriteAllText(metaFile, clientInfo.ToJson());
             }
-            // Only set success if the directory actually exists at this point.
-            if (!Directory.Exists(path)) return result; // false status already set above
+
+            if (isFs && !Directory.Exists(path)) return result; // false status already set above
             result.SetStatus(true).SetMessage($@"Client {client.DisplayName} is registered");
 
-            // Indexer registration is a write operation — skip in ReadOnly mode.
             if (Indexer == null || !WriteMode) return result;
             var idxResult = await Indexer.RegisterClient(clientInfo);
             result.Result = idxResult.Result;
 
-            //Whenever  we register a client, we immediately register default module and default workspace.
             await RegisterModule(new VaultProfile(null), client);
             return result;
         }
+
         public async Task<IFeedback> RegisterModule(IVaultInfo module, IVaultInfo client) {
-            //AssertValues(true, (client_name,"client name"), (name,"module name")); //uses reflection and might carry performance penalty
             string msg = string.Empty;
             if (!module.TryValidate(out msg)) new Feedback(false, msg);
             if (!client.TryValidate(out msg)) new Feedback(false, msg);
 
-            var client_path = GenerateBasePath(client, Enums.VaultObjectType.Client).path; //For client, we only prefer hash mode.
+            bool isFs = GetDefaultProvider() is FileSystemStorageProvider;
+
+            var client_path = GenerateBasePath(client, Enums.VaultObjectType.Client).path;
             var bPath = Path.Combine(BasePath, client_path);
-            if (!Directory.Exists(bPath)) return new Feedback(false, $@"Directory not found for the client {client.DisplayName}");
+            if (isFs && !Directory.Exists(bPath)) return new Feedback(false, $@"Directory not found for the client {client.DisplayName}");
             if (client_path.Contains("..")) return new Feedback(false, "Client Path contains invalid characters");
 
-            //MODULE INFORMATION BASIC VALIDATION
-            var modPath = GenerateBasePath(module, Enums.VaultObjectType.Module).path; //For client, we only prefer hash mode.
-            bPath = Path.Combine(bPath, modPath); //Including Client Path
+            var modPath = GenerateBasePath(module, Enums.VaultObjectType.Module).path;
+            bPath = Path.Combine(bPath, modPath);
 
-            //Create these folders and then register them.
-            if (!Directory.Exists(bPath) && WriteMode) {
-                Directory.CreateDirectory(bPath); //Create the directory.
+            if (isFs) {
+                if (!Directory.Exists(bPath) && WriteMode)
+                    Directory.CreateDirectory(bPath);
             }
 
-            var moduleInfo = module.MapProperties(new StorageModule(client.Name,module.DisplayName) { Path = modPath });
-            if (WriteMode) {
+            var moduleInfo = module.MapProperties(new StorageModule(client.Name, module.DisplayName) { Path = modPath });
+            if (WriteMode && isFs) {
                 var metaFile = Path.Combine(bPath, MODULEMETAFILE);
                 File.WriteAllText(metaFile, moduleInfo.ToJson());
             }
 
             var result = new Feedback(true, $@"Module {module.DisplayName} is registered");
-            if (!Directory.Exists(bPath)) result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
+            if (isFs && !Directory.Exists(bPath))
+                result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
 
-            // Indexer registration is a write operation — skip in ReadOnly mode or if dir setup failed.
             if (Indexer == null || !WriteMode || !result.Status) return result;
             var idxResult = await Indexer.RegisterModule(moduleInfo);
             result.Result = idxResult.Result;
 
-            //if (!string.IsNullOrWhiteSpace(moduleInfo.DatabaseName)) module.SetCUID(moduleInfo.DatabaseName);
-            await RegisterWorkSpace(new VaultProfile(null, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:true), client, module);
+            await RegisterWorkSpace(new VaultProfile(null, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual: true), client, module);
             return result;
         }
+
         public async Task<IFeedback> RegisterWorkSpace(IVaultInfo wspace, IVaultInfo client, IVaultInfo module, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate) {
             string msg = string.Empty;
             if (!wspace.TryValidate(out msg)) throw new Exception(msg);
             if (!client.TryValidate(out msg)) throw new Exception(msg);
             if (!module.TryValidate(out msg)) throw new Exception(msg);
-            module.UpdateCUID(client.Name,module.Name);
+            module.UpdateCUID(client.Name, module.Name);
+
+            bool isFs = GetDefaultProvider() is FileSystemStorageProvider;
 
             var cliPath = GenerateBasePath(client, Enums.VaultObjectType.Client).path;
             var modPath = GenerateBasePath(module, Enums.VaultObjectType.Module).path;
 
             var path = Path.Combine(BasePath, cliPath, modPath);
-            if (!Directory.Exists(path)) return new Feedback(false, $@"Unable to lcoate the basepath for the Client : {client.DisplayName}, Module : {module.DisplayName}");
+            if (isFs && !Directory.Exists(path)) return new Feedback(false, $@"Unable to locate the base path for Client: {client.DisplayName}, Module: {module.DisplayName}");
             if (path.Contains("..")) return new Feedback(false, "Invalid characters found in the base path.");
+
             string wsPath = string.Empty;
             if (!(wspace is VaultProfile wp && wp.IsVirtual)) {
-                //MODULE INFORMATION BASIC VALIDATION
-                wsPath = GenerateBasePath(wspace, Enums.VaultObjectType.WorkSpace).path; //For client, we only prefer hash mode.
-                path = Path.Combine(path, wsPath); //Including Base Paths
+                wsPath = GenerateBasePath(wspace, Enums.VaultObjectType.WorkSpace).path;
+                path = Path.Combine(path, wsPath);
 
-                //Create these folders and then register them.
-                if (!Directory.Exists(path) && WriteMode) {
-                    Directory.CreateDirectory(path); //Create the directory.
-                }
+                if (isFs && !Directory.Exists(path) && WriteMode)
+                    Directory.CreateDirectory(path);
             }
 
-            var wsInfo = wspace.MapProperties(new StorageWorkspace(client.Name, module.Name, wspace.DisplayName) { Path = wsPath ,ContentControl = content_control, ContentParse = content_pmode });
-            if (WriteMode) {
+            var wsInfo = wspace.MapProperties(new StorageWorkspace(client.Name, module.Name, wspace.DisplayName) { Path = wsPath, ContentControl = content_control, ContentParse = content_pmode });
+            if (WriteMode && isFs) {
                 var metaFile = Path.Combine(path, WORKSPACEMETAFILE);
                 File.WriteAllText(metaFile, wsInfo.ToJson());
             }
 
             var result = new Feedback(true, $@"Workspace {wspace.DisplayName} is registered");
-            if (!Directory.Exists(path)) result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
+            if (isFs && !Directory.Exists(path))
+                result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
 
-            // Indexer registration is a write operation — skip in ReadOnly mode or if dir setup failed.
             if (Indexer == null || !WriteMode || !result.Status) return result;
             var idxResult = await Indexer.RegisterWorkspace(wsInfo);
             result.Result = idxResult.Result;

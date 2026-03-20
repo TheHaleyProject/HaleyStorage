@@ -98,47 +98,67 @@ namespace Haley.Utils
             return joined.CreateGUID(HashMethod.Sha256).ToString("N");
         }
 
-        public static string BuildStoragePath(this IVaultReadRequest input, string basePath, bool allowRootAccess = false) {
-            bool readOnlyMode = input.ReadOnlyMode || !(input is IVaultFileWriteRequest); //If the input is osswrite, then we are trying to upload a file or else we deliberately set the input as readonly
-            bool forFile = false;
-            //While building storage path, may be we are building only the 
-            if (input == null || !(input is StorageReadRequest req)) throw new ArgumentNullException($@"{nameof(IVaultReadRequest)} cannot be null. It has to be of type {nameof(StorageReadRequest)}");
-            StorageReadFileRequest fileReq = input as StorageReadFileRequest;
-            if (fileReq != null) forFile = true;
+        /// <param name="checkDirectories">
+        /// Pass <c>true</c> only for the FileSystem provider. Cloud providers use base as a
+        /// key prefix — there are no real directories to verify.
+        /// </param>
+        public static string BuildStoragePath(this IVaultReadRequest input, string basePath,
+            bool allowRootAccess = false, bool checkDirectories = false) {
 
-            if (basePath.Contains("..")) throw new ArgumentOutOfRangeException("The base path contains invalid segments. Parent directory access is not allowed. Please fix");
-            if (!Directory.Exists(basePath)) throw new DirectoryNotFoundException("Base directory not found. Please ensure it is present");
+            bool readOnlyMode = input.ReadOnlyMode || !(input is IVaultFileWriteRequest);
+            if (input == null || !(input is StorageReadRequest req))
+                throw new ArgumentNullException($@"{nameof(IVaultReadRequest)} cannot be null. It has to be of type {nameof(StorageReadRequest)}");
+            StorageReadFileRequest fileReq = input as StorageReadFileRequest;
+
+            if (basePath.Contains(".."))
+                throw new ArgumentOutOfRangeException("The base path contains invalid segments. Parent directory access is not allowed.");
+
+            // Directory existence only applies to the FileSystem provider.
+            if (checkDirectories && !Directory.Exists(basePath))
+                throw new DirectoryNotFoundException("Base directory not found. Please ensure it is present.");
+
             if (string.IsNullOrWhiteSpace(req.TargetPath)) {
-                //Now we have two items to build. Directory path and file path. May be we are just building a directory here.
-                  req.SetTargetPath(basePath);
+                req.SetTargetPath(basePath);
                 // All folders are virtual (DB-only); they never contribute a physical path segment.
-                if (fileReq != null && fileReq.File != null) {
-                    req.SetTargetPath(Path.Combine(req.TargetPath, fileReq.File.FetchRoutePath(req.TargetPath, true, allowRootAccess, readOnlyMode)));
+                if (fileReq?.File != null) {
+                    req.SetTargetPath(JoinStoragePath(req.TargetPath,
+                        fileReq.File.FetchRoutePath(req.TargetPath, true, allowRootAccess, readOnlyMode, checkDirectories),
+                        checkDirectories));
                 }
             } else {
-                req.SetTargetPath(Path.Combine(basePath, req.TargetPath));
+                req.SetTargetPath(JoinStoragePath(basePath, req.TargetPath, checkDirectories));
             }
 
-            //What if, the user provided no value and we end up with only the Basepath.
-            if (string.IsNullOrWhiteSpace(req.TargetPath)) throw new ArgumentNullException($@"Unable to generate a full object path for the request");
+            if (string.IsNullOrWhiteSpace(req.TargetPath))
+                throw new ArgumentNullException($@"Unable to generate a full object path for the request.");
 
-            if (req.TargetPath.Contains("..")) throw new ArgumentOutOfRangeException("The generated path contains invalid segments. Parent directory access is not allowed. Please fix");
+            if (req.TargetPath.Contains(".."))
+                throw new ArgumentOutOfRangeException("The generated path contains invalid segments. Parent directory access is not allowed.");
 
             return req.TargetPath;
         }
 
-        static string FetchRoutePath(this IVaultRoute route, string basePath,bool finalDestination, bool allow_root_access, bool readonlyMode) {
-            //SEND ONLY THE PATH FROM THE ROUTE.. NOT THE FULL PATH INCLUDING THE BASE PATH.
-            //THE BASE PATH EXISTS HERE ONLY FOR TESTING PURPOSE.
-            string path = basePath;  
-            if (!Directory.Exists(path)) throw new ArgumentException("BasePath Directory doesn't exists.");
-             
-            if (route == null) return string.Empty; //Directly create inside the basepath (applicable in few cases);
-            //If one of the path is trying to make a root access, should we allow or deny?
-            //Route is expected to have one or more parents.
-            // So we loop through the routes and reach the last route without any parent and start building from there.
+        /// <summary>
+        /// Joins two path segments. For the FileSystem provider (<paramref name="useOsSeparator"/>
+        /// = true) the OS-native <see cref="Path.Combine"/> is used so Windows paths get
+        /// backslashes. For cloud providers the segments are joined with a forward slash so
+        /// object keys are always well-formed regardless of the host OS.
+        /// </summary>
+        static string JoinStoragePath(string left, string right, bool useOsSeparator) {
+            if (string.IsNullOrEmpty(right)) return left;
+            if (useOsSeparator) return Path.Combine(left, right);
+            return left.TrimEnd('/') + "/" + right.TrimStart('/');
+        }
+
+        static string FetchRoutePath(this IVaultRoute route, string basePath, bool finalDestination,
+            bool allow_root_access, bool readonlyMode, bool checkDirectories = false) {
+
+            if (checkDirectories && !Directory.Exists(basePath))
+                throw new ArgumentException("BasePath directory does not exist.");
+
+            if (route == null) return string.Empty;
             string value = SanitizePath(route.Path);
-            // Files use finalDestination=true; all folder routes are virtual (DB-only) — always return the sanitized path as-is.
+            // Files use finalDestination=true; all folder routes are virtual (DB-only) — return sanitized path as-is.
             return value;
         }
        
