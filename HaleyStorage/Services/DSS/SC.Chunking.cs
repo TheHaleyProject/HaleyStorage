@@ -52,7 +52,7 @@ namespace Haley.Services {
                 if (string.IsNullOrWhiteSpace(request.FileOriginalName))
                     return fb.SetMessage("FileName is required for chunked upload initiation.");
                 if (chunkSizeMb < 1) return fb.SetMessage("ChunkSizeMb must be >= 1.");
-                if (totalParts < 2) return fb.SetMessage("TotalParts must be >= 2.");
+                if (totalParts < 1) return fb.SetMessage("TotalParts must be >= 1.");
 
                 request.GenerateCallId();
 
@@ -246,7 +246,32 @@ namespace Haley.Services {
             }
         }
 
-        // ── 4. Status ─────────────────────────────────────────────────────────
+        // ── 4. Abort ──────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Cancels an active chunk session: removes it from <c>_chunkSessions</c> and
+        /// deletes the temp chunk directory. DB <c>chunk_info</c> and <c>chunked_files</c>
+        /// records are left for offline cleanup. Idempotent — returns success when no session exists.
+        /// </summary>
+        public Task<IFeedback> AbortChunkedUpload(long docVersionId) {
+            var fb = new Feedback();
+            try {
+                if (!_chunkSessions.TryRemove(docVersionId, out var session))
+                    return Task.FromResult<IFeedback>(fb.SetStatus(true).SetMessage("No active session found; nothing to abort."));
+
+                try {
+                    if (Directory.Exists(session.TempDir))
+                        Directory.Delete(session.TempDir, true);
+                } catch { /* best-effort */ }
+
+                return Task.FromResult<IFeedback>(fb.SetStatus(true)
+                    .SetMessage($"Chunk session {docVersionId} aborted and temp directory deleted."));
+            } catch (Exception ex) {
+                return Task.FromResult<IFeedback>(fb.SetMessage(ex.Message));
+            }
+        }
+
+        // ── 5. Status ─────────────────────────────────────────────────────────
 
         /// <summary>
         /// Returns a JSON result with <c>TotalParts</c>, <c>ReceivedParts</c>, and <c>Pending</c>
