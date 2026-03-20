@@ -35,7 +35,7 @@ namespace Haley.Models {
         public override bool TryValidate(out string message) {
             message = string.Empty;
             if (!base.TryValidate(out message)) return false;
-            if (string.IsNullOrEmpty(StorageName) || string.IsNullOrEmpty(Path)) {
+            if (string.IsNullOrEmpty(StorageName) || string.IsNullOrEmpty(StorageRef)) {
                 message = "Name & Path Cannot be empty";
                 return false;
             }

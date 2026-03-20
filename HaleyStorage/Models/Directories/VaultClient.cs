@@ -24,7 +24,7 @@ namespace Haley.Models {
                 return false;   
             }
 
-            if (string.IsNullOrEmpty(StorageName) || string.IsNullOrEmpty(Path)) {
+            if (string.IsNullOrEmpty(StorageName) || string.IsNullOrEmpty(StorageRef)) {
                 message = "Name & Path Cannot be empty";
                 return false;
             }

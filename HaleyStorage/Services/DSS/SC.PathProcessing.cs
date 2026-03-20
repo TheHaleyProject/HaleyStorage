@@ -116,8 +116,8 @@ namespace Haley.Services {
         public async Task ProcessFileRoute(IVaultFileReadRequest input, IStorageProvider provider = null) {
             provider ??= ResolveProvider(input);
             if (input == null) return;
-            if (!string.IsNullOrWhiteSpace(input.TargetPath)) return;
-            if (input.File != null && !string.IsNullOrWhiteSpace(input.File.Path)) return;
+            if (!string.IsNullOrWhiteSpace(input.OverrideRef)) return;
+            if (input.File != null && !string.IsNullOrWhiteSpace(input.File.StorageRef)) return;
 
             IVaultFileWriteRequest inputW = input as IVaultFileWriteRequest;
             bool forupload = inputW != null;
@@ -132,11 +132,11 @@ namespace Haley.Services {
             // any DB round-trip. This is the "DB-free read" the design intends for FS.
             if (!forupload && provider is FileSystemStorageProvider && wInfo != null && input.File != null) {
                 string logicalId = null;
-                string ext = Path.GetExtension(input.File.SaveAsName ?? input.TargetName ?? string.Empty);
+                string ext = Path.GetExtension(input.File.StorageName ?? input.RequestedName ?? string.Empty);
 
-                if (wInfo.ContentControl == VaultControlMode.Number && input.File.Id > 0)
+                if (wInfo.StorageNameMode == VaultControlMode.Number && input.File.Id > 0)
                     logicalId = input.File.Id.ToString();
-                else if (wInfo.ContentControl == VaultControlMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
+                else if (wInfo.StorageNameMode == VaultControlMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
                     // Storage names are always generated as compact-N (no dashes).
                     // Normalize regardless of what form the caller provided (dashed, braced, compact).
                     if (Guid.TryParse(input.File.Cuid, out var g))
@@ -144,7 +144,7 @@ namespace Haley.Services {
                 }
 
                 if (!string.IsNullOrWhiteSpace(logicalId)) {
-                    input.File.Path = provider.BuildStorageRef(logicalId, ext, SplitProvider, Config.SuffixFile);
+                    input.File.StorageRef = provider.BuildStorageRef(logicalId, ext, SplitProvider, Config.SuffixFile);
                     return; // DB-free — no indexer query needed
                 }
             }
@@ -158,41 +158,41 @@ namespace Haley.Services {
             // ── Determine the target filename ──────────────────────────────
             string targetFileName = string.Empty;
 
-            if (!string.IsNullOrWhiteSpace(input.TargetName)) {
-                targetFileName = Path.GetFileName(input.TargetName);
+            if (!string.IsNullOrWhiteSpace(input.RequestedName)) {
+                targetFileName = Path.GetFileName(input.RequestedName);
             } else if (forupload) {
-                if (!string.IsNullOrWhiteSpace(inputW!.FileOriginalName)) {
-                    targetFileName = Path.GetFileName(inputW.FileOriginalName);
+                if (!string.IsNullOrWhiteSpace(inputW!.OriginalName)) {
+                    targetFileName = Path.GetFileName(inputW.OriginalName);
                 } else if (inputW.FileStream is FileStream fs) {
                     targetFileName = Path.GetFileName(fs.Name);
-                    if (string.IsNullOrWhiteSpace(inputW.FileOriginalName)) inputW.SetFileOriginalName(targetFileName);
+                    if (string.IsNullOrWhiteSpace(inputW.OriginalName)) inputW.SetOriginalName(targetFileName);
                 }
             }
 
             // ── Ensure extension is present ────────────────────────────────
             string targetExtension = Path.GetExtension(targetFileName ?? string.Empty);
             if (string.IsNullOrWhiteSpace(targetExtension) && forupload) {
-                if (!string.IsNullOrWhiteSpace(inputW!.FileOriginalName))
-                    targetExtension = Path.GetExtension(inputW.FileOriginalName);
+                if (!string.IsNullOrWhiteSpace(inputW!.OriginalName))
+                    targetExtension = Path.GetExtension(inputW.OriginalName);
                 else if (inputW!.FileStream is FileStream fs)
                     targetExtension = Path.GetExtension(fs.Name);
 
                 if (!string.IsNullOrWhiteSpace(targetExtension)) targetFileName += targetExtension;
-                input.SetTargetName(targetFileName);
+                input.SetRequestedName(targetFileName);
             }
 
             if (forupload && !IsFormatAllowed(targetExtension, FormatControlMode.Extension))
                 throw new ArgumentException("Uploading this file format is not allowed.");
 
-            if (string.IsNullOrWhiteSpace(input.TargetName) && !string.IsNullOrWhiteSpace(targetFileName))
-                input.SetTargetName(targetFileName);
+            if (string.IsNullOrWhiteSpace(input.RequestedName) && !string.IsNullOrWhiteSpace(targetFileName))
+                input.SetRequestedName(targetFileName);
 
             // ── Generate storage path and register with indexer ────────────
-            if (input.File == null || string.IsNullOrWhiteSpace(input.File.Path)) {
+            if (input.File == null || string.IsNullOrWhiteSpace(input.File.StorageRef)) {
                 if (string.IsNullOrWhiteSpace(targetFileName))
                     throw new ArgumentNullException("No target file name specified for this request.");
 
-                var holder = new VaultProfile(targetFileName, wInfo.ContentControl, wInfo.ContentParse, isVirtual: false);
+                var holder = new VaultProfile(targetFileName, wInfo.StorageNameMode, wInfo.StorageNameParseMode, isVirtual: false);
 
                 // Step A: register with indexer and populate holder.Id / holder.Cuid / holder.StorageName.
                 // GenerateFileSystemSavePath is reused here only for the ID-registration side-effect;
@@ -220,13 +220,13 @@ namespace Haley.Services {
 
                 if (input.File == null)
                     input.SetFile(new StorageFileRoute(targetFileName, targetFilePath) {
-                        Id = holder.Id, Cuid = holder.Cuid.ToString("N"), Version = holder.Version, SaveAsName = holder.StorageName
+                        Id = holder.Id, Cuid = holder.Cuid.ToString("N"), Version = holder.Version, StorageName = holder.StorageName
                     });
 
-                input.File.Path = targetFilePath;
-                if (string.IsNullOrWhiteSpace(input.File.Name)) input.File.SetName(input.TargetName);
+                input.File.StorageRef = targetFilePath;
+                if (string.IsNullOrWhiteSpace(input.File.DisplayName)) input.File.SetDisplayName(input.RequestedName);
                 if (string.IsNullOrWhiteSpace(input.File.Cuid)) input.File.SetCuid(holder.Cuid);
-                if (string.IsNullOrWhiteSpace(input.File.SaveAsName)) input.File.SaveAsName = holder.StorageName;
+                if (string.IsNullOrWhiteSpace(input.File.StorageName)) input.File.StorageName = holder.StorageName;
                 if (input.File.Id < 1) input.File.SetId(holder.Id);
                 if (forupload) input.File.Size = inputW!.FileStream?.Length ?? 0;
             }
@@ -309,7 +309,7 @@ namespace Haley.Services {
             if (info.target == null) return;
 
             if (Indexer.TryGetComponentInfo(info.cuid, out T obj)) {
-                if (!string.IsNullOrWhiteSpace(obj.Path)) paths.Add(obj.Path);
+                if (!string.IsNullOrWhiteSpace(obj.StorageRef)) paths.Add(obj.StorageRef);
             } else {
                 var tuple = GenerateBasePath(info.target, info.type);
                 paths.Add(tuple.path);
@@ -347,17 +347,17 @@ namespace Haley.Services {
                 if (existing?.Status == true && existing.Result is Dictionary<string, object> dic && dic.Count > 0)
                     return PopulateFileFromDic(input, dic);
 
-            } else if (!string.IsNullOrWhiteSpace(input.File?.Name) || !string.IsNullOrWhiteSpace(input.TargetName)) {
-                var searchName = input.File?.Name ?? input.TargetName;
-                var dirName = input.Scope.Folder?.Name ?? VaultConstants.DEFAULT_NAME;
+            } else if (!string.IsNullOrWhiteSpace(input.File?.DisplayName) || !string.IsNullOrWhiteSpace(input.RequestedName)) {
+                var searchName = input.File?.DisplayName ?? input.RequestedName;
+                var dirName = input.Scope.Folder?.DisplayName ?? VaultConstants.DEFAULT_NAME;
                 var dirParent = input.Scope.Folder?.Parent?.Id ?? 0;
                 var existing = await Indexer.GetDocVersionInfo(input.Scope.Module.Cuid.ToString("N"), workspaceCuid, searchName, dirName, dirParent);
 
                 if (existing?.Status == true && existing.Result is Dictionary<string, object> dic && dic.Count > 0) {
                     if (input.File == null)
-                        input.SetFile(new StorageFileRoute(input.TargetName, string.Empty) { Cuid = dic["uid"]?.ToString() });
+                        input.SetFile(new StorageFileRoute(input.RequestedName, string.Empty) { Cuid = dic["uid"]?.ToString() });
                     if (string.IsNullOrWhiteSpace(input.File.Cuid)) input.File.SetCuid(dic["uid"]?.ToString());
-                    if (string.IsNullOrWhiteSpace(input.File.Name)) input.File.SetName(searchName);
+                    if (string.IsNullOrWhiteSpace(input.File.DisplayName)) input.File.SetDisplayName(searchName);
                     return PopulateFileFromDic(input, dic);
                 } else {
                     if (!forupload) throw new ArgumentException("File not found in the indexer.");
@@ -371,7 +371,7 @@ namespace Haley.Services {
         /// from a <c>version_info</c> dictionary row returned by the indexer.
         /// Returns <c>true</c> if the file was located (storage or staging path was found).
         /// A file that is still in staging (flags bit 4 set, bit 8 not yet set) will have
-        /// <see cref="IVaultFileRoute.Path"/> set to the staging key so the coordinator
+        /// <see cref="IVaultFileRoute.StorageRef"/> set to the staging key so the coordinator
         /// can decide whether to stream from staging or redirect to a pre-signed URL.
         /// </summary>
         bool PopulateFileFromDic(IVaultFileReadRequest input, Dictionary<string, object> dic) {
@@ -383,44 +383,44 @@ namespace Haley.Services {
                 return false;
 
             // Prefer the promoted storage path; fall back to staging path if file is still in staging.
-            input.File.Path = !string.IsNullOrWhiteSpace(storagePath) ? storagePath : stagingPath;
+            input.File.StorageRef = !string.IsNullOrWhiteSpace(storagePath) ? storagePath : stagingPath;
 
             if (long.TryParse(dic["size"]?.ToString(), out var size)) input.File.Size = size;
             // saveas_name = vi.storage_name alias; dname = di.display_name (human readable)
-            input.File.SaveAsName = dic.TryGetValue("saveas_name", out var sn) ? sn?.ToString() ?? string.Empty : string.Empty;
+            input.File.StorageName = dic.TryGetValue("saveas_name", out var sn) ? sn?.ToString() ?? string.Empty : string.Empty;
 
             // Flags and staging path are carried on StorageFileRoute (concrete type).
             if (input.File is StorageFileRoute sfr) {
                 if (int.TryParse(dic["flags"]?.ToString(), out var flags)) sfr.Flags = flags;
-                sfr.StagingPath = stagingPath ?? string.Empty;
+                sfr.StagingRef = stagingPath ?? string.Empty;
             }
 
             return true;
         }
 
         /// <summary>
-        /// Fast-path for reads where <see cref="IVaultFileRoute.SaveAsName"/> is already known.
+        /// Fast-path for reads where <see cref="IVaultFileRoute.StorageName"/> is already known.
         /// Validates the name matches the workspace's <see cref="VaultControlMode"/> then calls
         /// <see cref="IStorageProvider.BuildStorageRef"/> to reconstruct the sharded/flat key without a DB round-trip.
-        /// Returns <c>false</c> for uploads or when SaveAsName is empty.
+        /// Returns <c>false</c> for uploads or when StorageName is empty.
         /// </summary>
         bool PopulateFromSavedPath(IVaultFileReadRequest input, bool forupload, StorageWorkspace wInfo, IStorageProvider provider) {
-            if (forupload || string.IsNullOrWhiteSpace(input?.File?.SaveAsName)) return false;
-            var sname = Path.GetFileNameWithoutExtension(input.File.SaveAsName);
-            var extension = Path.GetExtension(input.File.SaveAsName);
+            if (forupload || string.IsNullOrWhiteSpace(input?.File?.StorageName)) return false;
+            var sname = Path.GetFileNameWithoutExtension(input.File.StorageName);
+            var extension = Path.GetExtension(input.File.StorageName);
 
-            if (wInfo.ContentControl == VaultControlMode.Number && !sname.IsNumber())
-                throw new ArgumentException("SaveAsName must be numeric for this workspace.");
+            if (wInfo.StorageNameMode == VaultControlMode.Number && !sname.IsNumber())
+                throw new ArgumentException("StorageName must be numeric for this workspace.");
 
-            if (wInfo.ContentControl == VaultControlMode.Guid) {
+            if (wInfo.StorageNameMode == VaultControlMode.Guid) {
                 if (sname.IsCompactGuid(out Guid g) || sname.IsValidGuid(out g))
                     sname = g.ToString("N");
                 else
-                    throw new ArgumentException("SaveAsName must be a valid GUID for this workspace.");
+                    throw new ArgumentException("StorageName must be a valid GUID for this workspace.");
             }
 
             // Use provider's key format: FS applies sharding, cloud returns a flat key.
-            input.File.Path = provider.BuildStorageRef(sname, extension, SplitProvider, Config.SuffixFile);
+            input.File.StorageRef = provider.BuildStorageRef(sname, extension, SplitProvider, Config.SuffixFile);
             return true;
         }
     }

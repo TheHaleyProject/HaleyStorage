@@ -57,7 +57,7 @@ namespace Haley.Services {
             var encrypt = RandomUtils.GetString(512);
             var pwdHash = HashUtils.ComputeHash(password, HashMethod.Sha256);
 
-            var clientInfo = client.MapProperties(new VaultClient(pwdHash, signing, encrypt, client.DisplayName) { Path = cInput.path });
+            var clientInfo = client.MapProperties(new VaultClient(pwdHash, signing, encrypt, client.DisplayName) { StorageRef = cInput.path });
             if (WriteMode && isFs) {
                 var metaFile = Path.Combine(path, CLIENTMETAFILE);
                 File.WriteAllText(metaFile, clientInfo.ToJson());
@@ -98,7 +98,7 @@ namespace Haley.Services {
                     Directory.CreateDirectory(bPath);
             }
 
-            var moduleInfo = module.MapProperties(new StorageModule(client.Name, module.DisplayName) { Path = modPath });
+            var moduleInfo = module.MapProperties(new StorageModule(client.Name, module.DisplayName) { StorageRef = modPath });
             if (WriteMode && isFs) {
                 var metaFile = Path.Combine(bPath, MODULEMETAFILE);
                 File.WriteAllText(metaFile, moduleInfo.ToJson());
@@ -147,7 +147,7 @@ namespace Haley.Services {
                     Directory.CreateDirectory(path);
             }
 
-            var wsInfo = wspace.MapProperties(new StorageWorkspace(client.Name, module.Name, wspace.DisplayName) { Path = wsPath, ContentControl = content_control, ContentParse = content_pmode });
+            var wsInfo = wspace.MapProperties(new StorageWorkspace(client.Name, module.Name, wspace.DisplayName) { StorageRef = wsPath, StorageNameMode = content_control, StorageNameParseMode = content_pmode });
             if (WriteMode && isFs) {
                 var metaFile = Path.Combine(path, WORKSPACEMETAFILE);
                 File.WriteAllText(metaFile, wsInfo.ToJson());

@@ -1,4 +1,4 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 using Haley.Enums;
 using Haley.Utils;
 using System;
@@ -12,12 +12,12 @@ using System.Xml;
 namespace Haley.Models {
     /// <summary>
     /// Extends <see cref="StorageReadFileRequest"/> with write-specific data:
-    /// the original file name, conflict resolve mode, buffer size, and the upload stream.
+    /// the original file name, write conflict mode, buffer size, and the upload stream.
     /// Used for single-shot uploads and as the request object for chunked upload initiation.
     /// </summary>
     public class StorageWriteRequest : StorageReadFileRequest, IVaultFileWriteRequest {
-        public string FileOriginalName { get; set; } //actual file name.
-        public ExistConflictResolveMode ResolveMode { get; set; } = ExistConflictResolveMode.ReturnError;
+        public string OriginalName { get; set; } //actual file name.
+        public ExistConflictResolveMode WriteConflictMode { get; set; } = ExistConflictResolveMode.ReturnError;
         public int BufferSize { get; set; } = 1024 * 80; //Default to 80KB
         public string Id { get; set; }
         public Stream FileStream { get; set; }
@@ -37,7 +37,7 @@ namespace Haley.Models {
 
         }
         public StorageWriteRequest(string client_name, string module_name,string workspace_name, bool isWsVirtual = false):base(client_name,module_name,workspace_name) {
-        
+
         }
 
         /// <summary>Creates a shallow clone by mapping all properties onto a new <see cref="StorageWriteRequest"/>.</summary>
@@ -49,9 +49,9 @@ namespace Haley.Models {
         }
 
         /// <summary>Sets the original upload filename (used for extension detection and display name storage).</summary>
-        public IVaultFileWriteRequest SetFileOriginalName(string name) {
+        public IVaultFileWriteRequest SetOriginalName(string name) {
             if (string.IsNullOrWhiteSpace(name)) return this;
-            FileOriginalName = name;
+            OriginalName = name;
             return this;
         }
     }

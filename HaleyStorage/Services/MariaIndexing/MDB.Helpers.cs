@@ -81,7 +81,7 @@ namespace Haley.Utils {
             var dirCuid = request.Scope.Folder?.Cuid ?? string.Empty;
 
             var dirParent = request.Scope.Folder?.Parent?.Id ?? 0;
-            var dirName = request.Scope.Folder?.Name ?? VaultConstants.DEFAULT_NAME;
+            var dirName = request.Scope.Folder?.DisplayName ?? VaultConstants.DEFAULT_NAME;
             var dirDbName = dirName.ToDBName();
 
             var dirInfo = await InsertAndFetchIDRead(dbid,
@@ -169,9 +169,9 @@ namespace Haley.Utils {
         /// Returns the <c>name_store</c> ID, which is used as the FK when inserting a document row.
         /// </summary>
        async Task<(bool status, long id)> EnsureNameStore(IVaultReadRequest request) {
-            if (string.IsNullOrWhiteSpace(request.TargetName)) return (false, 0);
-            var name = Path.GetFileNameWithoutExtension(request.TargetName)?.Trim();
-            var ext = Path.GetExtension(request.TargetName)?.Trim();
+            if (string.IsNullOrWhiteSpace(request.RequestedName)) return (false, 0);
+            var name = Path.GetFileNameWithoutExtension(request.RequestedName)?.Trim();
+            var ext = Path.GetExtension(request.RequestedName)?.Trim();
             if (string.IsNullOrWhiteSpace(ext)) ext = VaultConstants.DEFAULT_NAME;
             if (string.IsNullOrWhiteSpace(name)) return (false, 0);
             name = name.ToDBName();
@@ -234,8 +234,8 @@ namespace Haley.Utils {
                         () => (INSTANCE.DOCUMENT.EXISTS, Consolidate((PARENT, dir.result.id), (NAME, ns.id))),
                         ()=> (INSTANCE.DOCUMENT.INSERT, Consolidate((WSPACE,ws.id), (PARENT, dir.result.id), (NAME, ns.id))),
                          readOnly: request.ReadOnlyMode,
-                        $@"Unable to insert document with name {request.TargetName}",false, callId: request.CallID);
-                    var dname = Path.GetFileName(request.TargetName);
+                        $@"Unable to insert document with name {request.RequestedName}",false, callId: request.CallID);
+                    var dname = Path.GetFileName(request.RequestedName);
                     await _agw.NonQuery(new AdapterArgs(dbid) { Query = INSTANCE.DOCUMENT.INSERT_INFO }.ForTransaction(handler), (PARENT, docInfo.id), (DNAME, dname));
                 }
 

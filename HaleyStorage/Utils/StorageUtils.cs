@@ -155,25 +155,25 @@ namespace Haley.Utils
             if (checkDirectories && !Directory.Exists(basePath))
                 throw new DirectoryNotFoundException("Base directory not found. Please ensure it is present.");
 
-            if (string.IsNullOrWhiteSpace(req.TargetPath)) {
-                req.SetTargetPath(basePath);
+            if (string.IsNullOrWhiteSpace(req.OverrideRef)) {
+                req.SetOverrideRef(basePath);
                 // All folders are virtual (DB-only); they never contribute a physical path segment.
                 if (fileReq?.File != null) {
-                    req.SetTargetPath(JoinStoragePath(req.TargetPath,
-                        fileReq.File.FetchRoutePath(req.TargetPath, true, allowRootAccess, readOnlyMode, checkDirectories),
+                    req.SetOverrideRef(JoinStoragePath(req.OverrideRef,
+                        fileReq.File.FetchRoutePath(req.OverrideRef, true, allowRootAccess, readOnlyMode, checkDirectories),
                         checkDirectories));
                 }
             } else {
-                req.SetTargetPath(JoinStoragePath(basePath, req.TargetPath, checkDirectories));
+                req.SetOverrideRef(JoinStoragePath(basePath, req.OverrideRef, checkDirectories));
             }
 
-            if (string.IsNullOrWhiteSpace(req.TargetPath))
+            if (string.IsNullOrWhiteSpace(req.OverrideRef))
                 throw new ArgumentNullException($@"Unable to generate a full object path for the request.");
 
-            if (req.TargetPath.Contains(".."))
+            if (req.OverrideRef.Contains(".."))
                 throw new ArgumentOutOfRangeException("The generated path contains invalid segments. Parent directory access is not allowed.");
 
-            return req.TargetPath;
+            return req.OverrideRef;
         }
 
         /// <summary>
@@ -195,7 +195,7 @@ namespace Haley.Utils
                 throw new ArgumentException("BasePath directory does not exist.");
 
             if (route == null) return string.Empty;
-            string value = SanitizePath(route.Path);
+            string value = SanitizePath(route.StorageRef);
             // Files use finalDestination=true; all folder routes are virtual (DB-only) — return sanitized path as-is.
             return value;
         }

@@ -39,7 +39,7 @@ namespace Haley.Utils {
         /// </summary>
         /// <param name="file">
         /// Must carry <see cref="IVaultFileRoute.Id"/> and <see cref="IVaultFileRoute.Cuid"/>.
-        /// Additional properties (StagingPath, Flags, Hash, Metadata) are written when populated.
+        /// Additional properties (StagingRef, Flags, Hash, Metadata) are written when populated.
         /// </param>
         /// <param name="callId">Optional call ID used to look up an open transaction handler.</param>
         public async Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IVaultFileRoute file, string callId = null) {
@@ -64,8 +64,8 @@ namespace Haley.Utils {
                 await _agw.NonQuery(
                     new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.INSERT_INFO }.ForTransaction(handler),
                     (ID, file.Id),
-                    (SAVENAME, file.SaveAsName),
-                    (PATH, file.Path),
+                    (SAVENAME, file.StorageName),
+                    (PATH, file.StorageRef),
                     (SIZE, file.Size),
                     (HASH, hashVal),
                     (SYNCED_AT, syncedAtVal)
@@ -73,7 +73,7 @@ namespace Haley.Utils {
 
                 // Optional extended update (only if caller provides these fields)
                 // This avoids forcing existing apps to suddenly send flags/metadata etc.
-                if (file.TryGetProp<string>(out var stagingPath, "StagingPath", "staging_path") ||
+                if (file.TryGetProp<string>(out var stagingPath, "StagingRef", "staging_path") ||
                     file.TryGetProp<string>(out var metadata, "Metadata", "metadata") ||
                     file.TryGetProp<int>(out var flags, "Flags", "flags") ||
                     !(hashVal is DBNull) || !(syncedAtVal is DBNull)) {
@@ -82,7 +82,7 @@ namespace Haley.Utils {
                     object md = DBNull.Value;
                     object fl = DBNull.Value;
 
-                    if (file.TryGetProp<string>(out var spv, "StagingPath", "staging_path") && !string.IsNullOrWhiteSpace(spv)) sp = spv;
+                    if (file.TryGetProp<string>(out var spv, "StagingRef", "staging_path") && !string.IsNullOrWhiteSpace(spv)) sp = spv;
                     if (file.TryGetProp<string>(out var mdv, "Metadata", "metadata") && mdv != null) md = mdv;
                     if (file.TryGetProp<int>(out var flv, "Flags", "flags")) fl = flv;
 

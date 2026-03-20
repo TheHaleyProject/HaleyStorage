@@ -6,15 +6,15 @@ using Haley.Utils;
 namespace Haley.Models {
     /// <summary>
     /// Base read request that carries scope information (client, module, workspace, folder),
-    /// an optional resolved <see cref="StorageReadRequest.TargetPath"/>, and a per-call unique ID.
+    /// an optional resolved <see cref="StorageReadRequest.OverrideRef"/>, and a per-call unique ID.
     /// Implements both <see cref="IVaultReadRequest"/> and <see cref="IVaultScope"/> — the instance
     /// acts as its own scope to avoid an extra allocation.
     /// </summary>
     public class StorageReadRequest : IVaultReadRequest, IVaultScope {
         bool callIdGenerated;
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
-        public string TargetPath { get; protected set; }
-        public string TargetName { get; protected set; }
+        public string OverrideRef { get; protected set; }
+        public string RequestedName { get; protected set; }
         public IVaultInfo Client { get; protected set; }
         public IVaultInfo Module { get; protected set; }
         public IVaultInfo Workspace { get; protected set; }
@@ -60,10 +60,10 @@ namespace Haley.Models {
             if (Workspace != null) Workspace.UpdateCUID(Client.DisplayName, Module?.DisplayName);
         }
 
-        /// <summary>Sets the logical target file name (used by path resolution to look up or generate the storage path).</summary>
-        public IVaultReadRequest SetTargetName(string name) {
+        /// <summary>Sets the caller-requested file name (used by path resolution to look up or generate the storage ref).</summary>
+        public IVaultReadRequest SetRequestedName(string name) {
             if (string.IsNullOrWhiteSpace(name)) return this;
-            TargetName = name;
+            RequestedName = name;
             return this;
         }
         /// <summary>Sets the virtual folder context for directory-scoped file operations.</summary>
@@ -71,10 +71,10 @@ namespace Haley.Models {
             if (folder != null) Folder = folder;
             return this;
         }
-        /// <summary>Sets an already-resolved absolute or provider-specific target path, bypassing the path-resolution pipeline.</summary>
-        public IVaultReadRequest SetTargetPath(string path) {
-            if (string.IsNullOrWhiteSpace(path)) return this;
-            TargetPath = path;
+        /// <summary>Sets an already-resolved provider-specific storage ref, bypassing the path-resolution pipeline.</summary>
+        public IVaultReadRequest SetOverrideRef(string storageRef) {
+            if (string.IsNullOrWhiteSpace(storageRef)) return this;
+            OverrideRef = storageRef;
             return this;
         }
 

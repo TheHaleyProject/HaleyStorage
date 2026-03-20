@@ -9,7 +9,7 @@ namespace Haley.Models {
     /// </summary>
     public class StorageReadFileRequest : StorageReadRequest, IVaultFileReadRequest {
         public IVaultFileRoute File { get; private set; }
-        /// <summary>Attaches a pre-populated file route (e.g. with a known CUID or SaveAsName) to the request.</summary>
+        /// <summary>Attaches a pre-populated file route (e.g. with a known CUID or StorageName) to the request.</summary>
         public IVaultFileReadRequest SetFile(IVaultFileRoute file) {
             if (file != null) File = file;
             return this;
