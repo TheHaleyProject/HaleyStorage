@@ -8,6 +8,13 @@ using System.Text;
 using System.Xml.Linq;
 
 namespace Haley.Models {
+    /// <summary>
+    /// Extends <see cref="VaultInfo"/> with storage-name generation metadata:
+    /// whether the object uses a numeric ID or GUID (<see cref="ControlMode"/>),
+    /// whether the ID is parsed from input or auto-generated (<see cref="ParseMode"/>),
+    /// whether the object is virtual (DB-only, no physical directory),
+    /// and the current version number.
+    /// </summary>
     public class VaultProfile :VaultInfo , IVaultInfo{
         public string StorageName { get; set; } //Should be the controlled name or a name compatible for the database 
         public bool IsVirtual { get; set; }

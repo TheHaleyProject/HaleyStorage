@@ -7,6 +7,13 @@ using System.Xml.Linq;
 using static Haley.Internal.IndexingConstant;
 
 namespace Haley.Internal {
+    /// <summary>
+    /// SQL statement constants for all core-DB and per-module-DB operations used by
+    /// <see cref="Haley.Utils.MariaDBIndexing"/>. Organised into nested classes mirroring the
+    /// DB table structure: CLIENT, MODULE, WORKSPACE, PROVIDER, PROFILE, PROFILE_INFO, and the
+    /// per-module INSTANCE group (WORKSPACE, DIRECTORY, EXTENSION, VAULT, NAMESTORE, DOCUMENT,
+    /// DOCVERSION, CHUNK).
+    /// </summary>
     internal class IndexingQueries {
         public class GENERAL {
             public const string SCHEMA_EXISTS = $@"select 1 from information_schema.schemata where schema_name = {NAME};";

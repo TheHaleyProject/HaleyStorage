@@ -26,10 +26,22 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
+    /// <summary>
+    /// Partial class — vault hierarchy registration (client, module, workspace) and document registration.
+    /// </summary>
     public partial class MariaDBIndexing : IVaultIndexing {
+        /// <summary>
+        /// Public entry point for document registration. Delegates to <c>RegisterDocumentsInternal</c>.
+        /// </summary>
+        /// <param name="holder">Receives the assigned DB ID and CUID after successful registration.</param>
         public async Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultInfo holder) {
             return await RegisterDocumentsInternal(request, holder);
         }
+        /// <summary>
+        /// Upserts a client record in the core DB and updates its signing/encrypt/password keys.
+        /// If the client already exists, only the display name, path, and keys are updated.
+        /// Validates the DB schema via <c>EnsureValidation</c> before executing.
+        /// </summary>
         public async Task<IFeedback> RegisterClient(IVaultClient info) {
             if (info == null) throw new ArgumentNullException("Input client directory info cannot be null");
             if (!info.TryValidate(out var msg)) throw new ArgumentException(msg);
@@ -60,6 +72,12 @@ namespace Haley.Utils {
             }
             return await ValidateAndCache(CLIENT.EXISTS, "Client", info, null, (NAME, info.Name));
         }
+        /// <summary>
+        /// Upserts a module record in the core DB.
+        /// If the module is new, also creates the per-module MariaDB schema via <c>CreateModuleDBInstance</c>
+        /// (triggered through <c>ValidateAndCache</c>'s preProcess callback) and adds an adapter entry
+        /// under the module's CUID.
+        /// </summary>
         public async Task<IFeedback> RegisterModule(IVaultModule info) {
             if (info == null) throw new ArgumentNullException("Input Module directory info cannot be null");
             if (!info.TryValidate(out var msg)) throw new ArgumentNullException(msg);
@@ -81,6 +99,10 @@ namespace Haley.Utils {
             }
             return await ValidateAndCache(MODULE.EXISTS_BY_CUID, "Module", info, CreateModuleDBInstance, (CUID, info.Cuid.ToString("N")));
         }
+        /// <summary>
+        /// Upserts a workspace record in the core DB.
+        /// On insert, validates the parent module exists first; on update, patches display name, path, and control/parse modes.
+        /// </summary>
         public async Task<IFeedback> RegisterWorkspace(IVaultWorkSpace info) {
             if (info == null) throw new ArgumentNullException("Input Module directory info cannot be null");
             if (!info.TryValidate(out var msg)) throw new ArgumentNullException(msg);
@@ -99,6 +121,10 @@ namespace Haley.Utils {
             }
             return await ValidateAndCache(WORKSPACE.EXISTS_BY_CUID, "Workspace", info, null, (CUID, info.Cuid.ToString("N")));
         }
+        /// <summary>
+        /// Creates the core <c>dss_core</c> schema from the <c>dsscore.sql</c> template if it does not already exist.
+        /// Called once at startup via <c>EnsureValidation</c>.
+        /// </summary>
         public async Task Validate() {
             //var toReplace = new Dictionary<string, string> { ["lifecycle_state"] = }
                await _agw.CreateDatabase(new DbCreationArgs(_key) {

@@ -8,8 +8,21 @@ using static Haley.Internal.IndexingConstant;
 using static Haley.Internal.IndexingQueries;
 
 namespace Haley.Utils {
+    /// <summary>
+    /// Partial class — chunked-upload DB persistence.
+    /// Manages <c>chunk_info</c> (session metadata) and <c>chunked_files</c> (per-part records)
+    /// in the per-module MariaDB instance.
+    /// </summary>
     public partial class MariaDBIndexing {
-        
+
+        /// <summary>
+        /// Inserts or updates a <c>chunk_info</c> row for a doc_version, recording the expected
+        /// chunk size, total parts, temp folder name/path, and completion state.
+        /// </summary>
+        /// <param name="moduleCuid">CUID of the module whose per-module DB is targeted.</param>
+        /// <param name="docVersionId">DB ID of the <c>doc_version</c> row this chunk session belongs to.</param>
+        /// <param name="chunkFolderName">Short folder name (usually the fileCuid) used as the chunk dir identifier.</param>
+        /// <param name="chunkFolderPath">Absolute path to the temp chunk directory on the FS.</param>
         public async Task<IFeedback> UpsertChunkInfo(
             string moduleCuid,
             long docVersionId,
@@ -55,6 +68,13 @@ namespace Haley.Utils {
             }
         }
 
+        /// <summary>
+        /// Records that a specific part has been received by upserting a row in <c>chunked_files</c>.
+        /// Requires the parent <c>chunk_info</c> row to exist (FK guard).
+        /// </summary>
+        /// <param name="partNumber">1-based part index.</param>
+        /// <param name="sizeMb">Rounded size of the part in MB.</param>
+        /// <param name="hash">Optional SHA-256 hash of the part bytes.</param>
         // 2) Record that a specific chunk part was uploaded (chunked_files)
         public async Task<IFeedback> UpsertChunkPart(
             string moduleCuid,
@@ -95,6 +115,7 @@ namespace Haley.Utils {
             }
         }
 
+        /// <summary>Sets <c>chunk_info.is_completed = 1</c> for the given <paramref name="docVersionId"/>.</summary>
         // 3) Mark chunk upload completed
         public async Task<IFeedback> MarkChunkCompleted(string moduleCuid, long docVersionId, string callId = null) {
             var fb = new Feedback();

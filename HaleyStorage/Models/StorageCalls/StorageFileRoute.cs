@@ -2,6 +2,11 @@
 using System;
 
 namespace Haley.Models {
+    /// <summary>
+    /// Concrete file route carrying version, size, save-as name, lifecycle flags, optional hash,
+    /// and the staging provider path. Used by the coordinator to pass file metadata between
+    /// the path-resolution pipeline and the CRUD methods.
+    /// </summary>
     public class StorageFileRoute : StorageRoute, IVaultFileRoute {
         public int Version { get; set; } = 0;
         public long Size { get; set; } = 0;

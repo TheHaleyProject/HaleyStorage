@@ -7,6 +7,12 @@ using Haley.Enums;
 using System.Linq;
 
 namespace Haley.Models {
+    /// <summary>
+    /// Base implementation of <see cref="IVaultBase"/> that owns the display name, DB-safe name,
+    /// deterministic <see cref="Guid"/> (SHA-256 hash of the name), and the mutable <see cref="Cuid"/>
+    /// (composite SHA-256 GUID derived from parent names).
+    /// Setting <see cref="DisplayName"/> automatically derives <see cref="VaultInfo.Name"/> and <see cref="Guid"/>.
+    /// </summary>
     public class VaultInfo : IVaultBase {
         public string Name { get; set; }
         public long Id { get; set; }                        // public set — required by IIdentityBase
@@ -47,6 +53,7 @@ namespace Haley.Models {
             return true;
         }
 
+        /// <summary>Derives the <see cref="VaultInfo.Cuid"/> from <see cref="DisplayName"/> alone (single-component hash).</summary>
         protected virtual void GenerateCuid() {
             if (!string.IsNullOrWhiteSpace(DisplayName)) {
                 var cuidStr = StorageUtils.GenerateCuid(DisplayName);
@@ -54,6 +61,11 @@ namespace Haley.Models {
             }
         }
 
+        /// <summary>
+        /// Recomputes <see cref="VaultInfo.Cuid"/> as a SHA-256 GUID of the concatenated
+        /// <paramref name="parentNames"/> (plus this object's own name appended if absent).
+        /// Used to build a deterministic, hierarchy-scoped CUID.
+        /// </summary>
         public virtual IVaultBase UpdateCUID(params string[] parentNames) {
             if (parentNames == null) return this;
             var inputList = parentNames.ToList();
@@ -65,26 +77,34 @@ namespace Haley.Models {
             return this;
         }
 
+        /// <summary>Directly sets the identity <see cref="VaultInfo.Guid"/> without triggering name derivation.</summary>
         public IIdentityBase SetGuid(Guid guid) {
             Guid = guid;
             return this;
         }
 
+        /// <summary>Sets the DB auto-increment ID on this vault object.</summary>
         public IVaultBase SetId(long setId) {
             Id = setId;
             return this;
         }
 
+        /// <summary>Directly sets the DB-safe <see cref="VaultInfo.Name"/> without triggering display-name derivation.</summary>
         public IVaultBase SetName(string name) {
             Name = name;
             return this;
         }
 
+        /// <summary>Directly sets the CUID to the given <see cref="Guid"/> value.</summary>
         public IVaultBase SetCuid(Guid guid) {
             Cuid = guid;
             return this;
         }
 
+        /// <summary>
+        /// Parses and sets the CUID from a compact-N or standard-format GUID string.
+        /// Throws when the value is empty or cannot be parsed as a GUID.
+        /// </summary>
         public IVaultBase SetCuid(string guid) {
             if (string.IsNullOrWhiteSpace(guid)) throw new Exception("Cannot set CUID with empty value");
             System.Guid res;

@@ -7,6 +7,11 @@ using Haley.Enums;
 using System.Linq;
 
 namespace Haley.Models {
+    /// <summary>
+    /// Lightweight carrier used only to pass the auto-increment <see cref="VaultUID.Id"/> and
+    /// compact-N <see cref="VaultUID.Guid"/> out of <c>StorageUtils.TryPopulateControlledID</c>.
+    /// All other <see cref="IVaultBase"/> / <see cref="IIdentityBase"/> members are no-op stubs.
+    /// </summary>
     // Lightweight carrier used only to pass Id and Guid out of TryPopulateControlledID.
     // All other IVaultBase / IIdentityBase members are stubs.
     public class VaultUID : IVaultBase {

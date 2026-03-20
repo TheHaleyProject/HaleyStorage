@@ -26,7 +26,16 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
+    /// <summary>
+    /// Partial class — internal DB helpers for the registration and document-insert pipeline.
+    /// Contains the workspace/directory/namestore "ensure" helpers and the low-level
+    /// <c>InsertAndFetchID*</c> check-then-insert pattern.
+    /// </summary>
     public partial class MariaDBIndexing : IVaultIndexing {
+        /// <summary>
+        /// Thread-safe one-shot validation: runs <see cref="Validate"/> the first time it is called.
+        /// Subsequent calls are no-ops, guarded by a <see cref="SemaphoreSlim"/>.
+        /// </summary>
         async Task EnsureValidation() {
             if (isValidated) return;
             await _validateLock.WaitAsync();
@@ -40,6 +49,11 @@ namespace Haley.Utils {
             }
         }
 
+        /// <summary>
+        /// Ensures the workspace row exists in the per-module DB. If absent, inserts it
+        /// (insert-ignore by workspace ID). Returns the workspace numeric ID.
+        /// Throws <see cref="ArgumentNullException"/> when the workspace is not in the cache.
+        /// </summary>
         async Task<(bool status, long id)> EnsureWorkSpace(IVaultReadRequest request) {
             var wsCuidKey = request.Scope.Workspace.Cuid.ToString("N");
             if (!_cache.ContainsKey(wsCuidKey)) throw new ArgumentNullException($@"Unable to find any workspace for {wsCuidKey}");
@@ -54,6 +68,11 @@ namespace Haley.Utils {
             return (true, wspace.Id);
         }
 
+        /// <summary>
+        /// Ensures a directory row exists in the per-module DB for the request's folder scope.
+        /// Falls back to "default" when no folder is specified on the request.
+        /// Returns the directory numeric ID and its compact-N CUID.
+        /// </summary>
         async Task<(bool status, (long id, string uid) result)> EnsureDirectory(IVaultReadRequest request, long ws_id) {
             if (ws_id == 0) return (false, (0, string.Empty));
             var dbid = request.Scope.Module.Cuid.ToString("N");
@@ -79,6 +98,10 @@ namespace Haley.Utils {
             return (true, (dirInfo.id, dirInfo.uid));
         }
 
+        /// <summary>
+        /// Retrieves an open <see cref="ITransactionHandler"/> from the in-flight handler cache
+        /// by <c>callId###dbId</c> key. Returns <c>null</c> when not found (auto-commit mode).
+        /// </summary>
         ITransactionHandler GetTransactionHandlerCache(string callId, string dbid) {
             if (string.IsNullOrWhiteSpace(callId) || string.IsNullOrWhiteSpace(dbid)) return null;
             var key = GetHandlerKey(callId, dbid);
@@ -87,6 +110,11 @@ namespace Haley.Utils {
             return _handlers[key].handler;
         }
 
+        /// <summary>
+        /// Check-then-insert pattern that returns a single numeric ID.
+        /// Runs <paramref name="check"/> first; if the row is absent and <paramref name="readOnly"/> is false,
+        /// runs <paramref name="insert"/> then re-checks. Throws on failure.
+        /// </summary>
         async Task<long> InsertAndFetchIDScalar(string dbid, Func<(string query,(string key,object value)[] parameters)> check, Func<(string query, (string key, object value)[] parameters)> insert = null, bool readOnly = false, string failureMessage = "Error", bool preCheck = true,string callId = null) {
             if (check == null) return 0;
             ITransactionHandler handler = GetTransactionHandlerCache(callId, dbid);
@@ -107,6 +135,11 @@ namespace Haley.Utils {
             return id;
         }
 
+        /// <summary>
+        /// Check-then-insert pattern that returns both a numeric ID and a CUID string.
+        /// Used for rows that have a <c>cuid</c> column (directory, document, doc_version).
+        /// Throws when the row cannot be found or inserted.
+        /// </summary>
         async Task<(long id, string uid)> InsertAndFetchIDRead(string dbid, Func<(string query, (string key, object value)[] parameters)> check = null, Func<(string query, (string key, object value)[] parameters)> insert = null, bool readOnly = false, string failureMessage = "Error", bool preCheck = true, string callId = null) {
             if (check == null) return (0, string.Empty);
             var checkInput = check.Invoke();
@@ -126,10 +159,15 @@ namespace Haley.Utils {
             return ((long)dic["id"], (string)dic["uid"]);
         }
 
+        /// <summary>Convenience helper that converts a params array of named parameters to an array, matching the expected signature.</summary>
         (string key,object value)[] Consolidate(params (string, object)[] parameters) {
             return parameters;
         }
 
+        /// <summary>
+        /// Ensures the name-store chain exists: extension → vault name → name_store composite row.
+        /// Returns the <c>name_store</c> ID, which is used as the FK when inserting a document row.
+        /// </summary>
        async Task<(bool status, long id)> EnsureNameStore(IVaultReadRequest request) {
             if (string.IsNullOrWhiteSpace(request.TargetName)) return (false, 0);
             var name = Path.GetFileNameWithoutExtension(request.TargetName)?.Trim();
@@ -153,10 +191,16 @@ namespace Haley.Utils {
             return (true, nsId);
         }
 
+        /// <summary>Builds the composite cache key used to store transaction handlers: <c>callid###dbid</c> (lowercase dbid).</summary>
         string GetHandlerKey(string callid, string dbid) {
             return $@"{callid}###{dbid.ToLower()}";
         }
 
+        /// <summary>
+        /// Core document-registration flow: ensures workspace → directory → name-store → document → doc_version,
+        /// opens a transaction, sets the resulting ID and CUID on <paramref name="holder"/>, and returns both.
+        /// Rolls back the transaction on any exception.
+        /// </summary>
         async Task<(long id, Guid guid)> RegisterDocumentsInternal(IVaultReadRequest request, IVaultInfo holder) {
             try {
                 if (request.ReadOnlyMode) throw new ArgumentException("Cannot register a document in readonly mode");
@@ -238,6 +282,11 @@ namespace Haley.Utils {
                 return (0, Guid.Empty);
             }
         }
+        /// <summary>
+        /// Creates a per-module MariaDB schema from the <c>dssclient.sql</c> template if it does not already exist,
+        /// then duplicates the adapter gateway entry under the module's CUID so all subsequent per-module
+        /// queries target the correct database.
+        /// </summary>
         async Task CreateModuleDBInstance(IVaultObject dirInfo) {
             if (!(dirInfo is IVaultModule info)) return;
             if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid.ToString("N")}";

@@ -28,13 +28,29 @@ using static System.Net.Mime.MediaTypeNames;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
+    /// <summary>
+    /// Partial class — document and directory read queries.
+    /// All public overloads ultimately delegate to the internal <c>GetDocVersionInfoInternal</c>
+    /// or to the name-based workspace search path.
+    /// </summary>
     public partial class MariaDBIndexing : IVaultIndexing {
+        /// <summary>Fetches the latest <c>version_info</c> row for a doc_version identified by its auto-increment ID.</summary>
         public Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id) {
             return GetDocVersionInfoInternal(moduleCuid, id, string.Empty);
         }
+        /// <summary>Fetches the latest <c>version_info</c> row for a doc_version identified by its compact-N CUID.</summary>
         public Task<IFeedback> GetDocVersionInfo(string moduleCuid, string cuid) {
             return GetDocVersionInfoInternal(moduleCuid, 0, cuid);
         }
+        /// <summary>
+        /// Fetches the latest <c>version_info</c> row for a file identified by name within a specific
+        /// workspace ID and directory. Looks up the document by joining <c>vault</c>, <c>name_store</c>,
+        /// <c>extension</c>, and <c>directory</c> tables, then retrieves the latest version.
+        /// </summary>
+        /// <param name="wsId">Numeric workspace DB ID (must be &gt; 0).</param>
+        /// <param name="file_name">Original file name including extension.</param>
+        /// <param name="dir_name">Display name of the parent directory; defaults to <c>"default"</c>.</param>
+        /// <param name="dir_parent_id">DB ID of the parent directory row (0 = root).</param>
         public async Task<IFeedback> GetDocVersionInfo(string moduleCuid, long wsId, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0) {
             Feedback result = new Feedback();
             try {
@@ -60,6 +76,10 @@ namespace Haley.Utils {
 
         }
 
+        /// <summary>
+        /// Overload that accepts a workspace CUID string instead of a numeric workspace ID.
+        /// Resolves the workspace numeric ID from the core DB before delegating to the ID-based overload.
+        /// </summary>
         public async Task<IFeedback> GetDocVersionInfo(string moduleCuid, string wsCuid, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0) {
             try {
                 if (string.IsNullOrWhiteSpace(wsCuid)) return new Feedback() { Message = "Workspace CUID cannot be empty." };
@@ -74,6 +94,11 @@ namespace Haley.Utils {
             }
         }
 
+        /// <summary>
+        /// Returns the display name of the directory that contains the given file.
+        /// Requires a non-empty file CUID; queries the module DB by joining <c>doc_version</c>,
+        /// <c>document</c>, and <c>directory</c> tables.
+        /// </summary>
         public async Task<IFeedback<string>> GetParentName(IVaultFileReadRequest request) {
             var fb = new Feedback<string>();
             try {
@@ -96,6 +121,10 @@ namespace Haley.Utils {
             }
         }
 
+        /// <summary>
+        /// Internal implementation: fetches a full <c>GET_FULL_BY_ID</c> or <c>GET_FULL_BY_CUID</c>
+        /// row from the per-module DB. Exactly one of <paramref name="id"/> or <paramref name="cuid"/> must be supplied.
+        /// </summary>
         async Task<IFeedback> GetDocVersionInfoInternal(string moduleCuid, long id, string cuid) {
             Feedback result = new Feedback();
             try {

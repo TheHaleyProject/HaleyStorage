@@ -7,6 +7,10 @@ using System.Xml.Linq;
 using static Haley.Internal.IndexingConstant;
 
 namespace Haley.Internal {
+    /// <summary>
+    /// Named parameter placeholder constants used in all <see cref="IndexingQueries"/> SQL strings.
+    /// Each constant expands to the <c>@FIELDNAME</c> form expected by the MariaDB adapter gateway.
+    /// </summary>
     internal class IndexingConstant {
         public const string VAULT_DEFCLIENT = "admin";
         public const string NAME = $@"@{nameof(NAME)}";

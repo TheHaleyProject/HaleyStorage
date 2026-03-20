@@ -5,7 +5,19 @@ using Haley.Utils;
 using System.Reflection.Metadata.Ecma335;
 
 namespace Haley.Services {
+    /// <summary>
+    /// Partial class — file format allow/deny policy.
+    /// Maintains separate allowed and restricted lists for file extensions and MIME types.
+    /// When an allowed list is non-empty it takes priority; when only a restricted list exists,
+    /// anything absent from that list is permitted.
+    /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
+        /// <summary>
+        /// Normalises an extension or MIME type string for storage in the allow/deny lists.
+        /// Extensions: lowercased, leading dots stripped, multi-extension values truncated at first dot.
+        /// MIME types: lowercased, repeated slashes collapsed, spaces removed.
+        /// Returns <c>false</c> when the result is empty after sanitization.
+        /// </summary>
         bool TrySanitizeFormat(string format, out string result) {
             result = default;
 
@@ -53,6 +65,7 @@ namespace Haley.Services {
         }
 
 
+        /// <summary>Returns the correct internal list (allowed or restricted, extension or MIME) for the given parameters.</summary>
         List<string> GetSource (FormatControlMode type, bool restricted) {
             switch (type) {
                 case FormatControlMode.Extension:
@@ -77,10 +90,17 @@ namespace Haley.Services {
             }
             return this;
         }
+        /// <summary>Adds a single sanitized extension or MIME type to the allowed or restricted list.</summary>
         public IFileFormatPolicy AddFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format,type,true,restricted);
+        /// <summary>Adds a range of sanitized extensions or MIME types to the allowed or restricted list.</summary>
         public IFileFormatPolicy AddFormatRange(List<string> formats, FormatControlMode type, bool restricted = false) => ModifyFormatRange(formats, type, true, restricted);
+        /// <summary>Removes a single sanitized extension or MIME type from the allowed or restricted list.</summary>
         public IFileFormatPolicy RemoveFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format, type, false, restricted);
 
+        /// <summary>
+        /// Returns <c>true</c> if the format is permitted under the current policy.
+        /// Priority: allowed list (if non-empty) → restricted list → default allow all.
+        /// </summary>
         public bool IsFormatAllowed(string format, FormatControlMode type) {
             if (!TrySanitizeFormat(format, out var sanitized)) return false;
 
@@ -94,6 +114,10 @@ namespace Haley.Services {
             if (restrictedSource != null && restrictedSource.Count > 0) return !restrictedSource.Contains(sanitized);
             return true; //In this case, there is not restriction, allow everything.
         }
+        /// <summary>
+        /// Returns <c>true</c> if any allowed or restricted entries are registered for the given <paramref name="type"/>,
+        /// meaning format checking is active for that mode.
+        /// </summary>
         public bool IsFormatTypeControlled(FormatControlMode type) {
             return GetSource(type, false)?.Count > 0 || GetSource(type, true)?.Count > 0; //If either, allowed, or restricted list is not empty, then it has some sort of control in place.
         }

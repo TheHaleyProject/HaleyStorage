@@ -10,6 +10,11 @@ using System.Threading.Tasks;
 using System.Xml;
 
 namespace Haley.Models {
+    /// <summary>
+    /// Extends <see cref="StorageReadFileRequest"/> with write-specific data:
+    /// the original file name, conflict resolve mode, buffer size, and the upload stream.
+    /// Used for single-shot uploads and as the request object for chunked upload initiation.
+    /// </summary>
     public class StorageWriteRequest : StorageReadFileRequest, IVaultFileWriteRequest {
         public string FileOriginalName { get; set; } //actual file name.
         public ExistConflictResolveMode ResolveMode { get; set; } = ExistConflictResolveMode.ReturnError;
@@ -17,6 +22,7 @@ namespace Haley.Models {
         public string Id { get; set; }
         public Stream FileStream { get; set; }
 
+        /// <summary>Fluent override that returns <see cref="StorageWriteRequest"/> instead of the base type, enabling method chaining.</summary>
         public new StorageWriteRequest SetComponent(VaultProfile input, Enums.VaultObjectType type) {
              base.SetComponent(input,type);
             return this;
@@ -34,6 +40,7 @@ namespace Haley.Models {
         
         }
 
+        /// <summary>Creates a shallow clone by mapping all properties onto a new <see cref="StorageWriteRequest"/>.</summary>
         public virtual object Clone() {
             var cloned = new StorageWriteRequest(this.Client.Name);
             //use map
@@ -41,6 +48,7 @@ namespace Haley.Models {
             return cloned ;
         }
 
+        /// <summary>Sets the original upload filename (used for extension detection and display name storage).</summary>
         public IVaultFileWriteRequest SetFileOriginalName(string name) {
             if (string.IsNullOrWhiteSpace(name)) return this;
             FileOriginalName = name;

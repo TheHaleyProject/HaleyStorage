@@ -4,6 +4,12 @@ using Haley.Models;
 
 namespace Haley.Services {
 
+    /// <summary>
+    /// Partial class — provider resolution and module-level provider configuration.
+    /// Resolves primary and staging <see cref="IStorageProvider"/> instances from the module's
+    /// <see cref="StorageModule.StorageProviderKey"/> / <see cref="StorageModule.StagingProviderKey"/>,
+    /// and exposes <see cref="ConfigureModuleProviders"/> for runtime reconfiguration.
+    /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
 
         // ── Primary provider ──────────────────────────────────────────────────

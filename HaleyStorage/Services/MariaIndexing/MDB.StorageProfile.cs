@@ -6,8 +6,17 @@ using static Haley.Internal.IndexingConstant;
 using static Haley.Internal.IndexingQueries;
 
 namespace Haley.Utils {
+    /// <summary>
+    /// Partial class — storage provider and profile management.
+    /// Manages the <c>provider</c>, <c>profile</c>, and <c>profile_info</c> tables
+    /// in the core DB, and links profiles to modules.
+    /// </summary>
     public partial class MariaDBIndexing {
 
+        /// <summary>
+        /// Inserts or updates a provider record in the core DB's <c>provider</c> table.
+        /// Returns the provider's numeric ID.
+        /// </summary>
         public async Task<long> UpsertProvider(string name, string description = null) {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
             await EnsureValidation();
@@ -19,6 +28,10 @@ namespace Haley.Utils {
             return pid;
         }
 
+        /// <summary>
+        /// Inserts or updates a profile record in the core DB's <c>profile</c> table.
+        /// Returns the profile's numeric ID.
+        /// </summary>
         public async Task<long> UpsertProfile(string name) {
             if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
             await EnsureValidation();
@@ -30,6 +43,14 @@ namespace Haley.Utils {
             return pfid;
         }
 
+        /// <summary>
+        /// Inserts or updates a <c>profile_info</c> row that links a versioned profile to its
+        /// primary storage provider, staging provider, profile mode, and arbitrary metadata JSON.
+        /// Returns the <c>profile_info</c> numeric ID.
+        /// </summary>
+        /// <param name="mode">Integer representation of the <see cref="StorageProfileMode"/> enum value.</param>
+        /// <param name="storageProviderId">FK to <c>provider.id</c> for the primary provider; nullable.</param>
+        /// <param name="stagingProviderId">FK to <c>provider.id</c> for the staging provider; nullable.</param>
         public async Task<long> UpsertProfileInfo(
             int profileId,
             int version,
@@ -59,6 +80,10 @@ namespace Haley.Utils {
             return piid;
         }
 
+        /// <summary>
+        /// Associates a module with a storage profile by updating <c>module.storage_profile</c> for the given CUID.
+        /// Returns <c>true</c> on success.
+        /// </summary>
         public async Task<bool> SetModuleStorageProfile(string moduleCuid, int profileId) {
             if (string.IsNullOrWhiteSpace(moduleCuid)) throw new ArgumentNullException(nameof(moduleCuid));
             if (profileId < 1) throw new ArgumentException("profileId must be > 0");

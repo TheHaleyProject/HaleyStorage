@@ -8,6 +8,11 @@ using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace Haley.Models {
+    /// <summary>
+    /// Deserialized from the <c>Seed:sources</c> configuration section.
+    /// Describes a single client/module/workspace registration entry consumed by
+    /// <see cref="StorageCoordinator.RegisterFromSource"/>.
+    /// </summary>
     public class DSSRegInfo {
         [JsonPropertyName("client")]
         public string Client { get; set; }

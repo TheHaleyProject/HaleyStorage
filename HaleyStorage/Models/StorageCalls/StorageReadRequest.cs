@@ -4,6 +4,12 @@ using Haley.Enums;
 using Haley.Utils;
 
 namespace Haley.Models {
+    /// <summary>
+    /// Base read request that carries scope information (client, module, workspace, folder),
+    /// an optional resolved <see cref="StorageReadRequest.TargetPath"/>, and a per-call unique ID.
+    /// Implements both <see cref="IVaultReadRequest"/> and <see cref="IVaultScope"/> — the instance
+    /// acts as its own scope to avoid an extra allocation.
+    /// </summary>
     public class StorageReadRequest : IVaultReadRequest, IVaultScope {
         bool callIdGenerated;
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
@@ -18,6 +24,10 @@ namespace Haley.Models {
         // IVaultReadRequest.Scope — this class is itself the scope implementation.
         public IVaultScope Scope => this;
 
+        /// <summary>
+        /// Regenerates a fresh <see cref="StorageReadRequest.CallID"/> for this request.
+        /// Can only be called once per request instance; subsequent calls are no-ops and return <c>false</c>.
+        /// </summary>
         public bool GenerateCallId() {
             if (callIdGenerated) return false;
             CallID = Guid.NewGuid().ToString();
@@ -25,6 +35,10 @@ namespace Haley.Models {
             return true;
         }
 
+        /// <summary>
+        /// Sets the client, module, or workspace component and recomputes all CUIDs to reflect
+        /// the updated hierarchy.
+        /// </summary>
         public virtual IVaultReadRequest SetComponent(IVaultInfo input, Enums.VaultObjectType type) {
             switch (type) {
                 case Enums.VaultObjectType.Client:
@@ -46,21 +60,25 @@ namespace Haley.Models {
             if (Workspace != null) Workspace.UpdateCUID(Client.DisplayName, Module?.DisplayName);
         }
 
+        /// <summary>Sets the logical target file name (used by path resolution to look up or generate the storage path).</summary>
         public IVaultReadRequest SetTargetName(string name) {
             if (string.IsNullOrWhiteSpace(name)) return this;
             TargetName = name;
             return this;
         }
+        /// <summary>Sets the virtual folder context for directory-scoped file operations.</summary>
         public IVaultReadRequest SetFolder(IVaultFolderRoute folder) {
             if (folder != null) Folder = folder;
             return this;
         }
+        /// <summary>Sets an already-resolved absolute or provider-specific target path, bypassing the path-resolution pipeline.</summary>
         public IVaultReadRequest SetTargetPath(string path) {
             if (string.IsNullOrWhiteSpace(path)) return this;
             TargetPath = path;
             return this;
         }
 
+        /// <summary>When <paramref name="readOnly"/> is <c>true</c>, prevents DB writes during path resolution (e.g. no document registration).</summary>
         public IVaultReadRequest SetMode(bool readOnly) {
             ReadOnlyMode = readOnly;
             return this;

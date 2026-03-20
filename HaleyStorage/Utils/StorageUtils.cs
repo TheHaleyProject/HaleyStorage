@@ -18,12 +18,22 @@ using System.Xml.Schema;
 
 namespace Haley.Utils
 {
+    /// <summary>
+    /// Static utility methods for the HaleyStorage system.
+    /// Covers path sanitization, sharded path generation (<see cref="PreparePath"/>),
+    /// deterministic CUID generation, and the controlled-ID population pipeline
+    /// used by <see cref="StorageCoordinator"/> during file registration.
+    /// </summary>
     public static class StorageUtils {
- 
+
         static (int length,int depth) defaultSplitProvider(bool isInputNumber) {
             if (!isInputNumber) return (1, 8); //Split by 1 and go upto 8 depth for non numbers.
             return (2, 0); //For number go full round
         }
+        /// <summary>
+        /// Trims whitespace and rejects paths that contain <c>".."</c> segments,
+        /// preventing directory-traversal attacks. Returns the trimmed value unchanged otherwise.
+        /// </summary>
         public static string SanitizePath(this string input) {
             if (string.IsNullOrWhiteSpace(input)) return input;
             input = input.Trim();
@@ -34,6 +44,16 @@ namespace Haley.Utils
             return input;
         }
 
+        /// <summary>
+        /// Generates the storage name (logical ID) and sharded relative path for a <see cref="VaultProfile"/>.
+        /// For virtual profiles returns the raw name and an empty path.
+        /// Calls <paramref name="uidManager"/> to register/resolve the ID from the indexer, then
+        /// invokes <see cref="PreparePath"/> to build the sharded directory path.
+        /// </summary>
+        /// <param name="uidManager">
+        /// Optional delegate that registers the object in the DB and returns <c>(id, guid)</c>.
+        /// Pass <c>null</c> for GUID-controlled paths (GUID is derived deterministically from the name).
+        /// </param>
         public static (string name, string path) GenerateFileSystemSavePath(this IVaultInfo nObj, VaultParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultInfo, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
             // ControlMode, ParseMode, IsVirtual live on VaultProfile (not on IVaultInfo).
@@ -52,6 +72,12 @@ namespace Haley.Utils
             return (nObj.StorageName, result);
         }
 
+        /// <summary>
+        /// Applies directory sharding to a logical ID and appends an optional suffix and extension.
+        /// Example (numeric, depth=2, len=2): <c>"1234567"</c> → <c>"12/34/1234567f.mp4"</c>.
+        /// Used by both <see cref="FileSystemStorageProvider.BuildStorageRef"/> (FS provider) and by
+        /// <see cref="StorageCoordinator"/> when reconstructing paths for cloud providers.
+        /// </summary>
         public static string PreparePath(string input, Func<bool, (int length, int depth)> splitProvider = null, VaultControlMode control_mode = VaultControlMode.Number, string suffix = null, string extension = null) {
             if (string.IsNullOrWhiteSpace(input)) return input;
             if (splitProvider == null) splitProvider = defaultSplitProvider;
@@ -71,6 +97,14 @@ namespace Haley.Utils
             return result;
         }
 
+        /// <summary>
+        /// Generates a deterministic CUID (compact-N SHA-256 GUID) for a vault hierarchy object
+        /// by hashing the relevant component names from the request scope.
+        /// </summary>
+        /// <param name="type">
+        /// Determines which names are included: Client uses only client name;
+        /// Module adds module name; WorkSpace adds workspace name.
+        /// </param>
         public static string GenerateCuid(this IVaultReadRequest input, Enums.VaultObjectType type) {
             if (input == null) throw new ArgumentNullException("Inputs cannot be null or empty for CUID generation.");
             List<string> names = new List<string>();
@@ -90,6 +124,10 @@ namespace Haley.Utils
             return GenerateCuid(names.ToArray());
         }
 
+        /// <summary>
+        /// Generates a deterministic compact-N CUID by joining the input strings with <c>"##"</c>
+        /// and hashing the result with SHA-256.
+        /// </summary>
         public static string GenerateCuid(params string[] inputs) {
             if (inputs == null || inputs.Length < 1) throw new ArgumentNullException("Inputs cannot be null or empty for CUID generation.");
             string separator = "##";
@@ -162,6 +200,14 @@ namespace Haley.Utils
             return value;
         }
        
+        /// <summary>
+        /// Parses or generates a controlled ID (number or GUID) from <paramref name="value"/>
+        /// and returns it in a <see cref="IVaultBase"/> carrier.
+        /// In <c>Parse</c> mode, extracts the number/GUID from the string.
+        /// In <c>Generate</c> mode, calls <paramref name="idManager"/> (or SHA-256 hashes for GUID mode).
+        /// </summary>
+        /// <param name="idManager">Delegate to the indexer for registering/resolving the ID.</param>
+        /// <param name="holder">The parent <see cref="IVaultInfo"/> passed through to the idManager.</param>
         public static bool TryPopulateControlledID(this string value, out IVaultBase result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultInfo, (long id, Guid guid)> idManager, IVaultInfo holder, bool throwExceptions = false) {
             result = null;
             
