@@ -30,8 +30,12 @@ namespace Haley.Internal {
         public const string DATETIME = $@"@{nameof(DATETIME)}";
         public const string PARENT = $@"@{nameof(PARENT)}";
         public const string DIRNAME = $@"@{nameof(DIRNAME)}";
-        public const string CONTROLMODE = $@"@{nameof(CONTROLMODE)}";
-        public const string PARSEMODE = $@"@{nameof(PARSEMODE)}";
+        public const string CONTROLMODE = $@"@{nameof(CONTROLMODE)}";    // legacy — kept for any non-workspace callers
+        public const string PARSEMODE = $@"@{nameof(PARSEMODE)}";       // legacy — kept for any non-workspace callers
+        // Workspace column renames (schema v2)
+        public const string STORAGE_REF = $@"@{nameof(STORAGE_REF)}";           // workspace.storage_ref
+        public const string STORAGENAME_MODE = $@"@{nameof(STORAGENAME_MODE)}"; // workspace.storagename_mode
+        public const string STORAGENAME_PARSE = $@"@{nameof(STORAGENAME_PARSE)}"; // workspace.storagename_parse
         public const string WSPACE = $@"@{nameof(WSPACE)}";
         public const string EXT = $@"@{nameof(EXT)}";
         public const string VERSION = $@"@{nameof(VERSION)}";

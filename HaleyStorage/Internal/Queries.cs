@@ -21,16 +21,18 @@ namespace Haley.Internal {
         public class CLIENT {
             public const string EXISTS = $@"select c.id from client as c where c.name = {NAME} LIMIT 1;";
             public const string UPSERTKEYS = $@"insert into client_keys (client,signing,encrypt,password) values ({ID},{SIGNKEY},{ENCRYPTKEY},{PASSWORD}) ON DUPLICATE KEY UPDATE signing =  VALUES(signing), encrypt = VALUES(encrypt), password = VALUES(password);";
-            public const string UPSERT = $@"insert into client (name,display_name, guid,path) values ({NAME},{DNAME},{GUID},{PATH}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), path = VALUES(path);";
-            public const string UPDATE = $@"update client set display_name = {DNAME}, path = {PATH} where id = {ID};";
+            /// <summary>Client has no path column — path is derived from name at runtime.</summary>
+            public const string UPSERT = $@"insert into client (name,display_name,guid) values ({NAME},{DNAME},{GUID}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name);";
+            public const string UPDATE = $@"update client set display_name = {DNAME} where id = {ID};";
             public const string GETKEYS = $@"select * from client_keys as c where c.client = {ID} LIMIT 1;";
         }
 
         public class MODULE {
             public const string EXISTS = $@"select m.id from module as m where m.name = {NAME} and m.parent = {PARENT} LIMIT 1;";
             public const string EXISTS_BY_CUID = $@"select m.id from module as m where m.cuid = {CUID} LIMIT 1;";
-            public const string UPSERT = $@"insert into module (parent,name, display_name,guid,path,cuid) values ({PARENT}, {NAME},{DNAME},{GUID},{PATH},{CUID}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), path = VALUES(path);";
-            public const string UPDATE = $@"update module set display_name = {DNAME}, path = {PATH} where id = {ID};";
+            /// <summary>Module has no path column — path is derived from name at runtime.</summary>
+            public const string UPSERT = $@"insert into module (parent,name,display_name,guid,cuid) values ({PARENT},{NAME},{DNAME},{GUID},{CUID}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name);";
+            public const string UPDATE = $@"update module set display_name = {DNAME} where id = {ID};";
 
             public const string UPDATE_STORAGE_PROFILE_BY_ID = $@"update module set storage_profile = {PROFILE_ID} where id = {ID};";
             public const string UPDATE_STORAGE_PROFILE_BY_CUID = $@"update module set storage_profile = {PROFILE_ID} where cuid = {CUID};";
@@ -39,8 +41,20 @@ namespace Haley.Internal {
         public class WORKSPACE {
             public const string EXISTS = $@"select ws.id from workspace as ws where ws.name = {NAME} and ws.parent = {PARENT} LIMIT 1;";
             public const string EXISTS_BY_CUID = $@"select ws.id from workspace as ws where ws.cuid = {CUID} LIMIT 1;";
-            public const string UPSERT = $@"insert into workspace (parent,name, display_name,guid,path,cuid,control_mode,parse_mode) values ({PARENT}, {NAME},{DNAME},{GUID},{PATH},{CUID},{CONTROLMODE},{PARSEMODE}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), path = VALUES(path),control_mode=VALUES(control_mode),parse_mode=VALUES(parse_mode);";
-            public const string UPDATE = $@"update workspace set display_name = {DNAME}, path = {PATH},control_mode={CONTROLMODE},parse_mode={PARSEMODE} where id = {ID};";
+            public const string UPSERT = $@"insert into workspace (parent,name,display_name,guid,storage_ref,cuid,storagename_mode,storagename_parse) values ({PARENT},{NAME},{DNAME},{GUID},{STORAGE_REF},{CUID},{STORAGENAME_MODE},{STORAGENAME_PARSE}) ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),storage_ref=VALUES(storage_ref),storagename_mode=VALUES(storagename_mode),storagename_parse=VALUES(storagename_parse);";
+            public const string UPDATE = $@"update workspace set display_name={DNAME},storage_ref={STORAGE_REF},storagename_mode={STORAGENAME_MODE},storagename_parse={STORAGENAME_PARSE} where id={ID};";
+            public const string UPDATE_STORAGE_PROFILE_BY_CUID = $@"update workspace set storage_profile = {STORAGE_PROFILE} where cuid = {CUID};";
+            public const string UPDATE_STORAGE_PROFILE_BY_ID = $@"update workspace set storage_profile = {STORAGE_PROFILE} where id = {ID};";
+            /// <summary>Returns all workspaces that have a storage_profile assigned, with resolved provider name strings.</summary>
+            public const string GET_ALL_PROFILES_WITH_KEYS =
+                $@"SELECT ws.cuid, pi.mode,
+                          sp.name  AS storage_provider_key,
+                          stp.name AS staging_provider_key
+                   FROM workspace AS ws
+                   INNER JOIN profile_info AS pi  ON pi.id  = ws.storage_profile
+                   LEFT  JOIN provider     AS sp  ON sp.id  = pi.storage_provider
+                   LEFT  JOIN provider     AS stp ON stp.id = pi.staging_provider
+                   WHERE ws.storage_profile IS NOT NULL;";
         }
 
         public class PROVIDER {
@@ -57,6 +71,15 @@ namespace Haley.Internal {
 
         public class PROFILE_INFO {
             public const string EXISTS = $@"select pi.id from profile_info as pi where pi.profile = {PROFILE_ID} and pi.version = {VERSION} LIMIT 1;";
+            /// <summary>Loads a profile_info row together with the resolved provider name strings.</summary>
+            public const string GET_WITH_PROVIDER_KEYS =
+                $@"SELECT pi.mode, pi.metadata,
+                          sp.name  AS storage_provider_key,
+                          stp.name AS staging_provider_key
+                   FROM profile_info AS pi
+                   LEFT JOIN provider AS sp  ON sp.id  = pi.storage_provider
+                   LEFT JOIN provider AS stp ON stp.id = pi.staging_provider
+                   WHERE pi.id = {PROFILE_ID} LIMIT 1;";
 
             // MetaData
             public const string UPSERT = $@"insert into profile_info (profile, version, mode, storage_provider, staging_provider, metadata)
@@ -131,25 +154,25 @@ namespace Haley.Internal {
                 public const string INSERT = $@"insert ignore into doc_version (parent,ver) values({PARENT},{VERSION});";
                 public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT};";
 
-                // Writes -> storage_name/storage_path/size/hash/synced_at
+                // Writes -> storage_name/storage_ref/size/hash/synced_at
                 // hash and synced_at are nullable — pass DBNull.Value when not available.
                 public const string INSERT_INFO =
-                    $@"insert into version_info (id, storage_name, storage_path, size, hash, synced_at)
+                    $@"insert into version_info (id, storage_name, storage_ref, size, hash, synced_at)
                        values({ID},{SAVENAME},{PATH},{SIZE},{HASH},{SYNCED_AT})
                        ON DUPLICATE KEY UPDATE
                             storage_name = VALUES(storage_name),
-                            storage_path = VALUES(storage_path),
+                            storage_ref = VALUES(storage_ref),
                             size = VALUES(size),
                             hash = COALESCE(VALUES(hash), hash),
                             synced_at = COALESCE(VALUES(synced_at), synced_at);";
 
-                // Aliases keep backward compat: storage_name→saveas_name, storage_path→path
+                // Aliases: storage_name→saveas_name, storage_ref→path, staging_ref→staging_path (backward compat with PopulateFileFromDic)
                 public const string GET_INFO =
                     $@"select
                             id,
                             storage_name as saveas_name,
-                            storage_path as path,
-                            staging_path,
+                            storage_ref as path,
+                            staging_ref as staging_path,
                             size,
                             hash,
                             synced_at,
@@ -164,10 +187,10 @@ namespace Haley.Internal {
                             dv.cuid as uid,
                             dv.created,
                             dv.ver,
-                            vi.storage_path as path,
+                            vi.storage_ref as path,
                             vi.size,
                             vi.storage_name as saveas_name,
-                            vi.staging_path,
+                            vi.staging_ref as staging_path,
                             vi.hash,
                             vi.synced_at,
                             vi.flags,
@@ -184,10 +207,10 @@ namespace Haley.Internal {
                             dv.cuid as uid,
                             dv.created,
                             dv.ver,
-                            vi.storage_path as path,
+                            vi.storage_ref as path,
                             vi.size,
                             vi.storage_name as saveas_name,
-                            vi.staging_path,
+                            vi.staging_ref as staging_path,
                             vi.hash,
                             vi.synced_at,
                             vi.flags,
@@ -204,10 +227,10 @@ namespace Haley.Internal {
                             dv.cuid as uid,
                             dv.created,
                             dv.ver,
-                            vi.storage_path as path,
+                            vi.storage_ref as path,
                             vi.size,
                             vi.storage_name as saveas_name,
-                            vi.staging_path,
+                            vi.staging_ref as staging_path,
                             vi.hash,
                             vi.synced_at,
                             vi.flags,
@@ -223,7 +246,7 @@ namespace Haley.Internal {
                 // hash/synced_at use COALESCE so a NULL param leaves the existing value unchanged.
                 public const string UPDATE_INFO_EXT =
                     $@"update version_info
-                       set staging_path = {STAGINGPATH},
+                       set staging_ref = {STAGINGPATH},
                            metadata     = {METADATA},
                            flags        = {FLAGS},
                            hash         = COALESCE({HASH}, hash),

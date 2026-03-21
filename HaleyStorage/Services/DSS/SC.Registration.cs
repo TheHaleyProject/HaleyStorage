@@ -147,7 +147,7 @@ namespace Haley.Services {
                     Directory.CreateDirectory(path);
             }
 
-            var wsInfo = wspace.MapProperties(new StorageWorkspace(client.Name, module.Name, wspace.DisplayName) { StorageRef = wsPath, StorageNameMode = content_control, StorageNameParseMode = content_pmode });
+            var wsInfo = wspace.MapProperties(new StorageWorkspace(client.Name, module.Name, wspace.DisplayName) { Base = wsPath, StorageNameMode = content_control, StorageNameParseMode = content_pmode });
             if (WriteMode && isFs) {
                 var metaFile = Path.Combine(path, WORKSPACEMETAFILE);
                 File.WriteAllText(metaFile, wsInfo.ToJson());
@@ -215,6 +215,12 @@ namespace Haley.Services {
                         wspaces.Add(wsKey);
                     }
                 }
+                // Restore any persisted workspace profile overrides from the DB so provider
+                // resolution is correct after a process restart, without requiring explicit
+                // ConfigureWorkspaceProviders(...) calls at startup.
+                if (Indexer != null)
+                    await Indexer.RehydrateWorkspaceProfilesAsync();
+
                 return result.SetStatus(true).SetMessage("Successfully registered.");
             } catch (Exception ex) {
                 return new Feedback().SetMessage(ex.StackTrace);

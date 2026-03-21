@@ -56,13 +56,13 @@ namespace Haley.Utils {
                 //Client exists. We just need to update.
                 using (thandler.Begin()) {
                     //Register client
-                    await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPDATE }).ForTransaction(thandler), (DNAME, info.DisplayName), (PATH, info.StorageRef), (ID, cliId));
+                    await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPDATE }).ForTransaction(thandler), (DNAME, info.DisplayName), (ID, cliId));
                     await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPSERTKEYS }).ForTransaction(thandler), (ID, cliId), (SIGNKEY, info.SigningKey), (ENCRYPTKEY, info.EncryptKey), (PASSWORD, info.PasswordHash));
                 }
             } else {
                 using (thandler.Begin()) {
                     //Register client
-                    await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPSERT }).ForTransaction(thandler), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (PATH, info.StorageRef));
+                    await _agw.NonQuery((new AdapterArgs(_key) { Query = CLIENT.UPSERT }).ForTransaction(thandler), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")));
                     exists = await _agw.Scalar((new AdapterArgs(_key) { Query = CLIENT.EXISTS }).ForTransaction(thandler), (NAME, info.Name));
                     if (exists != null && long.TryParse(exists.ToString(), out var clientId)) {
                         //Add Info
@@ -91,11 +91,11 @@ namespace Haley.Utils {
             var exists = await _agw.Scalar(new AdapterArgs(_key) { Query = MODULE.EXISTS_BY_CUID }, (CUID, info.Cuid.ToString("N")));
             if (exists != null && long.TryParse(exists.ToString(),out var mId)) {
                 //Module exists. .just update it.
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = MODULE.UPDATE }, (DNAME, info.DisplayName), (PATH, info.StorageRef), (ID, mId));
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = MODULE.UPDATE }, (DNAME, info.DisplayName), (ID, mId));
             } else {
                 var cexists = await _agw.Scalar(new AdapterArgs(_key) { Query = CLIENT.EXISTS }, (NAME, info.Client.Name));
                 if (cexists == null || !long.TryParse(cexists.ToString(), out var clientId)) throw new ArgumentException($@"Client {info.Client.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = MODULE.UPSERT }, (PARENT, clientId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (PATH, info.StorageRef), (CUID, info.Cuid.ToString("N")));
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = MODULE.UPSERT }, (PARENT, clientId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (CUID, info.Cuid.ToString("N")));
             }
             return await ValidateAndCache(MODULE.EXISTS_BY_CUID, "Module", info, CreateModuleDBInstance, (CUID, info.Cuid.ToString("N")));
         }
@@ -111,13 +111,13 @@ namespace Haley.Utils {
 
             var exists = await _agw.Scalar(new AdapterArgs(_key) { Query = WORKSPACE.EXISTS_BY_CUID }, (CUID, info.Cuid.ToString("N")));
             if (exists != null && long.TryParse(exists.ToString(), out var wsId)) {
-                //Module exists. .just update it.
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPDATE }, (DNAME, info.DisplayName), (PATH, info.StorageRef), (CONTROLMODE, (int)info.StorageNameMode), (PARSEMODE, (int)info.StorageNameParseMode),(ID, wsId));
+                //Workspace exists — just update it.
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPDATE }, (DNAME, info.DisplayName), (STORAGE_REF, info.Base), (STORAGENAME_MODE, (int)info.StorageNameMode), (STORAGENAME_PARSE, (int)info.StorageNameParseMode), (ID, wsId));
             } else {
                 var moduleCuid = StorageUtils.GenerateCuid(info.Client.Name, info.Module.Name);
                 var mexists = await _agw.Scalar(new AdapterArgs(_key) { Query = MODULE.EXISTS_BY_CUID }, (CUID, moduleCuid));
                 if (mexists == null || !long.TryParse(mexists.ToString(), out var modId)) throw new ArgumentException($@"Module {info.Module.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPSERT }, (PARENT, modId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (PATH, info.StorageRef), (CUID, info.Cuid.ToString("N")), (CONTROLMODE, (int)info.StorageNameMode), (PARSEMODE, (int)info.StorageNameParseMode));
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPSERT }, (PARENT, modId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (STORAGE_REF, info.Base), (CUID, info.Cuid.ToString("N")), (STORAGENAME_MODE, (int)info.StorageNameMode), (STORAGENAME_PARSE, (int)info.StorageNameParseMode));
             }
             return await ValidateAndCache(WORKSPACE.EXISTS_BY_CUID, "Workspace", info, null, (CUID, info.Cuid.ToString("N")));
         }

@@ -25,7 +25,6 @@ CREATE TABLE IF NOT EXISTS `client` (
   `name` varchar(100) NOT NULL,
   `display_name` varchar(100) NOT NULL,
   `guid` varchar(48) NOT NULL DEFAULT 'uuid()',
-  `path` varchar(140) NOT NULL COMMENT 'Created only at register time.\nWe would have anyhow created the guid based on the provided name. If the client is created as managed, then the path should be based on the guid. or else it should be based on the name itself.',
   `created` timestamp NOT NULL DEFAULT current_timestamp(),
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
@@ -85,7 +84,6 @@ CREATE TABLE IF NOT EXISTS `module` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
   `display_name` varchar(120) NOT NULL,
-  `path` varchar(200) NOT NULL,
   `active` bit(1) NOT NULL DEFAULT b'1',
   `created` datetime NOT NULL DEFAULT current_timestamp(),
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -150,19 +148,22 @@ CREATE TABLE IF NOT EXISTS `workspace` (
   `parent` int(11) NOT NULL,
   `name` varchar(120) NOT NULL,
   `display_name` varchar(120) NOT NULL,
-  `path` varchar(200) NOT NULL,
+  `storage_ref` varchar(200) NOT NULL,
   `active` bit(1) NOT NULL DEFAULT b'1',
-  `control_mode` int(11) NOT NULL DEFAULT 1 COMMENT '1 - numbers - Semi or Fully managed\n2 - hash - Semi or fully managed.',
-  `parse_mode` int(11) NOT NULL DEFAULT 0 COMMENT '0- Parse //Semi Managed. You prepare the ID From outside.. Application will only prepare folders.\n1- Generate //Fully Managed, Application will generate the id as required.',
+  `storagename_mode` int(11) NOT NULL DEFAULT 1,
+  `storagename_parse` int(11) NOT NULL DEFAULT 0,
   `created` timestamp NOT NULL DEFAULT current_timestamp(),
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `storage_profile` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_workspace` (`parent`,`name`),
   UNIQUE KEY `unq_workspace_0` (`parent`,`guid`),
   UNIQUE KEY `unq_workspace_1` (`cuid`),
+  KEY `fk_workspace_profile_info` (`storage_profile`),
   CONSTRAINT `fk_workspace_module` FOREIGN KEY (`parent`) REFERENCES `module` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `cns_workspace` CHECK (`control_mode` >= 1 and `control_mode` <= 2),
-  CONSTRAINT `cns_workspace_0` CHECK (`parse_mode` >= 0 and `parse_mode` <= 1)
+  CONSTRAINT `fk_workspace_profile_info` FOREIGN KEY (`storage_profile`) REFERENCES `profile_info` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `cns_workspace` CHECK (`storagename_mode` >= 1 and `storagename_mode` <= 2),
+  CONSTRAINT `cns_workspace_0` CHECK (`storagename_parse` >= 0 and `storagename_parse` <= 1)
 ) ENGINE=InnoDB AUTO_INCREMENT=1923 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.

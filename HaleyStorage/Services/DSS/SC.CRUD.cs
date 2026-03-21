@@ -42,8 +42,8 @@ namespace Haley.Services {
                     throw new ArgumentException("File stream is null. Nothing to save.");
 
                 // ── Staging vs direct-save decision ───────────────────────────────
-                var moduleCuid = input.Scope?.Module?.Cuid.ToString("N");
-                var profileMode = ResolveProfileMode(moduleCuid);
+                // Resolution: workspace override → module → DirectSave default.
+                var profileMode = ResolveProfileMode(input);
                 var stagingProvider = ResolveStagingProvider(input);
                 bool useStaging = profileMode != StorageProfileMode.DirectSave && stagingProvider != null
                                   && input.File != null && !string.IsNullOrWhiteSpace(input.File.StorageName);
