@@ -1,6 +1,7 @@
 using Haley.Abstractions;
 using Haley.Enums;
 using Haley.Models;
+using Haley.Utils;
 using System;
 using System.Threading.Tasks;
 using static Haley.Internal.IndexingConstant;
@@ -18,12 +19,18 @@ namespace Haley.Utils {
         /// Inserts or updates a provider record in the core DB's <c>provider</c> table.
         /// Returns the provider's numeric ID.
         /// </summary>
-        public async Task<long> UpsertProvider(string name, string description = null) {
-            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
+        public async Task<long> UpsertProvider(string displayName, string description = null) {
+            if (string.IsNullOrWhiteSpace(displayName)) throw new ArgumentNullException(nameof(displayName));
+            var name = displayName.ToDBName();
             await EnsureValidation();
-            await _agw.ExecAsync(_key, PROVIDER.UPSERT, default, (NAME, name), (DESCRIPTION, description));
+            var existingId = await _agw.ScalarAsync<long>(_key, PROVIDER.EXISTS, default, (NAME, name));
+            if (existingId > 0) {
+                await _agw.ExecAsync(_key, PROVIDER.UPDATE, default, (ID, existingId), (DNAME, displayName), (DESCRIPTION, description));
+                return existingId;
+            }
+            await _agw.ExecAsync(_key, PROVIDER.INSERT, default, (NAME, name), (DNAME, displayName), (DESCRIPTION, description));
             var id = await _agw.ScalarAsync<long>(_key, PROVIDER.EXISTS, default, (NAME, name));
-            if (id < 1) throw new Exception($"Unable to upsert provider '{name}'");
+            if (id < 1) throw new Exception($"Unable to insert provider '{displayName}'");
             return id;
         }
 
@@ -31,12 +38,18 @@ namespace Haley.Utils {
         /// Inserts or updates a profile record in the core DB's <c>profile</c> table.
         /// Returns the profile's numeric ID.
         /// </summary>
-        public async Task<long> UpsertProfile(string name) {
-            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentNullException(nameof(name));
+        public async Task<long> UpsertProfile(string displayName) {
+            if (string.IsNullOrWhiteSpace(displayName)) throw new ArgumentNullException(nameof(displayName));
+            var name = displayName.ToDBName();
             await EnsureValidation();
-            await _agw.ExecAsync(_key, PROFILE.UPSERT, default, (NAME, name));
+            var existingId = await _agw.ScalarAsync<long>(_key, PROFILE.EXISTS, default, (NAME, name));
+            if (existingId > 0) {
+                await _agw.ExecAsync(_key, PROFILE.UPDATE, default, (ID, existingId), (DNAME, displayName));
+                return existingId;
+            }
+            await _agw.ExecAsync(_key, PROFILE.INSERT, default, (NAME, name), (DNAME, displayName));
             var id = await _agw.ScalarAsync<long>(_key, PROFILE.EXISTS, default, (NAME, name));
-            if (id < 1) throw new Exception($"Unable to upsert profile '{name}'");
+            if (id < 1) throw new Exception($"Unable to insert profile '{displayName}'");
             return id;
         }
 
@@ -44,32 +57,73 @@ namespace Haley.Utils {
         /// Inserts or updates a <c>profile_info</c> row that links a versioned profile to its
         /// primary storage provider, staging provider, profile mode, and arbitrary metadata JSON.
         /// Returns the <c>profile_info</c> numeric ID.
+        /// <para>
+        /// Deduplication: a SHA-256 hash of (storageProviderKey, stagingProviderKey, mode, canonicalized metadata)
+        /// is computed first. If a row with that hash already exists — regardless of (profile, version) — its id
+        /// is returned immediately; no insert or update is performed.
+        /// </para>
         /// </summary>
-        /// <param name="mode">Integer representation of the <see cref="StorageProfileMode"/> enum value.</param>
-        /// <param name="storageProviderId">FK to <c>provider.id</c> for the primary provider; nullable.</param>
-        /// <param name="stagingProviderId">FK to <c>provider.id</c> for the staging provider; nullable.</param>
+        /// <param name="storageProviderKey">Normalized name key of the primary provider (from <c>provider.name</c>); null = no provider.</param>
+        /// <param name="stagingProviderKey">Normalized name key of the staging provider; null = no staging.</param>
         public async Task<long> UpsertProfileInfo(
             int profileId,
             int version,
             int mode,
-            int? storageProviderId,
-            int? stagingProviderId,
+            string storageProviderKey,
+            string stagingProviderKey,
             string metadataJson
         ) {
             if (profileId < 1) throw new ArgumentException("profileId must be > 0");
             if (version < 1) throw new ArgumentException("version must be > 0");
             if (metadataJson == null) throw new ArgumentNullException(nameof(metadataJson));
             await EnsureValidation();
-            await _agw.ExecAsync(_key, PROFILE_INFO.UPSERT, default,
+
+            var hash = ComputeProfileInfoHash(storageProviderKey, stagingProviderKey, mode, metadataJson);
+
+            // Deduplication: if an identical config already exists anywhere, reuse it.
+            var hashId = await _agw.ScalarAsync<long>(_key, PROFILE_INFO.EXISTS_BY_HASH, default, (HASH, hash));
+            if (hashId > 0) return hashId;
+
+            // Resolve provider IDs from keys.
+            long? storageProviderId = null;
+            if (!string.IsNullOrWhiteSpace(storageProviderKey)) {
+                var sid = await _agw.ScalarAsync<long>(_key, PROVIDER.EXISTS, default, (NAME, storageProviderKey));
+                if (sid > 0) storageProviderId = sid;
+            }
+            long? stagingProviderId = null;
+            if (!string.IsNullOrWhiteSpace(stagingProviderKey)) {
+                var stid = await _agw.ScalarAsync<long>(_key, PROVIDER.EXISTS, default, (NAME, stagingProviderKey));
+                if (stid > 0) stagingProviderId = stid;
+            }
+
+            var existingId = await _agw.ScalarAsync<long>(_key, PROFILE_INFO.EXISTS, default, (PROFILE_ID, profileId), (VERSION, version));
+            if (existingId > 0) {
+                await _agw.ExecAsync(_key, PROFILE_INFO.UPDATE, default,
+                    (ID,                existingId),
+                    (MODE,              mode),
+                    (STORAGE_PROVIDER,  (object?)storageProviderId),
+                    (STAGING_PROVIDER,  (object?)stagingProviderId),
+                    (METADATA,          metadataJson),
+                    (HASH,              hash));
+                return existingId;
+            }
+            await _agw.ExecAsync(_key, PROFILE_INFO.INSERT, default,
                 (PROFILE_ID,        profileId),
                 (VERSION,           version),
                 (MODE,              mode),
                 (STORAGE_PROVIDER,  (object?)storageProviderId),
                 (STAGING_PROVIDER,  (object?)stagingProviderId),
-                (METADATA,          metadataJson));
+                (METADATA,          metadataJson),
+                (HASH,              hash));
             var id = await _agw.ScalarAsync<long>(_key, PROFILE_INFO.EXISTS, default, (PROFILE_ID, profileId), (VERSION, version));
-            if (id < 1) throw new Exception($"Unable to upsert profile_info for profileId={profileId}, version={version}");
+            if (id < 1) throw new Exception($"Unable to insert profile_info for profileId={profileId}, version={version}");
             return id;
+        }
+
+        static string ComputeProfileInfoHash(string storageProviderKey, string stagingProviderKey, int mode, string metadataJson) {
+            var canonical = (metadataJson ?? string.Empty).ToCompactJson();
+            var input = $"{storageProviderKey ?? "0"}|{stagingProviderKey ?? "0"}|{mode}|{canonical}";
+            return input.CreateGUID(HashMethod.Sha256).ToString("N");
         }
 
         /// <summary>

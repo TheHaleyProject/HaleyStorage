@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `client` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Auto-increment surrogate key.',
   `name` varchar(100) NOT NULL COMMENT 'Machine-usable slug; lowercase-normalized (e.g. "myapp", "hr_portal"). Unique across all clients. Used as one input to derive the deterministic CUID and the on-disk directory name. Never changes after registration — renaming requires a full migration.',
   `display_name` varchar(100) NOT NULL COMMENT 'Human-readable label shown in UIs and logs (e.g. "HR Portal", "Customer Docs Service"). Has no effect on path computation or CUID derivation.',
-  `guid` varchar(48) NOT NULL DEFAULT 'uuid()' COMMENT 'Random GUID assigned at creation, kept for backward compatibility. The StorageCoordinator routes by the deterministic CUID (derived from the name hash); guid is advisory only.',
+  `guid` varchar(42) NOT NULL COMMENT 'CUID generated from the name. Own name hash (not hierarchy aware)',
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Row creation timestamp (UTC).',
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Automatically updated whenever any column changes.',
   PRIMARY KEY (`id`),
@@ -79,7 +79,7 @@ DELIMITER ;
 -- Dumping structure for table dss_core.module
 CREATE TABLE IF NOT EXISTS `module` (
   `parent` int(11) NOT NULL COMMENT 'FK to client.id. Every module belongs to exactly one client.',
-  `guid` varchar(48) NOT NULL COMMENT 'Random GUID assigned at creation. Advisory only — the CUID is the primary routing key.',
+  `guid` varchar(42) NOT NULL COMMENT 'CUID generated from the name. Own name hash (not hierarchy aware)',
   `cuid` varchar(48) NOT NULL COMMENT 'Deterministic compact-N GUID derived from SHA-256(client_name##module_name). Used as the per-module MariaDB schema name prefix (e.g. "dss_module_<cuid>"). Stable for as long as the client and module names do not change.',
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Auto-increment surrogate key.',
   `name` varchar(120) NOT NULL COMMENT 'Machine-usable slug (e.g. "documents", "invoices", "avatars"). Combined with the parent client name to derive the CUID. Unique per client.',
@@ -103,7 +103,9 @@ CREATE TABLE IF NOT EXISTS `module` (
 CREATE TABLE IF NOT EXISTS `profile` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Auto-increment surrogate key.',
   `name` varchar(120) NOT NULL COMMENT 'Human-readable name for this profile group (e.g. "prod-b2", "staging-fs", "azure-east-tier1"). Groups one or more versioned profile_info rows under a single logical label.',
-  PRIMARY KEY (`id`)
+  `display_name` varchar(120) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unq_profile` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='A named storage configuration group. Each profile can have multiple versioned profile_info rows to support side-by-side configurations during migrations.\nA profile defines WHAT to call a configuration; the actual settings (provider, mode, metadata) live in profile_info.\nExample: a profile named "prod-b2" might have version 1 pointing to Backblaze B2 us-west and version 2 pointing to B2 eu-central — useful when migrating buckets without downtime.';
 
 -- Data exporting was unselected.
@@ -118,8 +120,10 @@ CREATE TABLE IF NOT EXISTS `profile_info` (
   `staging_provider` int(10) unsigned DEFAULT NULL COMMENT 'FK to provider.id. Temporary fast-landing zone used before promotion to primary (mode 1 or 2). Typically a local filesystem or a cheap/fast cloud bucket. NULL means no staging.',
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Row creation timestamp (UTC).',
   `metadata` text NOT NULL COMMENT 'JSON blob carrying provider-specific connection configuration required to initialise the provider at runtime.\nFor cloud providers this typically includes: bucket name, region, endpoint URL, and a reference to the credential (e.g. an env-var name or secrets-manager key).\nExample for S3: {"bucket":"my-vault","region":"us-east-1","endpoint":"https://s3.amazonaws.com","credential_ref":"env:AWS_SECRET_KEY"}\nExample for B2: {"bucketId":"abc123","bucketName":"my-vault","applicationKeyId":"key001","applicationKey":"env:B2_APP_KEY"}\nThe StorageCoordinator reads this JSON at startup when initialising the provider connection.',
+  `hash` varchar(48) NOT NULL COMMENT 'Deterministic compact-N GUID computed from SHA-256(storageProviderKey|stagingProviderKey|mode|canonicalMetadata). Used as a deduplication key — if this hash already exists in the table, the calling row is identical to the existing one and no new row is needed.',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_profile_config` (`profile`,`version`),
+  UNIQUE KEY `unq_profile_info_hash` (`hash`) COMMENT 'Prevents inserting two profile_info rows with identical configuration. Application checks this before insert.',
   KEY `fk_profile_info_provider` (`storage_provider`),
   KEY `fk_profile_info_provider_0` (`staging_provider`),
   CONSTRAINT `fk_profile_config_profile` FOREIGN KEY (`profile`) REFERENCES `profile` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -135,7 +139,9 @@ CREATE TABLE IF NOT EXISTS `provider` (
   `name` varchar(120) DEFAULT NULL COMMENT 'Registration key used by the StorageCoordinator to look up this provider at runtime (e.g. "hfs" for the default Haley FileSystem provider, "b2-prod", "s3-east-1", "azure-blob-tier1"). Must match the key passed to AddProvider() at application startup.',
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Row creation timestamp (UTC).',
   `description` text DEFAULT NULL COMMENT 'Free-text description for operators (e.g. "Backblaze B2 production bucket — us-west-004, 1 TB allocated, auto-delete after 7 years").',
-  PRIMARY KEY (`id`)
+  `display_name` varchar(120) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unq_provider` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='A named storage backend — the HOW of file storage, not the WHERE.\nExamples: "hfs" = Haley FileSystem (default local disk provider), "b2" = Backblaze B2, "s3-east" = AWS S3 us-east-1, "azure-blob" = Azure Blob Storage.\nThe application registers provider implementations at startup: AddProvider("b2", new BackblazeProvider()). This table is the authoritative record of which backend names are known to the system.\nOne provider name can serve many workspaces and modules via different profile_info rows — the provider says HOW to talk to the storage service; the profile_info.metadata says WHERE (which bucket / region / path prefix).';
 
 -- Data exporting was unselected.
@@ -144,7 +150,7 @@ CREATE TABLE IF NOT EXISTS `provider` (
 CREATE TABLE IF NOT EXISTS `workspace` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Auto-increment surrogate key.',
   `cuid` varchar(48) NOT NULL COMMENT 'Deterministic compact-N GUID derived from SHA-256(client_name##module_name##workspace_name). The StorageCoordinator uses this as the cache key to resolve the workspace base path and provider entirely in memory, with no DB query needed per request.',
-  `guid` varchar(48) NOT NULL COMMENT 'Random GUID assigned at creation. Advisory only — CUID is the primary routing key.',
+  `guid` varchar(42) NOT NULL COMMENT 'CUID generated from the name. Own name hash (not hierarchy aware)',
   `parent` int(11) NOT NULL COMMENT 'FK to module.id. Every workspace belongs to exactly one module.',
   `name` varchar(120) NOT NULL COMMENT 'Machine-usable slug (e.g. "user-files", "invoices-2024", "global-templates"). Combined with client and module names to derive the CUID. Unique per module.',
   `display_name` varchar(120) NOT NULL COMMENT 'Human-readable label shown in UIs (e.g. "User File Archive", "2024 Invoices"). No effect on path computation or CUID derivation.',
