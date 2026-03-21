@@ -1,8 +1,8 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 using System.Collections.Generic;
 
 namespace Haley.Models {
-    public class VaultSummaryResponse :Feedback, IVaultSummaryResponse {
+    public class VaultSummaryResponse :Feedback, IStorageSummaryResponse {
         public int Passed { get; set; }
         public int Failed { get; set; }
         public string TotalSizeUploaded { get; set; }

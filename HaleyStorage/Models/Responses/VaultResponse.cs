@@ -1,4 +1,4 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 
 namespace Haley.Models {
 

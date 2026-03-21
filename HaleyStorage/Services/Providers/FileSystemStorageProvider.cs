@@ -26,8 +26,7 @@ namespace Haley.Services {
 
         // ─── Write ────────────────────────────────────────────────────────────
 
-        public async Task<ProviderWriteResult> WriteAsync(
-            string storagePath, Stream dataStream, int bufferSize, ExistConflictResolveMode conflictMode) {
+        public async Task<ProviderWriteResult> WriteAsync(string storagePath, Stream dataStream, int bufferSize, ExistConflictResolveMode conflictMode) {
 
             // 1. Ensure the sharded directory structure exists.
             var targetDir = Path.GetDirectoryName(storagePath);
@@ -38,9 +37,7 @@ namespace Haley.Services {
 
             if (!alreadyExists) {
                 // Simple write — no conflict.
-                return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)
-                    ? ProviderWriteResult.Ok()
-                    : ProviderWriteResult.Fail("Failed to write file.");
+                return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)? ProviderWriteResult.Ok() : ProviderWriteResult.Fail("Failed to write file.");
             }
 
             // 2. File exists — apply conflict mode.
@@ -52,18 +49,14 @@ namespace Haley.Services {
                 return ProviderWriteResult.ExistsError();
 
                 case ExistConflictResolveMode.Replace:
-                return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)
-                    ? ProviderWriteResult.Ok(alreadyExisted: true, message: "Replaced.")
-                    : ProviderWriteResult.Fail("Failed to replace file.");
+                return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)? ProviderWriteResult.Ok(alreadyExisted: true, message: "Replaced.") : ProviderWriteResult.Fail("Failed to replace file.");
 
                 case ExistConflictResolveMode.Revise:
                 // Copy current file to a versioned name, then overwrite the main path.
                 if (DirectoryUtils.PopulateVersionedPath(targetDir, storagePath, out var versionPath)) {
                     try {
                         if (await DirectoryUtils.TryCopyFileAsync(storagePath, versionPath)) {
-                            return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)
-                                ? ProviderWriteResult.Ok(alreadyExisted: true, message: "Revised.")
-                                : ProviderWriteResult.Fail("Failed to write revised file.");
+                            return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)? ProviderWriteResult.Ok(alreadyExisted: true, message: "Revised.") : ProviderWriteResult.Fail("Failed to write revised file.");
                         }
                     } catch (Exception) {
                         await versionPath.TryDeleteFile();
@@ -78,14 +71,11 @@ namespace Haley.Services {
 
         // ─── Read ─────────────────────────────────────────────────────────────
 
-        public async Task<ProviderReadResult> ReadAsync(
-            string storagePath, bool autoSearchExtension = true,
-            StringComparison nameComparison = StringComparison.OrdinalIgnoreCase) {
+        public async Task<ProviderReadResult> ReadAsync(string storagePath, bool autoSearchExtension = true, StringComparison nameComparison = StringComparison.OrdinalIgnoreCase) {
 
             string resolvedPath = storagePath;
 
-            if (!File.Exists(resolvedPath) && autoSearchExtension
-                && string.IsNullOrWhiteSpace(Path.GetExtension(storagePath))) {
+            if (!File.Exists(resolvedPath) && autoSearchExtension && string.IsNullOrWhiteSpace(Path.GetExtension(storagePath))) {
 
                 var dir = Path.GetDirectoryName(storagePath);
                 var nameWithoutExt = Path.GetFileNameWithoutExtension(storagePath);
@@ -93,9 +83,7 @@ namespace Haley.Services {
                 if (!Directory.Exists(dir))
                     return ProviderReadResult.Fail("The storage directory doesn't exist.");
 
-                var matches = new DirectoryInfo(dir).GetFiles()
-                    .Where(f => Path.GetFileNameWithoutExtension(f.Name).Equals(nameWithoutExt, nameComparison))
-                    .ToList();
+                var matches = new DirectoryInfo(dir).GetFiles().Where(f => Path.GetFileNameWithoutExtension(f.Name).Equals(nameWithoutExt, nameComparison)).ToList();
 
                 if (matches.Count == 1) {
                     resolvedPath = matches[0].FullName;
@@ -129,8 +117,7 @@ namespace Haley.Services {
         /// across a balanced directory tree instead of a single flat folder.
         /// Example: logicalId="1234567", depth=2, len=2 → "12/34/1234567.mp4"
         /// </summary>
-        public string BuildStorageRef(string logicalId, string extension,
-            Func<bool, (int length, int depth)> splitProvider, string suffix) {
+        public string BuildStorageRef(string logicalId, string extension, Func<bool, (int length, int depth)> splitProvider, string suffix) {
             return StorageUtils.PreparePath(logicalId, splitProvider, suffix: suffix, extension: extension);
         }
 

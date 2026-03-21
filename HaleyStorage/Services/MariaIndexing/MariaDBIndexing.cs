@@ -1,4 +1,4 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 using Haley.Models;
 using Haley.Services;
 using Microsoft.Extensions.Logging;
@@ -88,13 +88,9 @@ namespace Haley.Utils {
         /// guarding against leaked transactions after server restarts or uncaught exceptions.
         /// </summary>
         void CleanupStaleHandlers() {
-            var staleKeys = _handlers
-                .Where(kvp => DateTime.UtcNow - kvp.Value.created > _handlerMaxAge)
-                .Select(kvp => kvp.Key)
-                .ToList();
+            var staleKeys = _handlers.Where(kvp => DateTime.UtcNow - kvp.Value.created > _handlerMaxAge).Select(kvp => kvp.Key).ToList();
             foreach (var key in staleKeys) {
-                if (_handlers.TryRemove(key, out var entry))
-                    entry.handler?.Rollback();
+                if (_handlers.TryRemove(key, out var entry)) entry.handler?.Rollback();
             }
         }
     }

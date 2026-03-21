@@ -1,4 +1,4 @@
-﻿
+
 namespace Haley.Abstractions {
     public interface IVaultFolderRoute : IVaultRoute {
         long Id { get; }

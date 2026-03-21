@@ -3,7 +3,7 @@ using System;
 namespace Haley.Abstractions {
     /// <summary>
     /// Extends <see cref="IVaultObject"/> with the storage-system name (<see cref="StorageName"/>)
-    /// and schema version. Implemented by <c>VaultProfile</c> and anything that participates
+    /// and schema version. Implemented by <c>VaultStorable</c> and anything that participates
     /// directly in path generation (workspaces, registration profiles).
     /// Clients and modules use <see cref="IVaultObject"/> only — they do not own a storage name
     /// at the interface level.

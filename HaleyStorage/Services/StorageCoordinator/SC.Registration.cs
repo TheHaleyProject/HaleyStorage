@@ -1,4 +1,4 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 using Haley.Enums;
 using Haley.Models;
 using Haley.Utils;
@@ -18,30 +18,31 @@ namespace Haley.Services {
 
         /// <summary>Convenience overload — registers a client by name with an optional password.</summary>
         public Task<IFeedback> RegisterClient(string client_name, string password = null) {
-            return RegisterClient(new VaultProfile(client_name) { });
+            return RegisterClient(new VaultObject(client_name), password);
         }
         /// <summary>Convenience overload — registers a module by name under the given client.</summary>
-        public Task<IFeedback> RegisterModule(string module_name=null, string client_name = null) {
-            return RegisterModule(new VaultProfile(module_name), new VaultProfile(client_name));
+        public Task<IFeedback> RegisterModule(string module_name = null, string client_name = null) {
+            return RegisterModule(new VaultObject(module_name), new VaultObject(client_name));
         }
         /// <summary>Convenience overload — registers a workspace by name under the given client and module.</summary>
-        public Task<IFeedback> RegisterWorkSpace(string workspace_name=null, string client_name = null, string module_name = null, StorageNameMode content_control = StorageNameMode.Number, StorageNameParseMode content_pmode = StorageNameParseMode.Generate, bool is_virtual = false) {
-            return RegisterWorkSpace(new VaultProfile(workspace_name, StorageNameMode.Guid, content_pmode, isVirtual:is_virtual), new VaultProfile(client_name), new VaultProfile(module_name), content_control, content_pmode);
+        public Task<IFeedback> RegisterWorkSpace(string workspace_name = null, string client_name = null, string module_name = null, VaultNameMode content_control = VaultNameMode.Number, VaultNameParseMode content_pmode = VaultNameParseMode.Generate, bool is_virtual = false) {
+            return RegisterWorkSpace(new VaultObject(workspace_name), new VaultObject(client_name), new VaultObject(module_name), content_control, content_pmode, is_virtual);
         }
 
         /// <summary>
         /// Registers a client: creates the physical directory (FS), writes <c>.client.dss.meta</c>,
         /// persists the record in the indexer, and registers a default module under it.
+        /// Clients always use <c>Guid</c> naming — no configuration needed.
         /// </summary>
-        /// <param name="client">Client info; <see cref="VaultProfile.ControlMode"/> is forced to <c>Guid</c>.</param>
         /// <param name="password">Plaintext password; defaults to <c>"admin"</c> when null.</param>
-        public async Task<IFeedback> RegisterClient(IVaultStorable client, string password = null) {
+        public async Task<IFeedback> RegisterClient(IVaultObject client, string password = null) {
             var result = new Feedback();
             if (client == null) return new Feedback(false, "Name cannot be empty");
             if (!client.TryValidate(out var msg)) return new Feedback(false, msg);
-            if (client is VaultProfile cp) cp.ControlMode = StorageNameMode.Guid;
             if (string.IsNullOrWhiteSpace(password)) password = DEFAULTPWD;
-            var cInput = GenerateBasePath(client, Enums.VaultObjectType.Client);
+            // VaultStorable is the internal path-generation carrier — callers never see it.
+            var pathCarrier = new VaultStorable(client.DisplayName) { NameMode = VaultNameMode.Guid };
+            var cInput = GenerateBasePath(pathCarrier, VaultObjectType.Client);
             var path = Path.Combine(BasePath, cInput.path);
 
             bool isFs = GetDefaultProvider() is FileSystemStorageProvider;
@@ -57,7 +58,7 @@ namespace Haley.Services {
             var encrypt = RandomUtils.GetString(512);
             var pwdHash = HashUtils.ComputeHash(password, HashMethod.Sha256);
 
-            var clientInfo = client.MapProperties(new VaultClient(pwdHash, signing, encrypt, client.DisplayName) { StorageRef = cInput.path });
+            var clientInfo = client.MapProperties(new VaultClient(pwdHash, signing, encrypt, client.DisplayName));
             if (WriteMode && isFs) {
                 var metaFile = Path.Combine(path, CLIENTMETAFILE);
                 File.WriteAllText(metaFile, clientInfo.ToJson());
@@ -70,7 +71,7 @@ namespace Haley.Services {
             var idxResult = await Indexer.RegisterClient(clientInfo);
             result.Result = idxResult.Result;
 
-            await RegisterModule(new VaultProfile(null), client);
+            //await RegisterModule(new VaultObject(null), client); //For every client, we try to register a default module.. not necessary.. should not be allowed. It ends up with unexcepted number of databases.
             return result;
         }
 
@@ -78,19 +79,21 @@ namespace Haley.Services {
         /// Registers a module under an existing client: creates the physical directory (FS),
         /// writes <c>.module.dss.meta</c>, persists in the indexer, and registers a default workspace.
         /// </summary>
-        public async Task<IFeedback> RegisterModule(IVaultStorable module, IVaultStorable client) {
+        public async Task<IFeedback> RegisterModule(IVaultObject module, IVaultObject client) {
             string msg = string.Empty;
             if (!module.TryValidate(out msg)) new Feedback(false, msg);
             if (!client.TryValidate(out msg)) new Feedback(false, msg);
 
             bool isFs = GetDefaultProvider() is FileSystemStorageProvider;
 
-            var client_path = GenerateBasePath(client, Enums.VaultObjectType.Client).path;
+            var clientCarrier = new VaultStorable(client.DisplayName) { NameMode = VaultNameMode.Guid };
+            var client_path = GenerateBasePath(clientCarrier, Enums.VaultObjectType.Client).path;
             var bPath = Path.Combine(BasePath, client_path);
             if (isFs && !Directory.Exists(bPath)) return new Feedback(false, $@"Directory not found for the client {client.DisplayName}");
             if (client_path.Contains("..")) return new Feedback(false, "Client Path contains invalid characters");
 
-            var modPath = GenerateBasePath(module, Enums.VaultObjectType.Module).path;
+            var modCarrier = new VaultStorable(module.DisplayName);
+            var modPath = GenerateBasePath(modCarrier, Enums.VaultObjectType.Module).path;
             bPath = Path.Combine(bPath, modPath);
 
             if (isFs) {
@@ -98,7 +101,7 @@ namespace Haley.Services {
                     Directory.CreateDirectory(bPath);
             }
 
-            var moduleInfo = module.MapProperties(new StorageModule(client.Name, module.DisplayName) { StorageRef = modPath });
+            var moduleInfo = module.MapProperties(new VaultModule(client.Name, module.DisplayName));
             if (WriteMode && isFs) {
                 var metaFile = Path.Combine(bPath, MODULEMETAFILE);
                 File.WriteAllText(metaFile, moduleInfo.ToJson());
@@ -112,7 +115,7 @@ namespace Haley.Services {
             var idxResult = await Indexer.RegisterModule(moduleInfo);
             result.Result = idxResult.Result;
 
-            await RegisterWorkSpace(new VaultProfile(null, StorageNameMode.Guid, StorageNameParseMode.Generate, isVirtual: true), client, module);
+            await RegisterWorkSpace(new VaultObject(null), client, module, VaultNameMode.Guid, VaultNameParseMode.Generate, is_virtual: true); //for a module, we can autocreate the workspace.. because user will mainly provide only client and moduel name.
             return result;
         }
 
@@ -122,7 +125,8 @@ namespace Haley.Services {
         /// </summary>
         /// <param name="content_control">Whether file identifiers are auto-increment numbers (<c>Number</c>) or compact-N GUIDs (<c>Guid</c>).</param>
         /// <param name="content_pmode">Whether file names are parsed from caller input or auto-generated by the indexer.</param>
-        public async Task<IFeedback> RegisterWorkSpace(IVaultStorable wspace, IVaultStorable client, IVaultStorable module, StorageNameMode content_control = StorageNameMode.Number, StorageNameParseMode content_pmode = StorageNameParseMode.Generate) {
+        /// <param name="is_virtual">When true, no physical directory is created (DB-only workspace).</param>
+        public async Task<IFeedback> RegisterWorkSpace(IVaultObject wspace, IVaultObject client, IVaultObject module, VaultNameMode content_control = VaultNameMode.Number, VaultNameParseMode content_pmode = VaultNameParseMode.Generate, bool is_virtual = false) {
             string msg = string.Empty;
             if (!wspace.TryValidate(out msg)) throw new Exception(msg);
             if (!client.TryValidate(out msg)) throw new Exception(msg);
@@ -131,23 +135,26 @@ namespace Haley.Services {
 
             bool isFs = GetDefaultProvider() is FileSystemStorageProvider;
 
-            var cliPath = GenerateBasePath(client, Enums.VaultObjectType.Client).path;
-            var modPath = GenerateBasePath(module, Enums.VaultObjectType.Module).path;
+            var clientCarrier = new VaultStorable(client.DisplayName) { NameMode = VaultNameMode.Guid };
+            var modCarrier = new VaultStorable(module.DisplayName);
+            var cliPath = GenerateBasePath(clientCarrier, Enums.VaultObjectType.Client).path;
+            var modPath = GenerateBasePath(modCarrier, Enums.VaultObjectType.Module).path;
 
             var path = Path.Combine(BasePath, cliPath, modPath);
             if (isFs && !Directory.Exists(path)) return new Feedback(false, $@"Unable to locate the base path for Client: {client.DisplayName}, Module: {module.DisplayName}");
             if (path.Contains("..")) return new Feedback(false, "Invalid characters found in the base path.");
 
             string wsPath = string.Empty;
-            if (!(wspace is VaultProfile wp && wp.IsVirtual)) {
-                wsPath = GenerateBasePath(wspace, Enums.VaultObjectType.WorkSpace).path;
+            if (!is_virtual) {
+                var wsCarrier = new VaultStorable(wspace.DisplayName, VaultNameMode.Guid, content_pmode);
+                wsPath = GenerateBasePath(wsCarrier, Enums.VaultObjectType.WorkSpace).path;
                 path = Path.Combine(path, wsPath);
 
                 if (isFs && !Directory.Exists(path) && WriteMode)
                     Directory.CreateDirectory(path);
             }
 
-            var wsInfo = wspace.MapProperties(new StorageWorkspace(client.Name, module.Name, wspace.DisplayName) { Base = wsPath, NameMode = content_control, ParseMode = content_pmode });
+            var wsInfo = wspace.MapProperties(new VaultWorkSpace(client.Name, module.Name, wspace.DisplayName, is_virtual) { Base = wsPath, NameMode = content_control, ParseMode = content_pmode });
             if (WriteMode && isFs) {
                 var metaFile = Path.Combine(path, WORKSPACEMETAFILE);
                 File.WriteAllText(metaFile, wsInfo.ToJson());
@@ -162,7 +169,7 @@ namespace Haley.Services {
             result.Result = idxResult.Result;
             return result;
         }
-       
+
         /// <summary>
         /// Reads the <c>Seed:sources</c> configuration section (or the provided <paramref name="section"/>)
         /// and registers all clients, modules, and workspaces declared there.
@@ -177,10 +184,7 @@ namespace Haley.Services {
                     if (section == null) return result.SetMessage("Cannot proceed with empty configuration");
                 }
                 var sources = section.AsDictionaryList();
-                var sourceList = sources
-                    .Where(p => p.Count > 0 && p.First().Value is Dictionary<string, object>)
-                    .Select(q => ((Dictionary<string, object>)q.First().Value).Map<DSSRegInfo>())
-                    .ToList();
+                var sourceList = sources.Where(p => p.Count > 0 && p.First().Value is Dictionary<string, object>).Select(q => ((Dictionary<string, object>)q.First().Value).Map<DSSRegInfo>()).ToList();
                 if (sourceList == null || sourceList.Count < 0) return result.SetMessage("Unable to parse registration info from the given configuration section.");
 
                 //First get all the case sensitive clients.
@@ -215,11 +219,11 @@ namespace Haley.Services {
                         wspaces.Add(wsKey);
                     }
                 }
+
                 // Restore any persisted workspace profile overrides from the DB so provider
                 // resolution is correct after a process restart, without requiring explicit
                 // ConfigureWorkspaceProviders(...) calls at startup.
-                if (Indexer != null)
-                    await Indexer.RehydrateWorkspaceProfilesAsync();
+                if (Indexer != null) await Indexer.RehydrateWorkspaceProfilesAsync();
 
                 return result.SetStatus(true).SetMessage("Successfully registered.");
             } catch (Exception ex) {

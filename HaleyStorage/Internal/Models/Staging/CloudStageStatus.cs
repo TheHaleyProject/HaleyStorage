@@ -5,7 +5,7 @@ namespace Haley.Models {
     /// Response body of <c>GET /api/stage/status/{sessionId}</c>.
     /// Used by <c>CloudApiStagingProvider.Exists</c> and <c>GetSize</c> to avoid two round-trips.
     /// </summary>
-    public class CloudStageStatus {
+    internal class CloudStageStatus {
         /// <summary>Session identifier.</summary>
         public string SessionId { get; set; }
         /// <summary>Byte count of the stored object. 0 until <c>upload</c> completes.</summary>

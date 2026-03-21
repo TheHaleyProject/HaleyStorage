@@ -54,11 +54,7 @@ namespace Haley.Models {
             UpdateCUID();
             return this;
         }
-        void UpdateCUID() {
-            if (Client == null) return;
-            if (Module != null) Module.UpdateCUID(Client.DisplayName);
-            if (Workspace != null) Workspace.UpdateCUID(Client.DisplayName, Module?.DisplayName);
-        }
+        void UpdateCUID() { if (Client == null) return; if (Module != null) Module.UpdateCUID(Client.DisplayName); if (Workspace != null) Workspace.UpdateCUID(Client.DisplayName, Module?.DisplayName); }
 
         /// <summary>Sets the caller-requested file name (used by path resolution to look up or generate the storage ref).</summary>
         public IVaultReadRequest SetRequestedName(string name) {
@@ -78,6 +74,12 @@ namespace Haley.Models {
             return this;
         }
 
+        /// <summary>Sets the workspace by name. Pass <paramref name="isVirtual"/> true for the DB-only default workspace.</summary>
+        public IVaultReadRequest SetWorkspace(string name, bool isVirtual = false) {
+            Workspace = new VaultStorable(name, isVirtual: isVirtual).UpdateCUID(Client?.DisplayName, Module?.DisplayName);
+            return this;
+        }
+
         /// <summary>When <paramref name="readOnly"/> is <c>true</c>, prevents DB writes during path resolution (e.g. no document registration).</summary>
         public IVaultReadRequest SetMode(bool readOnly) {
             ReadOnlyMode = readOnly;
@@ -89,9 +91,9 @@ namespace Haley.Models {
         public StorageReadRequest(string client_name,string module_name) :this(client_name, module_name, null) { }
 
         public  StorageReadRequest(string client_name, string module_name, string workspace_name) {
-            Client = new VaultProfile(client_name);
-            Module = new VaultProfile(module_name).UpdateCUID(Client.DisplayName,module_name);
-            Workspace = new VaultProfile(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName);
+            Client = new VaultStorable(client_name);
+            Module = new VaultStorable(module_name).UpdateCUID(Client.DisplayName,module_name);
+            Workspace = new VaultStorable(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName);
         }
     }
 }

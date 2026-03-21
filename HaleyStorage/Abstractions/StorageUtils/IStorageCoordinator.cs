@@ -1,4 +1,4 @@
-﻿using Haley.Enums;
+using Haley.Enums;
 using System.IO;
 using System.Threading.Tasks;
 using Haley.Models;
@@ -26,9 +26,7 @@ namespace Haley.Abstractions {
         /// </summary>
         IStorageProvider GetPrimaryProvider(IVaultReadRequest request);
 
-        bool ConfigureModuleProviders(string moduleCuid, string storageProviderKey,
-            string stagingProviderKey = null, StorageProfileMode mode = StorageProfileMode.DirectSave,
-            long profileInfoId = 0);
+        bool ConfigureModuleProviders(string moduleCuid, string storageProviderKey, string stagingProviderKey = null, VaultProfileMode mode = VaultProfileMode.DirectSave, long profileInfoId = 0);
 
         /// <summary>
         /// Sets the runtime provider routing for a registered workspace, overriding the module-level
@@ -36,8 +34,7 @@ namespace Haley.Abstractions {
         /// disable staging at workspace level. Both keys must already be registered with <c>AddProvider</c>.
         /// Returns false if the workspace CUID is not found in the indexer cache.
         /// </summary>
-        bool ConfigureWorkspaceProviders(string workspaceCuid, string storageProviderKey,
-            string stagingProviderKey = null, StorageProfileMode mode = StorageProfileMode.DirectSave);
+        bool ConfigureWorkspaceProviders(string workspaceCuid, string storageProviderKey, string stagingProviderKey = null, VaultProfileMode mode = VaultProfileMode.DirectSave);
 
         // ── Placeholder / Background-Move ────────────────────────────────────
 
@@ -73,7 +70,6 @@ namespace Haley.Abstractions {
         /// <param name="toStaging">True if the file was copied to staging rather than primary storage.</param>
         /// <param name="size">File size in bytes, or null to auto-detect (FS only).</param>
         /// <param name="hash">Optional SHA-256 hash of the copied file.</param>
-        Task<IFeedback> FinalizePlaceholder(IVaultReadRequest request, long versionId,
-            bool toStaging = false, long? size = null, string hash = null);
+        Task<IFeedback> FinalizePlaceholder(IVaultReadRequest request, long versionId, bool toStaging = false, long? size = null, string hash = null);
     }
 }

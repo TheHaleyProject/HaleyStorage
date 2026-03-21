@@ -1,4 +1,4 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 using Haley.Utils;
 using System;
 using System.Collections.Generic;
@@ -13,7 +13,7 @@ namespace Haley.Models {
     /// Describes a single client/module/workspace registration entry consumed by
     /// <see cref="StorageCoordinator.RegisterFromSource"/>.
     /// </summary>
-    public class DSSRegInfo {
+    internal class DSSRegInfo {
         [JsonPropertyName("client")]
         public string Client { get; set; }
         [JsonPropertyName("module")]
@@ -23,9 +23,9 @@ namespace Haley.Models {
         [JsonPropertyName("space")]
         public string Workspace { get; set; }
         [JsonPropertyName("control")]
-        public StorageNameMode Control { get; set; }
+        public VaultNameMode Control { get; set; }
         [JsonPropertyName("parse")]
-        public StorageNameParseMode Parse { get; set; }
+        public VaultNameParseMode Parse { get; set; }
         [JsonPropertyName("virtual")]
         public bool IsVirtual { get; set; }
         [JsonPropertyName("case-sensitive")]

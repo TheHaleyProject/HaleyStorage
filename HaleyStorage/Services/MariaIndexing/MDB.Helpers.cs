@@ -1,29 +1,9 @@
-﻿using Haley.Abstractions;
-using Haley.Enums;
+using Haley.Abstractions;
 using Haley.Models;
-using Haley.Utils;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
-using System.Security.AccessControl;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Xml.Linq;
-using System.Xml.XPath;
 using static Haley.Internal.IndexingConstant;
 using static Haley.Internal.IndexingQueries;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
     /// <summary>
@@ -60,11 +40,7 @@ namespace Haley.Utils {
             var dbid = request.Scope.Module.Cuid.ToString("N");
             var wspace = _cache[wsCuidKey];
             //Check if workspace exists in the database.
-            var ws = await InsertAndFetchIDScalar(dbid,
-                () => (INSTANCE.WORKSPACE.EXISTS, Consolidate((ID, wspace.Id))),
-                () => (INSTANCE.WORKSPACE.INSERT, Consolidate((ID, wspace.Id))),
-                readOnly:request.ReadOnlyMode,
-                $@"Unable to insert the workspace  {wspace.Id}"); //Workspace registration can happen without transaction, as it might be needed for other items later.
+            var ws = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.WORKSPACE.EXISTS, Consolidate((ID, wspace.Id))), () => (INSTANCE.WORKSPACE.INSERT, Consolidate((ID, wspace.Id))), readOnly:request.ReadOnlyMode, $@"Unable to insert the workspace  {wspace.Id}"); //Workspace registration can happen without transaction, as it might be needed for other items later.
             return (true, wspace.Id);
         }
 
@@ -120,19 +96,19 @@ namespace Haley.Utils {
             ITransactionHandler handler = GetTransactionHandlerCache(callId, dbid);
 
             var checkInput = check.Invoke();
-            object info = null;
-            if (preCheck) info = await _agw.Scalar(new AdapterArgs(dbid) { Query = checkInput.query }.ForTransaction(handler,false) , checkInput.parameters);
+            var load = new DbExecutionLoad(default, handler, false);
+            var checkArgs = Array.ConvertAll(checkInput.parameters, p => (DbArg)p);
+            long? id = null;
+            if (preCheck) id = await _agw.ScalarAsync<long?>(dbid, checkInput.query, load, checkArgs);
 
-            if (info == null) {
+            if (!id.HasValue) {
                 if (insert == null || readOnly) return 0;
                 var insertInput = insert.Invoke();
-                await _agw.NonQuery(new AdapterArgs(dbid) { Query = insertInput.query }.ForTransaction(handler,false), insertInput.parameters);
-
-                info = await _agw.Scalar(new AdapterArgs(dbid) { Query = checkInput.query }.ForTransaction(handler,false), checkInput.parameters);
+                await _agw.ExecAsync(dbid, insertInput.query, load, Array.ConvertAll(insertInput.parameters, p => (DbArg)p));
+                id = await _agw.ScalarAsync<long?>(dbid, checkInput.query, load, checkArgs);
             }
-            long id = 0;
-            if (info == null || !long.TryParse(info.ToString(), out id)) throw new Exception($@"{failureMessage} from the database {dbid}");
-            return id;
+            if (!id.HasValue) throw new Exception($@"{failureMessage} from the database {dbid}");
+            return id.Value;
         }
 
         /// <summary>
@@ -145,24 +121,23 @@ namespace Haley.Utils {
             var checkInput = check.Invoke();
             ITransactionHandler handler = GetTransactionHandlerCache(callId, dbid);
 
-            object info = null;
-            if (preCheck) info = await _agw.Read(new AdapterArgs(dbid) { Query = checkInput.query, Filter = ResultFilter.FirstDictionary }.ForTransaction(handler,false), checkInput.parameters);
+            var load = new DbExecutionLoad(default, handler, false);
+            var checkArgs = Array.ConvertAll(checkInput.parameters, p => (DbArg)p);
+            DbRow row = null;
+            if (preCheck) row = await _agw.RowAsync(dbid, checkInput.query, load, checkArgs);
 
-            if (info == null || !(info is Dictionary<string, object> dic1) || dic1.Count < 1) {
+            if (row == null || row.Count < 1) {
                 if (insert == null || readOnly) return (0, string.Empty);
                 var insertInput = insert.Invoke();
-                await _agw.NonQuery(new AdapterArgs(dbid) { Query = insertInput.query }.ForTransaction(handler, false), insertInput.parameters);
-                info = await _agw.Read(new AdapterArgs(dbid) { Query = checkInput.query, Filter = ResultFilter.FirstDictionary }.ForTransaction(handler, false), checkInput.parameters);
+                await _agw.ExecAsync(dbid, insertInput.query, load, Array.ConvertAll(insertInput.parameters, p => (DbArg)p));
+                row = await _agw.RowAsync(dbid, checkInput.query, load, checkArgs);
             }
-            long id = 0;
-            if (info == null || !(info is Dictionary<string, object> dic) || dic.Count < 1) throw new Exception($@"{failureMessage} from the database {dbid}");
-            return ((long)dic["id"], (string)dic["uid"]);
+            if (row == null || row.Count < 1) throw new Exception($@"{failureMessage} from the database {dbid}");
+            return (row.GetLong("id"), row.GetString("uid") ?? string.Empty);
         }
 
         /// <summary>Convenience helper that converts a params array of named parameters to an array, matching the expected signature.</summary>
-        (string key,object value)[] Consolidate(params (string, object)[] parameters) {
-            return parameters;
-        }
+        (string key,object value)[] Consolidate(params (string, object)[] parameters) { return parameters; }
 
         /// <summary>
         /// Ensures the name-store chain exists: extension → vault name → name_store composite row.
@@ -192,9 +167,7 @@ namespace Haley.Utils {
         }
 
         /// <summary>Builds the composite cache key used to store transaction handlers: <c>callid###dbid</c> (lowercase dbid).</summary>
-        string GetHandlerKey(string callid, string dbid) {
-            return $@"{callid}###{dbid.ToLower()}";
-        }
+        string GetHandlerKey(string callid, string dbid) { return $@"{callid}###{dbid.ToLower()}"; }
 
         /// <summary>
         /// Core document-registration flow: ensures workspace → directory → name-store → document → doc_version,
@@ -225,28 +198,26 @@ namespace Haley.Utils {
                 if (!dir.status) return result;
                 var ns = await EnsureNameStore(request);
                 if (!ns.status) return result;
-              
+
                 var docInfo = await InsertAndFetchIDRead(dbid,() => (INSTANCE.DOCUMENT.EXISTS, Consolidate((PARENT, dir.result.id), (NAME, ns.id))), callId: request.CallID);
                 bool docExists = docInfo.id != 0;
                 if (!docExists) {
                     // Insert it.
-                    docInfo = await InsertAndFetchIDRead(dbid, 
+                    docInfo = await InsertAndFetchIDRead(dbid,
                         () => (INSTANCE.DOCUMENT.EXISTS, Consolidate((PARENT, dir.result.id), (NAME, ns.id))),
                         ()=> (INSTANCE.DOCUMENT.INSERT, Consolidate((WSPACE,ws.id), (PARENT, dir.result.id), (NAME, ns.id))),
                          readOnly: request.ReadOnlyMode,
                         $@"Unable to insert document with name {request.RequestedName}",false, callId: request.CallID);
                     var dname = Path.GetFileName(request.RequestedName);
-                    await _agw.NonQuery(new AdapterArgs(dbid) { Query = INSTANCE.DOCUMENT.INSERT_INFO }.ForTransaction(handler), (PARENT, docInfo.id), (DNAME, dname));
+                    await _agw.ExecAsync(dbid, INSTANCE.DOCUMENT.INSERT_INFO, new DbExecutionLoad(default, handler), (PARENT, docInfo.id), (DNAME, dname));
                 }
 
                 int version = 1;
                 //If Doc exists.. we just need to revise the version.
                 if (docExists) {
                     //Assuming that there is a version. Get the latest version.
-                    var currentVersion = await _agw.Scalar(new AdapterArgs(dbid) { Query = INSTANCE.DOCVERSION.FIND_LATEST }.ForTransaction(handler), (PARENT, docInfo.id));
-                    if (currentVersion != null && int.TryParse(currentVersion.ToString(),out int cver)) {
-                        version = ++cver;
-                    }
+                    var currentVersion = await _agw.ScalarAsync<int?>(dbid, INSTANCE.DOCVERSION.FIND_LATEST, new DbExecutionLoad(default, handler), (PARENT, docInfo.id));
+                    if (currentVersion.HasValue) version = currentVersion.Value + 1;
                 }
 
                 var dvInfo = await InsertAndFetchIDRead(dbid,
@@ -262,7 +233,7 @@ namespace Haley.Utils {
                         result = (dvInfo.id, dvId);
                     }
                 }
-                
+
                 if (holder != null) {
                     holder.SetCuid(result.guid);
                     holder.Id = result.id;   // IIdentityBase.Id has public setter
@@ -290,26 +261,9 @@ namespace Haley.Utils {
         async Task CreateModuleDBInstance(IVaultObject dirInfo) {
             if (!(dirInfo is IVaultModule info)) return;
             if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid.ToString("N")}";
-            //What if the CUID is changed? Should we use the guid instead? 
-            //But, guid is not unique across clients. So, we use cuid.
             //So, when we create the module, we use the cuid as the database name.
             //TODO : IF A CUID IS CHANGED, THEN WE NEED TO UPDATE THE DATABASE NAME IN THE DB.
-            var sqlFile = Path.Combine(AssemblyUtils.GetBaseDirectory(), DB_SQL_FILE_LOCATION, DB_CLIENT_SQL_FILE);
-            if (!File.Exists(sqlFile)) throw new ArgumentException($@"Master sql for client file is not found. Please check : {DB_CLIENT_SQL_FILE}");
-            //if the file exists, then run this file against the adapter gateway but ignore the db name.
-            var content = File.ReadAllText(sqlFile);
-            //We know that the file itself contains "dss_core" as the schema name. Replace that with new one.
-            var exists = await _agw.Scalar(new AdapterArgs(_key) { ExcludeDBInConString = true, Query = GENERAL.SCHEMA_EXISTS }, (NAME, info.DatabaseName));
-            if (exists == null || !exists.IsNumericType() || !double.TryParse(exists.ToString(),out var id) || id < 1) {
-                content = content.Replace(DB_CLIENT_SEARCH_TERM, info.DatabaseName);
-                //?? Should we run everything in one go or run as separate statements ???
-                var result = await _agw.NonQuery(new AdapterArgs(_key) { ExcludeDBInConString = true, Query = content });
-            }
-            exists = await _agw.Scalar(new AdapterArgs(_key) { ExcludeDBInConString = true, Query = GENERAL.SCHEMA_EXISTS }, (NAME, info.DatabaseName));
-            if (exists == null) throw new ArgumentException($@"Unable to generate the database {info.DatabaseName}");
-            //We create an adapter with this Cuid and store them.
-            _agw.DuplicateAdapter(_key, info.Cuid.ToString("N"), ("database",info.DatabaseName));
-            
+            await _agw.CreateDatabase(new DbCreationArgs(info.Cuid.ToString("N")) { ContentProcessor = (content, dbname) => { return content.Replace(DB_CLIENT_SEARCH_TERM, dbname); }, FallBackDBName = info.DatabaseName, DBName = info.DatabaseName, SQLPath = Path.Combine(AssemblyUtils.GetBaseDirectory(), DB_SQL_FILE_LOCATION, DB_CLIENT_SQL_FILE), CloningAdapterKey = _key });
         }
     }
 }

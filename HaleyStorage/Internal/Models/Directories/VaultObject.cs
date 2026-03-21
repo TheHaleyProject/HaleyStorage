@@ -11,7 +11,7 @@ namespace Haley.Models {
     /// Base implementation of <see cref="IVaultObject"/> that owns the display name, DB-safe name,
     /// deterministic <see cref="Guid"/> (SHA-256 hash of the name), and the mutable <see cref="Cuid"/>
     /// (composite SHA-256 GUID derived from parent names).
-    /// Setting <see cref="DisplayName"/> automatically derives <see cref="VaultObject.Name"/> and <see cref="Guid"/>.
+    /// Setting <see cref="DisplayName"/> automatically derives <see cref="VaultObject.Name"/> and <see cref="VaultObject.Guid"/>.
     /// </summary>
     internal class VaultObject : IVaultObject {
         public string Name { get; set; }
@@ -19,7 +19,7 @@ namespace Haley.Models {
         [IgnoreMapping] //Important.. should not map this.
         public Guid Cuid { get; protected set; }
         public Guid Guid { get; private set; }              // Guid — matches IIdentityBase.Guid
-        public string Key => Cuid == System.Guid.Empty ? Name : Cuid.ToString("N"); // IIdentityBase.Key
+        public string Key => Cuid == Guid.Empty ? Name : Cuid.ToString("N"); // IIdentityBase.Key
 
         private string _displayName;
         public string DisplayName {

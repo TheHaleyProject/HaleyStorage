@@ -21,7 +21,7 @@ namespace Haley.Services {
     ///         are fetched via <see cref="System.Net.Http.HttpClient"/> so the on-prem server is not
     ///         a bandwidth bottleneck. Otherwise falls back to <c>ReadAsync</c>.</item>
     ///   <item>Writes bytes to the primary provider at the pre-computed <c>storage_ref</c>.</item>
-    ///   <item>Calls <c>UpdateVersionPromotion</c> with new flags based on <see cref="StorageProfileMode"/>:
+    ///   <item>Calls <c>UpdateVersionPromotion</c> with new flags based on <see cref="VaultProfileMode"/>:
     ///         <c>StageAndMove → 8|64</c>, <c>StageAndRetainCopy → 4|8|64</c>.</item>
     ///   <item>For <c>StageAndMove</c>: calls <c>DeleteAsync</c> on the staging provider (non-fatal on failure).</item>
     /// </list>
@@ -38,18 +38,14 @@ namespace Haley.Services {
         readonly ILogger _logger;
         readonly ConcurrentDictionary<long, byte> _inFlight = new();
 
-        public StagingPromotionWorker(
-            IStorageCoordinator coordinator,
-            StagingPromotionConfig config,
-            ILogger<StagingPromotionWorker> logger = null) {
+        public StagingPromotionWorker(IStorageCoordinator coordinator, StagingPromotionConfig config, ILogger<StagingPromotionWorker> logger = null) {
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             _config      = config      ?? throw new ArgumentNullException(nameof(config));
             _logger      = logger;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-            _logger?.LogInformation("StagingPromotionWorker started. Module: {ModuleCuid}, interval: {Sec}s",
-                _config.ModuleCuid, _config.PollingIntervalSeconds);
+            _logger?.LogInformation("StagingPromotionWorker started. Module: {ModuleCuid}, interval: {Sec}s", _config.ModuleCuid, _config.PollingIntervalSeconds);
 
             while (!stoppingToken.IsCancellationRequested) {
                 try {
@@ -128,23 +124,19 @@ namespace Haley.Services {
             try { writtenSize = primary.GetSize(ver.StorageRef); } catch { /* non-fatal */ }
 
             // Step 3: update DB — set storage_ref, new flags, synced_at, and the confirmed size.
-            int newFlags = mode == StorageProfileMode.StageAndRetainCopy
-                ? 4 | 8 | 64    // InStaging | InStorage | Completed — cloud copy kept
-                : 8 | 64;       // InStorage | Completed — cloud copy to be deleted
+            int newFlags = mode == VaultProfileMode.StageAndRetainCopy ? 4 | 8 | 64 : 8 | 64;
 
-            var updateFb = await indexer.UpdateVersionPromotion(
-                ver.ModuleCuid, ver.VersionId, ver.StorageRef, newFlags, DateTime.UtcNow, writtenSize);
+            var updateFb = await indexer.UpdateVersionPromotion( ver.ModuleCuid, ver.VersionId, ver.StorageRef, newFlags, DateTime.UtcNow, writtenSize);
 
             if (updateFb == null || !updateFb.Status) {
                 _logger?.LogError("UpdateVersionPromotion failed for versionId={Vid}: {Msg}", ver.VersionId, updateFb?.Message);
                 return;
             }
 
-            _logger?.LogInformation("Promoted versionId={Vid} → {Ref} (flags={Flags})",
-                ver.VersionId, ver.StorageRef, newFlags);
+            _logger?.LogInformation("Promoted versionId={Vid} → {Ref} (flags={Flags})", ver.VersionId, ver.StorageRef, newFlags);
 
             // Step 4: delete from staging (StageAndMove only — failure is non-fatal).
-            if (mode != StorageProfileMode.StageAndRetainCopy) {
+            if (mode != VaultProfileMode.StageAndRetainCopy) {
                 try {
                     await staging.DeleteAsync(ver.StagingRef);
                 } catch (Exception ex) {
@@ -163,8 +155,7 @@ namespace Haley.Services {
         /// <paramref name="config"/> must specify the module CUID that owns the staged files.
         /// The worker resolves its <see cref="IStorageCoordinator"/> from the DI container.
         /// </summary>
-        public static IServiceCollection AddStagingPromotion(
-            this IServiceCollection services, StagingPromotionConfig config) {
+        public static IServiceCollection AddStagingPromotion(this IServiceCollection services, StagingPromotionConfig config) {
             if (config == null) throw new ArgumentNullException(nameof(config));
             services.AddSingleton(config);
             services.AddHostedService<StagingPromotionWorker>();

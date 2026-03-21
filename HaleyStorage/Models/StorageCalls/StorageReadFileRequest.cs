@@ -1,4 +1,4 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 using System.Collections.Generic;
 using Haley.Enums;
 

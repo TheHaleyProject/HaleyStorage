@@ -51,8 +51,7 @@ namespace Haley.Services {
         /// The cloud service uses flat session IDs as object keys.
         /// Extension is intentionally omitted; the cloud session is content-agnostic.
         /// </summary>
-        public string BuildStorageRef(string logicalId, string extension,
-            Func<bool, (int length, int depth)> splitProvider, string suffix)
+        public string BuildStorageRef(string logicalId, string extension, Func<bool, (int length, int depth)> splitProvider, string suffix)
             => logicalId;
 
         // ── Write ─────────────────────────────────────────────────────────────
@@ -62,8 +61,7 @@ namespace Haley.Services {
         /// then POSTs the byte stream to the upload endpoint.
         /// Re-uploading the same session ID is idempotent (cloud uses Replace mode).
         /// </summary>
-        public async Task<ProviderWriteResult> WriteAsync(
-            string storagePath, Stream dataStream, int bufferSize, ExistConflictResolveMode conflictMode) {
+        public async Task<ProviderWriteResult> WriteAsync(string storagePath, Stream dataStream, int bufferSize, ExistConflictResolveMode conflictMode) {
             try {
                 // Step 1: create session (idempotent — server uses Replace if session exists).
                 var sessionBody = JsonSerializer.Serialize(new { sessionId = storagePath });
@@ -93,9 +91,7 @@ namespace Haley.Services {
         /// Streams bytes from the cloud staging session.
         /// Returns a network stream — the caller is responsible for disposing it.
         /// </summary>
-        public async Task<ProviderReadResult> ReadAsync(
-            string storagePath, bool autoSearchExtension = true,
-            StringComparison nameComparison = StringComparison.OrdinalIgnoreCase) {
+        public async Task<ProviderReadResult> ReadAsync(string storagePath, bool autoSearchExtension = true, StringComparison nameComparison = StringComparison.OrdinalIgnoreCase) {
             try {
                 var resp = await SendWithRetryAsync(() => new HttpRequestMessage(HttpMethod.Get, $"api/stage/stream/{Uri.EscapeDataString(storagePath)}"));
                 if (!resp.IsSuccessStatusCode)
@@ -178,8 +174,7 @@ namespace Haley.Services {
             }
         }
 
-        static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions {
-            PropertyNameCaseInsensitive = true,
+        static readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true,
         };
 
         /// <summary>

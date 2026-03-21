@@ -1,4 +1,4 @@
-﻿
+
 using Haley.Enums;
 using System;
 

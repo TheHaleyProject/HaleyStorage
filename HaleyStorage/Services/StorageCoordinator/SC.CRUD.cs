@@ -17,7 +17,7 @@ namespace Haley.Services {
 
         /// <summary>
         /// Uploads a file from <see cref="IVaultFileWriteRequest.FileStream"/> to the resolved storage provider.
-        /// When the module's <see cref="StorageProfileMode"/> is not <c>DirectSave</c> and a staging provider
+        /// When the module's <see cref="VaultProfileMode"/> is not <c>DirectSave</c> and a staging provider
         /// is configured, the file is written to staging first with <c>flags=4</c> (InStaging);
         /// direct-save sets <c>flags=8|64</c> (InStorage|Completed) immediately.
         /// </summary>
@@ -28,6 +28,7 @@ namespace Haley.Services {
             try {
                 if (!WriteMode) { result.Message = "Application is in Read-Only mode."; return result; }
                 if (input == null) { result.Message = "Input cannot be empty or null."; return result; }
+                if (input.ReadOnlyMode) { result.Message = "Request is in Read-Only mode."; return result; }
 
                 input.GenerateCallId();
                 var gPaths = ProcessAndBuildStoragePath(input, true);
@@ -45,7 +46,7 @@ namespace Haley.Services {
                 // Resolution: workspace override → module → DirectSave default.
                 var profileMode = ResolveProfileMode(input);
                 var stagingProvider = ResolveStagingProvider(input);
-                bool useStaging = profileMode != StorageProfileMode.DirectSave && stagingProvider != null
+                bool useStaging = profileMode != VaultProfileMode.DirectSave && stagingProvider != null
                                   && input.File != null && !string.IsNullOrWhiteSpace(input.File.StorageName);
 
                 IStorageProvider writeProvider;
@@ -84,9 +85,7 @@ namespace Haley.Services {
                 // When overwriting an existing file (CUID was supplied and a live copy already exists
                 // on disk), snapshot the current bytes before the new version lands.
                 // The current file becomes ##R<next>; older revisions beyond MaxRevisionCopies are pruned.
-                if (writeProvider is FileSystemStorageProvider
-                    && Config.MaxRevisionCopies > 0
-                    && File.Exists(writePath))
+                if (writeProvider is FileSystemStorageProvider && Config.MaxRevisionCopies > 0 && File.Exists(writePath))
                     BackupRevision(writePath, Config.MaxRevisionCopies);
 
                 if (input.BufferSize < (1024 * 80)) input.BufferSize = (1024 * 80);
@@ -136,18 +135,13 @@ namespace Haley.Services {
             var path = ProcessAndBuildStoragePath(input, true).targetPath;
             if (string.IsNullOrWhiteSpace(path)) return result;
 
-            var comparison = _caseSensitivePairs.Any(p => p.client.Equals(input.Scope.Client.Name.ToDBName()))
-                ? StringComparison.InvariantCulture
-                : StringComparison.OrdinalIgnoreCase;
+            var comparison = _caseSensitivePairs.Any(p => p.client.Equals(input.Scope.Client.Name.ToDBName()))? StringComparison.InvariantCulture : StringComparison.OrdinalIgnoreCase;
 
             // ── Staging-aware read ─────────────────────────────────────────────
             // If the file is still in staging (InStaging bit set, InStorage bit clear),
             // read from the staging provider. Cloud staging providers return a pre-signed
             // redirect URL via GetAccessUrl; FS staging falls back to streaming.
-            if (input.File is StorageFileRoute sfr
-                && (sfr.Flags & 4) != 0          // InStaging
-                && (sfr.Flags & 8) == 0           // not yet InStorage
-                && !string.IsNullOrWhiteSpace(sfr.StagingRef)) {
+            if (input.File is StorageFileRoute sfr && (sfr.Flags & 4) != 0 && (sfr.Flags & 8) == 0 && !string.IsNullOrWhiteSpace(sfr.StagingRef)) {
 
                 var stagingProvider = ResolveStagingProvider(input);
                 if (stagingProvider != null) {
@@ -221,6 +215,7 @@ namespace Haley.Services {
         public async Task<IFeedback> Delete(IVaultFileReadRequest input) {
             var feedback = new Feedback() { Status = false };
             if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
+            if (input.ReadOnlyMode) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
 
             var path = ProcessAndBuildStoragePath(input, true).targetPath;
             if (string.IsNullOrWhiteSpace(path)) {
@@ -235,9 +230,7 @@ namespace Haley.Services {
             }
 
             feedback.Status = await provider.DeleteAsync(path);
-            feedback.Message = feedback.Status
-                ? "File deleted."
-                : "Unable to delete the file. Check if it is in use by another process and try again.";
+            feedback.Message = feedback.Status? "File deleted." : "Unable to delete the file. Check if it is in use by another process and try again.";
             return feedback;
         }
 
@@ -261,9 +254,7 @@ namespace Haley.Services {
             // For files: ask the provider.
             // For directories: virtual dirs are in DB — physical check only applies to FS provider.
             // Cloud providers cannot determine virtual folder existence without an indexer query (not yet implemented).
-            feedback.Status = isFilePath
-                ? ResolveProvider(input).Exists(path)
-                : (ResolveProvider(input) is FileSystemStorageProvider && Directory.Exists(path));
+            feedback.Status = isFilePath? ResolveProvider(input).Exists(path) : (ResolveProvider(input) is FileSystemStorageProvider && Directory.Exists(path));
             if (!feedback.Status) feedback.Message = $"Does not exist: {path}";
             return feedback;
         }
@@ -294,10 +285,7 @@ namespace Haley.Services {
         /// </summary>
         public Task<IVaultDirResponse> GetDirectoryInfo(IVaultReadRequest input) {
             // TODO: virtual directories live in MariaDB — query Indexer.GetDirectoryInfo once available.
-            return Task.FromResult<IVaultDirResponse>(new VaultDirResponse() {
-                Status = false,
-                Message = "GetDirectoryInfo requires indexer implementation (pending MariaDB phase)."
-            });
+            return Task.FromResult<IVaultDirResponse>(new VaultDirResponse() { Status = false, Message = "GetDirectoryInfo requires indexer implementation (pending MariaDB phase)." });
         }
 
         /// <summary>
@@ -305,10 +293,7 @@ namespace Haley.Services {
         /// </summary>
         public Task<IVaultResponse> CreateDirectory(IVaultReadRequest input, string rawname) {
             // TODO: register virtual directory in MariaDB via Indexer.RegisterDirectory.
-            return Task.FromResult<IVaultResponse>(new VaultResponse() {
-                Status = false, OriginalName = rawname,
-                Message = "CreateDirectory requires indexer implementation (pending MariaDB phase)."
-            });
+            return Task.FromResult<IVaultResponse>(new VaultResponse() { Status = false, OriginalName = rawname, Message = "CreateDirectory requires indexer implementation (pending MariaDB phase)." });
         }
 
         /// <summary>
@@ -316,10 +301,7 @@ namespace Haley.Services {
         /// </summary>
         public Task<IFeedback> DeleteDirectory(IVaultReadRequest input, bool recursive) {
             // TODO: soft-delete virtual directory in MariaDB via Indexer.DeleteDirectory.
-            return Task.FromResult<IFeedback>(new Feedback() {
-                Status = false,
-                Message = "DeleteDirectory requires indexer implementation (pending MariaDB phase)."
-            });
+            return Task.FromResult<IFeedback>(new Feedback() { Status = false, Message = "DeleteDirectory requires indexer implementation (pending MariaDB phase)." });
         }
 
         // ─── Revision backup helper ───────────────────────────────────────────
@@ -339,14 +321,7 @@ namespace Haley.Services {
                 var prefix   = fileName + "##R";               // e.g. "abc123.pdf##R"
 
                 // Collect existing revision numbers.
-                var existing = Directory.GetFiles(dir, prefix + "*")
-                    .Select(f => {
-                        var tail = Path.GetFileName(f)[prefix.Length..];
-                        return int.TryParse(tail, out var n) ? (int?)n : null;
-                    })
-                    .Where(n => n.HasValue)
-                    .Select(n => n!.Value)
-                    .ToList();
+                var existing = Directory.GetFiles(dir, prefix + "*").Select(f => { var tail = Path.GetFileName(f)[prefix.Length..]; return int.TryParse(tail, out var n) ? (int?)n : null; }).Where(n => n.HasValue).Select(n => n!.Value).ToList();
 
                 int nextRev = existing.Count == 0 ? 1 : existing.Max() + 1;
 
@@ -354,9 +329,7 @@ namespace Haley.Services {
                 File.Copy(filePath, Path.Combine(dir, $"{prefix}{nextRev}"), overwrite: true);
 
                 // Prune: keep only the maxCopies highest revision numbers, delete the rest.
-                var toDelete = existing.Append(nextRev)
-                    .OrderByDescending(n => n)
-                    .Skip(maxCopies);
+                var toDelete = existing.Append(nextRev).OrderByDescending(n => n).Skip(maxCopies);
 
                 foreach (var rev in toDelete) {
                     try { File.Delete(Path.Combine(dir, $"{prefix}{rev}")); } catch { /* best-effort */ }

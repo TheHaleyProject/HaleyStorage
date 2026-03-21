@@ -65,14 +65,7 @@ namespace Haley.Utils {
         /// </summary>
         /// <param name="storageProviderKey">Normalized name key of the primary provider (from <c>provider.name</c>); null = no provider.</param>
         /// <param name="stagingProviderKey">Normalized name key of the staging provider; null = no staging.</param>
-        public async Task<long> UpsertProfileInfo(
-            int profileId,
-            int version,
-            int mode,
-            string storageProviderKey,
-            string stagingProviderKey,
-            string metadataJson
-        ) {
+        public async Task<long> UpsertProfileInfo(int profileId, int version, int mode, string storageProviderKey, string stagingProviderKey, string metadataJson) {
             if (profileId < 1) throw new ArgumentException("profileId must be > 0");
             if (version < 1) throw new ArgumentException("version must be > 0");
             if (metadataJson == null) throw new ArgumentNullException(nameof(metadataJson));
@@ -134,9 +127,7 @@ namespace Haley.Utils {
             if (string.IsNullOrWhiteSpace(moduleCuid)) throw new ArgumentNullException(nameof(moduleCuid));
             if (profileId < 1) throw new ArgumentException("profileId must be > 0");
             await EnsureValidation();
-            await _agw.ExecAsync(_key, MODULE.UPDATE_STORAGE_PROFILE_BY_CUID, default,
-                (CUID,          moduleCuid),
-                (PROFILE_ID,    profileId));
+            await _agw.ExecAsync(_key, MODULE.UPDATE_STORAGE_PROFILE_BY_CUID, default, (CUID,          moduleCuid), (PROFILE_ID,    profileId));
             return true;
         }
 
@@ -150,17 +141,15 @@ namespace Haley.Utils {
             if (string.IsNullOrWhiteSpace(workspaceCuid)) throw new ArgumentNullException(nameof(workspaceCuid));
             if (profileInfoId < 1) throw new ArgumentException("profileInfoId must be > 0");
             await EnsureValidation();
-            await _agw.ExecAsync(_key, WORKSPACE.UPDATE_STORAGE_PROFILE_BY_CUID, default,
-                (CUID,              workspaceCuid),
-                (STORAGE_PROFILE,   profileInfoId));
+            await _agw.ExecAsync(_key, WORKSPACE.UPDATE_STORAGE_PROFILE_BY_CUID, default, (CUID,              workspaceCuid), (STORAGE_PROFILE,   profileInfoId));
             await HydrateWorkspaceProfileAsync(workspaceCuid, profileInfoId);
             return true;
         }
 
         /// <summary>
         /// Startup hydration: loads all workspaces that have a <c>storage_profile</c> set in the DB
-        /// and populates <see cref="StorageWorkspace.StorageProviderKey"/>,
-        /// <see cref="StorageWorkspace.StagingProviderKey"/>, and <see cref="StorageWorkspace.ProfileMode"/>
+        /// and populates <see cref="VaultWorkSpace.StorageProviderKey"/>,
+        /// <see cref="VaultWorkSpace.StagingProviderKey"/>, and <see cref="VaultWorkSpace.ProfileMode"/>
         /// on the matching in-memory cache entries.
         /// Call this once at startup after all workspace registrations are complete.
         /// </summary>
@@ -170,7 +159,7 @@ namespace Haley.Utils {
             foreach (var row in rows) {
                 var cuid = row["cuid"]?.ToString();
                 if (string.IsNullOrWhiteSpace(cuid)) continue;
-                if (!_cache.TryGetValue(cuid, out var cached) || !(cached is StorageWorkspace ws)) continue;
+                if (!_cache.TryGetValue(cuid, out var cached) || !(cached is VaultWorkSpace ws)) continue;
                 ApplyProfileRowToWorkspace(ws, row);
             }
         }
@@ -179,15 +168,15 @@ namespace Haley.Utils {
 
         async Task HydrateWorkspaceProfileAsync(string workspaceCuid, int profileInfoId) {
             var row = await _agw.RowAsync(_key, PROFILE_INFO.GET_WITH_PROVIDER_KEYS, default, (PROFILE_ID, profileInfoId));
-            if (row != null && _cache.TryGetValue(workspaceCuid, out var cached) && cached is StorageWorkspace ws)
+            if (row != null && _cache.TryGetValue(workspaceCuid, out var cached) && cached is VaultWorkSpace ws)
                 ApplyProfileRowToWorkspace(ws, row);
         }
 
-        void ApplyProfileRowToWorkspace(StorageWorkspace ws, DbRow row) {
+        void ApplyProfileRowToWorkspace(VaultWorkSpace ws, DbRow row) {
             ws.StorageProviderKey = row.TryGetValue("storage_provider_key", out var spk) ? spk?.ToString() ?? string.Empty : string.Empty;
             ws.StagingProviderKey = row.TryGetValue("staging_provider_key", out var stk) ? stk?.ToString() ?? string.Empty : string.Empty;
             if (row.TryGetValue("mode", out var mode) && int.TryParse(mode?.ToString(), out var modeInt))
-                ws.ProfileMode = (StorageProfileMode)modeInt;
+                ws.ProfileMode = (VaultProfileMode)modeInt;
             if (row.TryGetValue("profile_info_id", out var pid) && long.TryParse(pid?.ToString(), out var pidLong) && pidLong > 0)
                 ws.ProfileInfoId = pidLong;
         }

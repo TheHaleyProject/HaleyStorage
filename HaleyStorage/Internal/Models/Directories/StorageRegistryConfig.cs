@@ -1,4 +1,4 @@
-﻿using Haley.Abstractions;
+using Haley.Abstractions;
 using Haley.Enums;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace Haley.Models {
     /// All suffix properties apply only to controlled names (not raw filenames).
     /// Bind from the <c>Seed:oss</c> configuration section via <see cref="StorageCoordinator.SetConfig"/>.
     /// </summary>
-    public class StorageRegistryConfig : IVaultRegistryConfig{
+    internal class StorageRegistryConfig : IVaultRegistryConfig{
         /// <summary>Suffix appended to client directory names (default <c>"c"</c>).</summary>
         public string SuffixClient { get; set; } = "c";
         /// <summary>Suffix appended to module directory names (default <c>"m"</c>).</summary>

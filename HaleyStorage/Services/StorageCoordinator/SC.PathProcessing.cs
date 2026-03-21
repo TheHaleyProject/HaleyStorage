@@ -84,8 +84,8 @@ namespace Haley.Services {
             } else {
                 var paths = new List<string> { BasePath };
                 AddComponentPath<VaultClient>(request, paths, provider);
-                AddComponentPath<StorageModule>(request, paths, provider);
-                AddComponentPath<StorageWorkspace>(request, paths, provider);
+                AddComponentPath<VaultModule>(request, paths, provider);
+                AddComponentPath<VaultWorkSpace>(request, paths, provider);
                 result = provider is FileSystemStorageProvider
                     ? Path.Combine(paths.ToArray())
                     : string.Join("/", paths.Select(p => p.Trim('/', '\\')));
@@ -124,7 +124,7 @@ namespace Haley.Services {
             IVaultFileWriteRequest inputW = input as IVaultFileWriteRequest;
             bool forupload = inputW != null;
 
-            if (!Indexer.TryGetComponentInfo<StorageWorkspace>(input.Scope.Workspace.Cuid.ToString("N"), out StorageWorkspace wInfo) && forupload) {
+            if (!Indexer.TryGetComponentInfo<VaultWorkSpace>(input.Scope.Workspace.Cuid.ToString("N"), out VaultWorkSpace wInfo) && forupload) {
                 throw new Exception($"Unable to find workspace info. Name: {input.Scope.Workspace.Name} — Cuid: {input.Scope.Workspace.Cuid}.");
             }
 
@@ -136,9 +136,9 @@ namespace Haley.Services {
                 string logicalId = null;
                 string ext = Path.GetExtension(input.File.StorageName ?? input.RequestedName ?? string.Empty);
 
-                if (wInfo.NameMode == StorageNameMode.Number && input.File.Id > 0)
+                if (wInfo.NameMode == VaultNameMode.Number && input.File.Id > 0)
                     logicalId = input.File.Id.ToString();
-                else if (wInfo.NameMode == StorageNameMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
+                else if (wInfo.NameMode == VaultNameMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
                     // Storage names are always generated as compact-N (no dashes).
                     // Normalize regardless of what form the caller provided (dashed, braced, compact).
                     if (Guid.TryParse(input.File.Cuid, out var g))
@@ -194,7 +194,7 @@ namespace Haley.Services {
                 if (string.IsNullOrWhiteSpace(targetFileName))
                     throw new ArgumentNullException("No target file name specified for this request.");
 
-                var holder = new VaultProfile(targetFileName, wInfo.NameMode, wInfo.ParseMode, isVirtual: false);
+                var holder = new VaultStorable(targetFileName, wInfo.NameMode, wInfo.ParseMode, isVirtual: false);
 
                 // Step A: register with indexer and populate holder.Id / holder.Cuid / holder.StorageName.
                 // GenerateFileSystemSavePath is reused here only for the ID-registration side-effect;
@@ -238,10 +238,10 @@ namespace Haley.Services {
                 // enabling future reads to reconstruct the original provider even after a profile change.
                 if (forupload && input.File is StorageFileRoute sfrWrite && sfrWrite.ProfileInfoId == 0) {
                     long activeProfileInfoId = 0;
-                    if (TryGetWorkspace(input, out StorageWorkspace wsW) && wsW.ProfileInfoId > 0)
+                    if (TryGetWorkspace(input, out VaultWorkSpace wsW) && wsW.ProfileInfoId > 0)
                         activeProfileInfoId = wsW.ProfileInfoId;
                     else if (Indexer != null
-                        && Indexer.TryGetComponentInfo<StorageModule>(input.Scope.Module.Cuid.ToString("N"), out StorageModule mW)
+                        && Indexer.TryGetComponentInfo<VaultModule>(input.Scope.Module.Cuid.ToString("N"), out VaultModule mW)
                         && mW.ProfileInfoId > 0)
                         activeProfileInfoId = mW.ProfileInfoId;
                     if (activeProfileInfoId > 0) sfrWrite.ProfileInfoId = activeProfileInfoId;
@@ -258,26 +258,26 @@ namespace Haley.Services {
         /// (client, module, or workspace). Throws <see cref="InvalidOperationException"/> for
         /// <c>VaultObjectType.File</c> — use <c>StorageUtils.GenerateFileSystemSavePath</c> instead.
         /// </summary>
-        public (string name, string path) GenerateBasePath(IVaultStorable input, Enums.VaultObjectType component) {
+        public (string name, string path) GenerateBasePath(IVaultStorable input, VaultObjectType component) {
             string suffix = string.Empty;
             int length = 2, depth = 0;
             bool case_sensitive = false;
 
             switch (component) {
-                case Enums.VaultObjectType.Client:
+                case VaultObjectType.Client:
                 suffix = Config.SuffixClient;
                 length = 0; depth = 0;
                 case_sensitive = _caseSensitivePairs.Any(p => input.Name.ToDBName().Equals(p.client, StringComparison.OrdinalIgnoreCase));
                 break;
 
-                case Enums.VaultObjectType.Module:
+                case VaultObjectType.Module:
                 suffix = Config.SuffixModule;
                 length = 0; depth = 0;
                 case_sensitive = _caseSensitivePairs.Any(p => input.Name.ToDBName().Equals(p.module, StringComparison.OrdinalIgnoreCase));
                 break;
 
-                case Enums.VaultObjectType.WorkSpace:
-                var suffixAddon = (input is VaultProfile pp && pp.ParseMode == StorageNameParseMode.Generate) ? "f" : "p";
+                case VaultObjectType.WorkSpace:
+                var suffixAddon = (input is VaultStorable pp && pp.ParseMode == VaultNameParseMode.Generate) ? "f" : "p";
                 suffix = suffixAddon + Config.SuffixWorkSpace;
                 length = 1; depth = 5;
                 break;
@@ -289,16 +289,17 @@ namespace Haley.Services {
                     "Use StorageUtils.GenerateFileSystemSavePath for file path generation.");
             }
 
-            return StorageUtils.GenerateFileSystemSavePath(input, StorageNameParseMode.Generate,
+            return StorageUtils.GenerateFileSystemSavePath(input, VaultNameParseMode.Generate,
                 (n) => (length, depth), suffix: suffix, throwExceptions: false, caseSensitive: case_sensitive);
         }
 
         /// <summary>
-        /// Extracts the relevant <see cref="IVaultStorable"/> target, its object type, the corresponding
+        /// Extracts the relevant scope target, its object type, the corresponding
         /// meta-file name, and the CUID string for a hierarchy type <typeparamref name="T"/>.
         /// Used by <see cref="AddComponentPath{T}"/> to dispatch between client, module, and workspace.
+        /// The scope always holds <see cref="VaultStorable"/> carriers (which implement <see cref="IVaultStorable"/>).
         /// </summary>
-        (IVaultStorable target, Enums.VaultObjectType type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultStorable {
+        (IVaultStorable target, Enums.VaultObjectType type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultObject {
             IVaultStorable target = null;
             Enums.VaultObjectType targetType = Enums.VaultObjectType.Client;
             string metaFilePath = string.Empty;
@@ -320,16 +321,24 @@ namespace Haley.Services {
         /// For the FileSystem provider, falls back to reading the .meta file from disk when
         /// the indexer cache is cold. Cloud providers have no on-disk meta files.
         /// </summary>
-        void AddComponentPath<T>(IVaultReadRequest input, List<string> paths, IStorageProvider provider) where T : IVaultStorable {
+        void AddComponentPath<T>(IVaultReadRequest input, List<string> paths, IStorageProvider provider) where T : IVaultObject {
             if (Indexer == null) return;
             var info = GetTargetInfo<T>(input);
             if (info.target == null) return;
 
             if (Indexer.TryGetComponentInfo(info.cuid, out T obj)) {
-                // StorageRef lives on IVaultWorkSpace (workspace) or VaultComponent (client/module concrete).
-                // For cloud providers, StorageRef is empty for client/module — GenerateBasePath handles those.
-                var storedRef = (obj as IVaultWorkSpace)?.StorageRef ?? (obj as VaultComponent)?.StorageRef;
-                if (!string.IsNullOrWhiteSpace(storedRef)) paths.Add(storedRef);
+                var wsObj = obj as IVaultWorkSpace;
+                if (wsObj != null && wsObj.IsVirtual) {
+                    // virtual workspace — no physical path segment to add
+                } else {
+                    var storedRef = wsObj?.StorageRef;
+                    if (!string.IsNullOrWhiteSpace(storedRef)) {
+                        paths.Add(storedRef);
+                    } else {
+                        var tuple = GenerateBasePath(info.target, info.type);
+                        if (!string.IsNullOrWhiteSpace(tuple.path)) paths.Add(tuple.path);
+                    }
+                }
             } else {
                 var tuple = GenerateBasePath(info.target, info.type);
                 paths.Add(tuple.path);
@@ -428,19 +437,19 @@ namespace Haley.Services {
 
         /// <summary>
         /// Fast-path for reads where <see cref="IVaultFileRoute.StorageName"/> is already known.
-        /// Validates the name matches the workspace's <see cref="StorageNameMode"/> then calls
+        /// Validates the name matches the workspace's <see cref="VaultNameMode"/> then calls
         /// <see cref="IStorageProvider.BuildStorageRef"/> to reconstruct the sharded/flat key without a DB round-trip.
         /// Returns <c>false</c> for uploads or when StorageName is empty.
         /// </summary>
-        bool PopulateFromSavedPath(IVaultFileReadRequest input, bool forupload, StorageWorkspace wInfo, IStorageProvider provider) {
+        bool PopulateFromSavedPath(IVaultFileReadRequest input, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider) {
             if (forupload || string.IsNullOrWhiteSpace(input?.File?.StorageName)) return false;
             var sname = Path.GetFileNameWithoutExtension(input.File.StorageName);
             var extension = Path.GetExtension(input.File.StorageName);
 
-            if (wInfo.NameMode == StorageNameMode.Number && !sname.IsNumber())
+            if (wInfo.NameMode == VaultNameMode.Number && !sname.IsNumber())
                 throw new ArgumentException("StorageName must be numeric for this workspace.");
 
-            if (wInfo.NameMode == StorageNameMode.Guid) {
+            if (wInfo.NameMode == VaultNameMode.Guid) {
                 if (sname.IsCompactGuid(out Guid g) || sname.IsValidGuid(out g))
                     sname = g.ToString("N");
                 else

@@ -9,7 +9,7 @@ namespace Haley.Models {
         [FromQuery(Name = "fid")]
         public long? FolderId { get; set; }
 
-        [FromQuery(Name = "fuid")]
+        [FromQuery(Name = "fuid")] //How do we prepare the cuid for a directory? obviously it should not be deterministic.. It wont work that way.
         public string? FolderCuid { get; set; }
     }
 }

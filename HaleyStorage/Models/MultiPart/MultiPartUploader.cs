@@ -63,9 +63,8 @@ namespace Haley.Models {
             //if (_defaultMaxFileSizeinMb > 10000) _defaultMaxFileSizeinMb = 10000; // 10 GB limit
         }
 
-        public async Task<MultipartUploadSummary> UploadFileAsync(HttpRequest request, IVaultFileWriteRequest upRequest)
-        {
-             return await UploadFileAsync(request.Body, request.ContentType, upRequest);
+        public async Task<MultipartUploadSummary> UploadFileAsync(HttpRequest request, IVaultFileWriteRequest upRequest) {
+            return await UploadFileAsync(request.Body, request.ContentType, upRequest);
         }
      
         public async Task<MultipartUploadSummary> UploadFileAsync(Stream stream, string contentType, IVaultFileWriteRequest upRequest) {

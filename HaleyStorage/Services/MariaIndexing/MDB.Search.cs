@@ -16,15 +16,7 @@ namespace Haley.Utils {
     /// </summary>
     internal partial class MariaDBIndexing {
 
-        public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(
-            IVaultReadRequest request,
-            string searchTerm,
-            VaultSearchMode searchMode,
-            string extension = null,
-            long directoryId = 0,
-            bool recursive = false,
-            int page = 1,
-            int pageSize = 50) {
+        public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, long directoryId = 0, bool recursive = false, int page = 1, int pageSize = 50) {
 
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {
@@ -48,48 +40,30 @@ namespace Haley.Utils {
 
                 var likePattern = BuildSearchPattern(searchTerm.Trim().ToLowerInvariant(), searchMode);
                 // Pass DBNull.Value when no extension filter — lets (@EXT is null or ...) short-circuit.
-                object extParam = string.IsNullOrWhiteSpace(extension)
-                    ? (object)DBNull.Value
-                    : extension.TrimStart('.').ToLowerInvariant();
+                object extParam = string.IsNullOrWhiteSpace(extension)? (object)DBNull.Value : extension.TrimStart('.').ToLowerInvariant();
 
                 var offset = (page - 1) * pageSize;
                 long totalDirs, totalFiles;
-                System.Collections.Generic.IEnumerable<DbRow> rows;
+                IEnumerable<DbRow> rows;
 
                 if (directoryId < 1) {
                     // Scope: entire workspace.
                     totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_DIRS_ALL,  default, (WSPACE, wsId), (VALUE, likePattern)) ?? 0;
                     totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_FILES_ALL, default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
-                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_ALL, default,
-                        (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam),
-                        (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
+                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_ALL, default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 } else if (!recursive) {
                     // Scope: direct children of a specific directory.
                     totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_DIRS_IN_DIR,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern)) ?? 0;
                     totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_FILES_IN_DIR, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
-                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_IN_DIR, default,
-                        (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam),
-                        (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
+                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_IN_DIR, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 } else {
                     // Scope: recursive subtree of a directory (WITH RECURSIVE CTE).
                     totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_DIRS_RECURSIVE,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern)) ?? 0;
                     totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_FILES_RECURSIVE, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
-                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_RECURSIVE, default,
-                        (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam),
-                        (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
+                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_RECURSIVE, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 }
 
-                var response = new VaultFolderBrowseResponse {
-                    WorkspaceId    = wsId,
-                    WorkspaceCuid  = request.Scope.Workspace.Cuid.ToString("N"),
-                    IsRoot         = directoryId < 1,
-                    CurrentFolderId = directoryId,
-                    Page           = page,
-                    PageSize       = pageSize,
-                    TotalFolders   = totalDirs,
-                    TotalFiles     = totalFiles,
-                    TotalItems     = totalDirs + totalFiles,
-                };
+                var response = new VaultFolderBrowseResponse { WorkspaceId    = wsId, WorkspaceCuid  = request.Scope.Workspace.Cuid.ToString("N"), IsRoot         = directoryId < 1, CurrentFolderId = directoryId, Page           = page, PageSize       = pageSize, TotalFolders   = totalDirs, TotalFiles     = totalFiles, TotalItems     = totalDirs + totalFiles };
 
                 foreach (var row in rows)
                     response.Items.Add(MapBrowseItem(row));

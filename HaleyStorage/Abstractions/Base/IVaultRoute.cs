@@ -1,4 +1,4 @@
-﻿
+
 namespace Haley.Abstractions {
     // Lightweight path descriptor — does NOT inherit IVaultObject.
     // Entity identity (Cuid as Guid, Guid, Key, etc.) comes through IVaultStorable/IVaultObject.

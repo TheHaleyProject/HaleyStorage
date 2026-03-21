@@ -4,8 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Abstractions {
-    internal interface IStorageModule : IVaultObject {
-        IVaultObject Client { get; set; }
+    internal interface IStorageProfile  {
         string DatabaseName { get; set; }
         string StorageProfileName { get; set; }
         string StorageProviderKey { get; set; }

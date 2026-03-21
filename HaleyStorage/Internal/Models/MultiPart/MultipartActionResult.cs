@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http.Headers;
@@ -8,7 +8,7 @@ using System.Buffers;
 using System.Collections.ObjectModel;
 
 namespace Haley.Models {
-    public class MultipartActionResult : Collection<FileStreamInfo>, IActionResult {
+    internal class MultipartActionResult : Collection<FileStreamInfo>, IActionResult {
         private readonly MultipartContent _internalContent;
         public MultipartActionResult(string subtype = "byteranges", string boundary = null) {
             if (boundary == null) {

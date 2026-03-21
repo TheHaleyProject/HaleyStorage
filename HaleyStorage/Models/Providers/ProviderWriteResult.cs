@@ -10,16 +10,12 @@ namespace Haley.Models {
         public bool AlreadyExisted { get; init; }
         public string Message { get; init; }
 
-        public static ProviderWriteResult Ok(bool alreadyExisted = false, string message = null) =>
-            new ProviderWriteResult { Success = true, AlreadyExisted = alreadyExisted, Message = message };
+        public static ProviderWriteResult Ok(bool alreadyExisted = false, string message = null) => new ProviderWriteResult { Success = true, AlreadyExisted = alreadyExisted, Message = message };
 
-        public static ProviderWriteResult Skipped() =>
-            new ProviderWriteResult { Success = true, AlreadyExisted = true, Message = "File exists. Skipped." };
+        public static ProviderWriteResult Skipped() => new ProviderWriteResult { Success = true, AlreadyExisted = true, Message = "File exists. Skipped." };
 
-        public static ProviderWriteResult Fail(string message) =>
-            new ProviderWriteResult { Success = false, Message = message };
+        public static ProviderWriteResult Fail(string message) => new ProviderWriteResult { Success = false, Message = message };
 
-        public static ProviderWriteResult ExistsError() =>
-            new ProviderWriteResult { Success = false, AlreadyExisted = true, Message = "File exists. Returned error." };
+        public static ProviderWriteResult ExistsError() => new ProviderWriteResult { Success = false, AlreadyExisted = true, Message = "File exists. Returned error." };
     }
 }

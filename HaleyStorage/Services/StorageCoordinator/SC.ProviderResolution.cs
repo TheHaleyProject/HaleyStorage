@@ -18,7 +18,7 @@ namespace Haley.Services {
         // ── Profile-info cache ────────────────────────────────────────────────
         // Keyed by profile_info.id → (storageProviderKey, stagingProviderKey, mode).
         // Populated lazily on the first resolution for each profile_info_id.
-        readonly ConcurrentDictionary<long, (string storageKey, string stagingKey, StorageProfileMode mode)>
+        readonly ConcurrentDictionary<long, (string storageKey, string stagingKey, VaultProfileMode mode)>
             _profileInfoCache = new();
 
         // ── Primary provider ──────────────────────────────────────────────────
@@ -49,7 +49,7 @@ namespace Haley.Services {
         internal IStorageProvider ResolveProvider(string moduleCuid) {
             if (!string.IsNullOrWhiteSpace(moduleCuid)
                 && Indexer != null
-                && Indexer.TryGetComponentInfo<StorageModule>(moduleCuid, out StorageModule m)
+                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m)
                 && !string.IsNullOrWhiteSpace(m?.StorageProviderKey)
                 && _providers.TryGetValue(m.StorageProviderKey, out var p))
                 return p;
@@ -79,7 +79,7 @@ namespace Haley.Services {
                 // Profile exists but no staging key = staging disabled for this profile; don't fall through
                 if (_profileInfoCache.ContainsKey(sfr.ProfileInfoId)) return null;
             }
-            if (Indexer != null && TryGetWorkspace(request, out StorageWorkspace ws)
+            if (Indexer != null && TryGetWorkspace(request, out VaultWorkSpace ws)
                 && !string.IsNullOrWhiteSpace(ws.StorageProviderKey)) {
                 // Workspace owns its full profile — honor its staging setting; empty = disabled.
                 if (!string.IsNullOrWhiteSpace(ws.StagingProviderKey)
@@ -97,7 +97,7 @@ namespace Haley.Services {
         internal IStorageProvider ResolveStagingProvider(string moduleCuid) {
             if (!string.IsNullOrWhiteSpace(moduleCuid)
                 && Indexer != null
-                && Indexer.TryGetComponentInfo<StorageModule>(moduleCuid, out StorageModule m)
+                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m)
                 && !string.IsNullOrWhiteSpace(m?.StagingProviderKey)
                 && _providers.TryGetValue(m.StagingProviderKey, out var sp))
                 return sp;
@@ -113,46 +113,46 @@ namespace Haley.Services {
         ///   2. workspace ProfileMode (when workspace has an explicit StorageProviderKey)
         ///   3. module ProfileMode → DirectSave.
         /// </summary>
-        internal StorageProfileMode ResolveProfileMode(IVaultReadRequest request) {
+        internal VaultProfileMode ResolveProfileMode(IVaultReadRequest request) {
             // Priority 1: file's stored profile
             if (request is IVaultFileReadRequest fr && fr.File is StorageFileRoute sfr && sfr.ProfileInfoId > 0
                 && TryGetProfileInfoCached(sfr.ProfileInfoId, out _, out _, out var pMode))
                 return pMode;
-            if (Indexer != null && TryGetWorkspace(request, out StorageWorkspace ws)
+            if (Indexer != null && TryGetWorkspace(request, out VaultWorkSpace ws)
                 && !string.IsNullOrWhiteSpace(ws.StorageProviderKey))
                 return ws.ProfileMode;
             return ResolveProfileMode(request?.Scope?.Module?.Cuid.ToString("N"));
         }
 
         /// <summary>Module-level profile mode fallback. Returns DirectSave when not configured.</summary>
-        internal StorageProfileMode ResolveProfileMode(string moduleCuid) {
+        internal VaultProfileMode ResolveProfileMode(string moduleCuid) {
             if (!string.IsNullOrWhiteSpace(moduleCuid)
                 && Indexer != null
-                && Indexer.TryGetComponentInfo<StorageModule>(moduleCuid, out StorageModule m))
+                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m))
                 return m.ProfileMode;
-            return StorageProfileMode.DirectSave;
+            return VaultProfileMode.DirectSave;
         }
 
         // ── Workspace resolution helpers ──────────────────────────────────────
 
-        bool TryGetWorkspace(IVaultReadRequest request, out StorageWorkspace ws) {
+        bool TryGetWorkspace(IVaultReadRequest request, out VaultWorkSpace ws) {
             ws = null;
             var wsCuid = request?.Scope?.Workspace?.Cuid.ToString("N");
             return !string.IsNullOrWhiteSpace(wsCuid)
-                && Indexer.TryGetComponentInfo<StorageWorkspace>(wsCuid, out ws)
+                && Indexer.TryGetComponentInfo<VaultWorkSpace>(wsCuid, out ws)
                 && ws != null;
         }
 
         bool TryResolveWorkspaceProvider(IVaultReadRequest request, out IStorageProvider provider) {
             provider = null;
-            return TryGetWorkspace(request, out StorageWorkspace ws)
+            return TryGetWorkspace(request, out VaultWorkSpace ws)
                 && !string.IsNullOrWhiteSpace(ws.StorageProviderKey)
                 && _providers.TryGetValue(ws.StorageProviderKey, out provider);
         }
 
         bool TryResolveWorkspaceStagingProvider(IVaultReadRequest request, out IStorageProvider provider) {
             provider = null;
-            return TryGetWorkspace(request, out StorageWorkspace ws)
+            return TryGetWorkspace(request, out VaultWorkSpace ws)
                 && !string.IsNullOrWhiteSpace(ws.StagingProviderKey)
                 && _providers.TryGetValue(ws.StagingProviderKey, out provider);
         }
@@ -164,9 +164,8 @@ namespace Haley.Services {
         /// On a cache miss, fetches from the DB via the indexer and populates the cache.
         /// Returns <c>true</c> when the profile was found (even if both provider keys are empty).
         /// </summary>
-        bool TryGetProfileInfoCached(long profileInfoId,
-            out string storageKey, out string stagingKey, out StorageProfileMode mode) {
-            storageKey = null; stagingKey = null; mode = StorageProfileMode.DirectSave;
+        bool TryGetProfileInfoCached(long profileInfoId, out string storageKey, out string stagingKey, out VaultProfileMode mode) {
+            storageKey = null; stagingKey = null; mode = VaultProfileMode.DirectSave;
             if (profileInfoId < 1 || Indexer == null) return false;
 
             if (_profileInfoCache.TryGetValue(profileInfoId, out var cached)) {
@@ -181,9 +180,9 @@ namespace Haley.Services {
 
             var sk = row.TryGetValue("storage_provider_key", out var spk) ? spk?.ToString() ?? string.Empty : string.Empty;
             var stk = row.TryGetValue("staging_provider_key", out var spv) ? spv?.ToString() ?? string.Empty : string.Empty;
-            var m2 = StorageProfileMode.DirectSave;
+            var m2 = VaultProfileMode.DirectSave;
             if (row.TryGetValue("mode", out var mv) && int.TryParse(mv?.ToString(), out var mInt))
-                m2 = (StorageProfileMode)mInt;
+                m2 = (VaultProfileMode)mInt;
 
             var entry = (sk, stk, m2);
             _profileInfoCache.TryAdd(profileInfoId, entry);
@@ -211,8 +210,7 @@ namespace Haley.Services {
         /// profile is not found or when <paramref name="profileInfoId"/> is 0.
         /// Used internally by <see cref="StagingPromotionWorker"/>.
         /// </summary>
-        internal (IStorageProvider primary, IStorageProvider staging, StorageProfileMode mode)
-            GetProvidersForProfile(long profileInfoId, string moduleCuid) {
+        internal (IStorageProvider primary, IStorageProvider staging, VaultProfileMode mode) GetProvidersForProfile(long profileInfoId, string moduleCuid) {
             if (profileInfoId > 0 && TryGetProfileInfoCached(profileInfoId, out var sk, out var stk, out var pMode)) {
                 var primary  = (!string.IsNullOrEmpty(sk)  && _providers.TryGetValue(sk,  out var pp)) ? pp : GetDefaultProvider();
                 var staging  = (!string.IsNullOrEmpty(stk) && _providers.TryGetValue(stk, out var sp)) ? sp : null;
@@ -224,12 +222,10 @@ namespace Haley.Services {
         // ── Runtime provider configuration ────────────────────────────────────
 
         /// <inheritdoc/>
-        public bool ConfigureModuleProviders(string moduleCuid, string storageProviderKey,
-            string stagingProviderKey = null, StorageProfileMode mode = StorageProfileMode.DirectSave,
-            long profileInfoId = 0) {
+        public bool ConfigureModuleProviders(string moduleCuid, string storageProviderKey, string stagingProviderKey = null, VaultProfileMode mode = VaultProfileMode.DirectSave, long profileInfoId = 0) {
 
             if (string.IsNullOrWhiteSpace(moduleCuid)) return false;
-            if (Indexer == null || !Indexer.TryGetComponentInfo<StorageModule>(moduleCuid, out StorageModule m) || m == null)
+            if (Indexer == null || !Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m) || m == null)
                 return false;
 
             if (!string.IsNullOrWhiteSpace(storageProviderKey) && !_providers.ContainsKey(storageProviderKey))
@@ -237,7 +233,7 @@ namespace Haley.Services {
             if (!string.IsNullOrWhiteSpace(stagingProviderKey) && !_providers.ContainsKey(stagingProviderKey))
                 throw new ArgumentException($"Staging provider key '{stagingProviderKey}' is not registered. Call AddProvider first.", nameof(stagingProviderKey));
 
-            // StorageModule is a reference type — mutating updates the indexer cache in-place.
+            // VaultModule is a reference type — mutating updates the indexer cache in-place.
             m.StorageProviderKey = storageProviderKey ?? string.Empty;
             m.StagingProviderKey = stagingProviderKey ?? string.Empty;
             m.ProfileMode = mode;
@@ -246,11 +242,10 @@ namespace Haley.Services {
         }
 
         /// <inheritdoc/>
-        public bool ConfigureWorkspaceProviders(string workspaceCuid, string storageProviderKey,
-            string stagingProviderKey = null, StorageProfileMode mode = StorageProfileMode.DirectSave) {
+        public bool ConfigureWorkspaceProviders(string workspaceCuid, string storageProviderKey, string stagingProviderKey = null, VaultProfileMode mode = VaultProfileMode.DirectSave) {
 
             if (string.IsNullOrWhiteSpace(workspaceCuid)) return false;
-            if (Indexer == null || !Indexer.TryGetComponentInfo<StorageWorkspace>(workspaceCuid, out StorageWorkspace ws) || ws == null)
+            if (Indexer == null || !Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out VaultWorkSpace ws) || ws == null)
                 return false;
 
             if (!string.IsNullOrWhiteSpace(storageProviderKey) && !_providers.ContainsKey(storageProviderKey))
@@ -258,7 +253,7 @@ namespace Haley.Services {
             if (!string.IsNullOrWhiteSpace(stagingProviderKey) && !_providers.ContainsKey(stagingProviderKey))
                 throw new ArgumentException($"Staging provider key '{stagingProviderKey}' is not registered. Call AddProvider first.", nameof(stagingProviderKey));
 
-            // StorageWorkspace is a reference type — mutating updates the indexer cache in-place.
+            // VaultWorkSpace is a reference type — mutating updates the indexer cache in-place.
             ws.StorageProviderKey = storageProviderKey ?? string.Empty;
             ws.StagingProviderKey = stagingProviderKey ?? string.Empty;
             ws.ProfileMode = mode;

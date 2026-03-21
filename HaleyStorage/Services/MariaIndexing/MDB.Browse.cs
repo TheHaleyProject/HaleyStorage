@@ -22,7 +22,7 @@ namespace Haley.Utils {
                     return fb.SetMessage("Workspace CUID is mandatory to browse a folder.");
 
                 if (page < 1) page = 1;
-                if (pageSize < 1) pageSize = 50;
+                if (pageSize < 1) pageSize = 10;
                 if (pageSize > 200) pageSize = 200;
 
                 var moduleCuid = request.Scope.Module.Cuid.ToString("N");
@@ -38,26 +38,9 @@ namespace Haley.Utils {
                 var totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCUMENT.COUNT_BY_DIRECTORY, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
                 var offset = (page - 1) * pageSize;
 
-                var rows = await _agw.RowsAsync(moduleCuid, INSTANCE.DIRECTORY.BROWSE_ITEMS, default,
-                    (WSPACE, wsId),
-                    (PARENT, folderInfo.id),
-                    (LIMIT_ROWS, pageSize),
-                    (OFFSET_ROWS, offset));
+                var rows = await _agw.RowsAsync(moduleCuid, INSTANCE.DIRECTORY.BROWSE_ITEMS, default, (WSPACE, wsId), (PARENT, folderInfo.id), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
 
-                var response = new VaultFolderBrowseResponse {
-                    WorkspaceId = wsId,
-                    WorkspaceCuid = request.Scope.Workspace.Cuid.ToString("N"),
-                    IsRoot = folderInfo.isRoot,
-                    CurrentFolderId = folderInfo.id,
-                    CurrentFolderCuid = folderInfo.cuid,
-                    CurrentFolderName = folderInfo.displayName,
-                    CurrentFolderParentId = folderInfo.parentId,
-                    Page = page,
-                    PageSize = pageSize,
-                    TotalFolders = totalFolders,
-                    TotalFiles = totalFiles,
-                    TotalItems = totalFolders + totalFiles
-                };
+                var response = new VaultFolderBrowseResponse { WorkspaceId = wsId, WorkspaceCuid = request.Scope.Workspace.Cuid.ToString("N"), IsRoot = folderInfo.isRoot, CurrentFolderId = folderInfo.id, CurrentFolderCuid = folderInfo.cuid, CurrentFolderName = folderInfo.displayName, CurrentFolderParentId = folderInfo.parentId, Page = page, PageSize = pageSize, TotalFolders = totalFolders, TotalFiles = totalFiles, TotalItems = totalFolders + totalFiles };
 
                 foreach (var row in rows) {
                     response.Items.Add(MapBrowseItem(row));
@@ -88,34 +71,10 @@ namespace Haley.Utils {
 
                 var versionRows = await _agw.RowsAsync(moduleCuid, INSTANCE.DOCVERSION.GET_ALL_BY_PARENT, default, (PARENT, documentId));
 
-                var response = new VaultFileDetailsResponse {
-                    DocumentId = ToLong(docRow, "document_id"),
-                    DocumentCuid = ToString(docRow, "document_cuid"),
-                    DisplayName = ToString(docRow, "display_name"),
-                    WorkspaceId = ToLong(docRow, "workspace_id"),
-                    WorkspaceCuid = request.Scope?.Workspace?.Cuid.ToString("N") ?? string.Empty,
-                    DirectoryId = ToLong(docRow, "directory_id"),
-                    DirectoryCuid = ToString(docRow, "directory_cuid"),
-                    DirectoryName = ToString(docRow, "directory_name"),
-                    DirectoryParentId = ToLong(docRow, "directory_parent_id"),
-                    VersionCount = versionRows.Count
-                };
+                var response = new VaultFileDetailsResponse { DocumentId = docRow.GetLong("document_id"), DocumentCuid = docRow.GetString("document_cuid") ?? string.Empty, DisplayName = docRow.GetString("display_name") ?? string.Empty, WorkspaceId = docRow.GetLong("workspace_id"), WorkspaceCuid = request.Scope?.Workspace?.Cuid.ToString("N") ?? string.Empty, DirectoryId = docRow.GetLong("directory_id"), DirectoryCuid = docRow.GetString("directory_cuid") ?? string.Empty, DirectoryName = docRow.GetString("directory_name") ?? string.Empty, DirectoryParentId = docRow.GetLong("directory_parent_id"), VersionCount = versionRows.Count };
 
                 foreach (var row in versionRows) {
-                    response.Versions.Add(new VaultFileVersionInfo {
-                        VersionId = ToLong(row, "version_id"),
-                        VersionCuid = ToString(row, "version_cuid"),
-                        VersionNumber = ToInt(row, "version_no"),
-                        Created = ToDateTime(row, "version_created"),
-                        Size = ToNullableLong(row, "size"),
-                        StorageName = ToString(row, "storage_name"),
-                        StorageRef = ToString(row, "storage_ref"),
-                        StagingRef = ToString(row, "staging_ref"),
-                        Flags = ToInt(row, "flags"),
-                        Hash = ToString(row, "hash"),
-                        SyncedAt = ToDateTime(row, "synced_at"),
-                        Metadata = ToString(row, "metadata")
-                    });
+                    response.Versions.Add(new VaultFileVersionInfo { VersionId = row.GetLong("version_id"), VersionCuid = row.GetString("version_cuid") ?? string.Empty, VersionNumber = row.GetInt("version_no"), Created = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, Flags = row.GetInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at"), Metadata = row.GetString("metadata") ?? string.Empty });
                 }
 
                 return fb.SetStatus(true).SetResult(response);
@@ -127,8 +86,7 @@ namespace Haley.Utils {
 
         async Task<long> ResolveWorkspaceId(string workspaceCuid) {
             if (string.IsNullOrWhiteSpace(workspaceCuid)) return 0;
-            var wsInfo = await _agw.Scalar(new AdapterArgs(_key) { Query = WORKSPACE.EXISTS_BY_CUID }, (CUID, workspaceCuid));
-            return wsInfo != null && long.TryParse(wsInfo.ToString(), out var wsId) ? wsId : 0;
+            return await _agw.ScalarAsync<long?>(_key, WORKSPACE.EXISTS_BY_CUID, default, (CUID, workspaceCuid)) ?? 0;
         }
 
         async Task<(bool status, string message, bool isRoot, long id, string cuid, string displayName, long parentId)> ResolveFolderInfo(string moduleCuid, IVaultReadRequest request, long workspaceId) {
@@ -144,20 +102,13 @@ namespace Haley.Utils {
                 row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS_BY_CUID, default, (VALUE, folder.Cuid));
             } else {
                 var parentId = folder.Parent?.Id ?? 0;
-                row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS, default,
-                    (WSPACE, workspaceId),
-                    (PARENT, parentId),
-                    (NAME, folder.DisplayName.ToDBName()));
+                row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS, default, (WSPACE, workspaceId), (PARENT, parentId), (NAME, folder.DisplayName.ToDBName()));
             }
 
             if (row == null) return (false, "Folder not found.", false, 0, string.Empty, string.Empty, 0);
-            if (ToLong(row, "workspace") != workspaceId) return (false, "Folder does not belong to the requested workspace.", false, 0, string.Empty, string.Empty, 0);
+            if (row.GetLong("workspace") != workspaceId) return (false, "Folder does not belong to the requested workspace.", false, 0, string.Empty, string.Empty, 0);
 
-            return (true, string.Empty, false,
-                ToLong(row, "id"),
-                ToString(row, "uid"),
-                ToString(row, "display_name"),
-                ToLong(row, "parent"));
+            return (true, string.Empty, false, row.GetLong("id"), row.GetString("uid") ?? string.Empty, row.GetString("display_name") ?? string.Empty, row.GetLong("parent"));
         }
 
         async Task<long> ResolveDocumentId(string moduleCuid, IVaultFileReadRequest request) {
@@ -185,70 +136,11 @@ namespace Haley.Utils {
             var name = System.IO.Path.GetFileNameWithoutExtension(fileName).ToDBName();
             var extension = System.IO.Path.GetExtension(fileName)?.ToDBName() ?? VaultConstants.DEFAULT_NAME;
 
-            return await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCUMENT.GET_BY_NAME, default,
-                (NAME, name),
-                (EXT, extension),
-                (WSPACE, wsId),
-                (PARENT, dirParentId),
-                (DIRNAME, dirName.ToDBName())) ?? 0;
+            return await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCUMENT.GET_BY_NAME, default, (NAME, name), (EXT, extension), (WSPACE, wsId), (PARENT, dirParentId), (DIRNAME, dirName.ToDBName())) ?? 0;
         }
 
         static VaultBrowseItem MapBrowseItem(DbRow row) {
-            return new VaultBrowseItem {
-                ItemType = ToString(row, "item_type"),
-                Id = ToLong(row, "id"),
-                Cuid = ToString(row, "uid"),
-                DisplayName = ToString(row, "display_name"),
-                ParentId = ToLong(row, "parent_id"),
-                Created = ToDateTime(row, "created"),
-                Modified = ToDateTime(row, "modified"),
-                LatestVersionId = ToNullableLong(row, "version_id"),
-                LatestVersionCuid = ToString(row, "version_cuid"),
-                LatestVersionNumber = ToNullableInt(row, "version_no"),
-                VersionCount = ToNullableInt(row, "version_count"),
-                LatestVersionCreated = ToDateTime(row, "version_created"),
-                Size = ToNullableLong(row, "size"),
-                StorageName = ToString(row, "storage_name"),
-                StorageRef = ToString(row, "storage_ref"),
-                StagingRef = ToString(row, "staging_ref"),
-                Flags = ToNullableInt(row, "flags"),
-                Hash = ToString(row, "hash"),
-                SyncedAt = ToDateTime(row, "synced_at")
-            };
-        }
-
-        static bool IsDbNull(object value) {
-            return value == null || value == DBNull.Value;
-        }
-
-        static string ToString(DbRow row, string key) {
-            return row.TryGetValue(key, out var value) && !IsDbNull(value) ? value?.ToString() ?? string.Empty : string.Empty;
-        }
-
-        static long ToLong(DbRow row, string key) {
-            if (!row.TryGetValue(key, out var value) || IsDbNull(value)) return 0;
-            return long.TryParse(value?.ToString(), out var result) ? result : 0;
-        }
-
-        static long? ToNullableLong(DbRow row, string key) {
-            if (!row.TryGetValue(key, out var value) || IsDbNull(value)) return null;
-            return long.TryParse(value?.ToString(), out var result) ? result : null;
-        }
-
-        static int ToInt(DbRow row, string key) {
-            if (!row.TryGetValue(key, out var value) || IsDbNull(value)) return 0;
-            return int.TryParse(value?.ToString(), out var result) ? result : 0;
-        }
-
-        static int? ToNullableInt(DbRow row, string key) {
-            if (!row.TryGetValue(key, out var value) || IsDbNull(value)) return null;
-            return int.TryParse(value?.ToString(), out var result) ? result : null;
-        }
-
-        static DateTime? ToDateTime(DbRow row, string key) {
-            if (!row.TryGetValue(key, out var value) || IsDbNull(value)) return null;
-            if (value is DateTime dateTime) return dateTime;
-            return DateTime.TryParse(value?.ToString(), out var parsed) ? parsed : null;
+            return new VaultBrowseItem { ItemType = row.GetString("item_type") ?? string.Empty, Id = row.GetLong("id"), Cuid = row.GetString("uid") ?? string.Empty, DisplayName = row.GetString("display_name") ?? string.Empty, ParentId = row.GetLong("parent_id"), Created = row.GetDateTime("created"), Modified = row.GetDateTime("modified"), LatestVersionId = row.GetNullableLong("version_id"), LatestVersionCuid = row.GetString("version_cuid") ?? string.Empty, LatestVersionNumber = row.GetNullableInt("version_no"), VersionCount = row.GetNullableInt("version_count"), LatestVersionCreated = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, Flags = row.GetNullableInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at") };
         }
     }
 }

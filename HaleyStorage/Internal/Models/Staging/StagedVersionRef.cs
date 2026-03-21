@@ -4,7 +4,7 @@ namespace Haley.Models {
     /// Carries exactly the fields the <c>StagingPromotionWorker</c> needs to promote a
     /// staged file to primary storage without loading the full document graph.
     /// </summary>
-    public class StagedVersionRef {
+    internal class StagedVersionRef {
         /// <summary>Auto-increment <c>doc_version.id</c> (= <c>version_info.id</c>).</summary>
         public long VersionId { get; set; }
         /// <summary>Provider-level storage name (e.g. <c>"00001234.pdf"</c>).</summary>

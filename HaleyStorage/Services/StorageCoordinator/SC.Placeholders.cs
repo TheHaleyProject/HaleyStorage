@@ -32,28 +32,20 @@ namespace Haley.Services {
         /// <param name="request">Scope (client/module/workspace). File route is ignored.</param>
         /// <param name="fileName">File name including extension (e.g. <c>"archive.mp4"</c>).</param>
         /// <param name="displayName">Optional human-readable display name stored in doc_info.</param>
-        public async Task<IFeedback<PlaceholderInfo>> CreatePlaceholder(
-            IVaultReadRequest request,
-            string fileName,
-            string displayName = null) {
+        public async Task<IFeedback<PlaceholderInfo>> CreatePlaceholder(IVaultReadRequest request, string fileName, string displayName = null) {
 
             var fb = new Feedback<PlaceholderInfo>();
             try {
                 if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.ReadOnlyMode) return fb.SetMessage("Request is in Read-Only mode.");
                 if (string.IsNullOrWhiteSpace(fileName)) return fb.SetMessage("fileName is required.");
                 if (Indexer == null) return fb.SetMessage("An indexer is required to create a placeholder.");
 
                 // Build a write request so ProcessAndBuildStoragePath enters forupload mode,
                 // which triggers RegisterDocuments and generates the storage name/path.
                 // FileStream is intentionally null — the file does not exist yet.
-                var writeReq = new StorageWriteRequest(
-                    request.Scope?.Client?.Name,
-                    request.Scope?.Module?.Name,
-                    request.Scope?.Workspace?.Name) {
-                    OriginalName = fileName,
-                    FileStream = null
-                };
+                var writeReq = new StorageWriteRequest(request.Scope?.Client?.Name, request.Scope?.Module?.Name, request.Scope?.Workspace?.Name) { OriginalName = fileName, FileStream = null };
 
                 writeReq.GenerateCallId();
                 ProcessAndBuildStoragePath(writeReq, true);
@@ -85,14 +77,7 @@ namespace Haley.Services {
 
                 // ── Write placeholder version_info to DB ──────────────────────
                 // flags = 256 (Placeholder): DB record reserved, no file content yet.
-                var sfr = new StorageFileRoute(fileName, storageRef) {
-                    Id          = versionId,
-                    Cuid        = versionCuid,
-                    StorageName = storageName,
-                    Size        = 0,
-                    Flags       = 256,
-                    StagingRef  = stagingRef ?? string.Empty
-                };
+                var sfr = new StorageFileRoute(fileName, storageRef) { Id          = versionId, Cuid        = versionCuid, StorageName = storageName, Size        = 0, Flags       = 256, StagingRef  = stagingRef ?? string.Empty };
                 if (!string.IsNullOrWhiteSpace(displayName))
                     sfr.SetDisplayName(displayName);
 
@@ -110,13 +95,7 @@ namespace Haley.Services {
                 if (!string.IsNullOrWhiteSpace(displayName))
                     await Indexer.UpdateDocDisplayName(moduleCuid, versionId, displayName);
 
-                return fb.SetStatus(true).SetResult(new PlaceholderInfo {
-                    VersionId   = versionId,
-                    VersionCuid = versionCuid,
-                    StorageName = storageName,
-                    StorageRef  = storageRef,
-                    StagingRef  = stagingRef
-                });
+                return fb.SetStatus(true).SetResult(new PlaceholderInfo { VersionId   = versionId, VersionCuid = versionCuid, StorageName = storageName, StorageRef  = storageRef, StagingRef  = stagingRef });
 
             } catch (Exception ex) {
                 return fb.SetMessage(ex.Message);
@@ -139,17 +118,13 @@ namespace Haley.Services {
         /// <param name="toStaging">True if the file was copied to staging rather than primary storage.</param>
         /// <param name="size">File size in bytes, or null to auto-detect (FS only).</param>
         /// <param name="hash">Optional SHA-256 hash of the copied file.</param>
-        public async Task<IFeedback> FinalizePlaceholder(
-            IVaultReadRequest request,
-            long versionId,
-            bool toStaging = false,
-            long? size = null,
-            string hash = null) {
+        public async Task<IFeedback> FinalizePlaceholder(IVaultReadRequest request, long versionId, bool toStaging = false, long? size = null, string hash = null) {
 
             var fb = new Feedback();
             try {
                 if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.ReadOnlyMode) return fb.SetMessage("Request is in Read-Only mode.");
                 if (versionId < 1) return fb.SetMessage("A valid versionId is required.");
                 if (Indexer == null) return fb.SetMessage("An indexer is required to finalize a placeholder.");
 
@@ -173,11 +148,7 @@ namespace Haley.Services {
                 var resolvedProvider = ResolveProvider(request);
                 long resolvedSize = size ?? 0;
                 if (!size.HasValue && !toStaging && resolvedProvider is FileSystemStorageProvider) {
-                    var fullPath = string.IsNullOrWhiteSpace(storedPath)
-                        ? null
-                        : Path.IsPathRooted(storedPath)
-                            ? storedPath
-                            : Path.Combine(FetchWorkspaceBasePath(request), storedPath);
+                    var fullPath = string.IsNullOrWhiteSpace(storedPath)? null : Path.IsPathRooted(storedPath)? storedPath : Path.Combine(FetchWorkspaceBasePath(request), storedPath);
 
                     if (!string.IsNullOrWhiteSpace(fullPath) && File.Exists(fullPath))
                         resolvedSize = new FileInfo(fullPath).Length;
@@ -187,15 +158,7 @@ namespace Haley.Services {
                 // flags: InStaging=4, InStorage|Completed=8|64
                 int finalFlags = toStaging ? 4 : (8 | 64);
 
-                var sfr = new StorageFileRoute(storageName ?? string.Empty, toStaging ? string.Empty : (storedPath ?? string.Empty)) {
-                    Id          = versionId,
-                    Cuid        = versionCuid,
-                    StorageName = storageName ?? string.Empty,
-                    Size        = resolvedSize,
-                    Flags       = finalFlags,
-                    StagingRef  = toStaging ? (storedStaging ?? string.Empty) : (storedStaging ?? string.Empty),
-                    Hash        = hash
-                };
+                var sfr = new StorageFileRoute(storageName ?? string.Empty, toStaging ? string.Empty : (storedPath ?? string.Empty)) { Id          = versionId, Cuid        = versionCuid, StorageName = storageName ?? string.Empty, Size        = resolvedSize, Flags       = finalFlags, StagingRef  = toStaging ? (storedStaging ?? string.Empty) : (storedStaging ?? string.Empty), Hash        = hash };
 
                 // When finalizing to staging we clear the primary storage ref.
                 if (toStaging) sfr.StorageRef = string.Empty;
@@ -209,10 +172,7 @@ namespace Haley.Services {
                 if (!ok)
                     return fb.SetMessage($"Finalize failed: {updateResult.Message}");
 
-                return fb.SetStatus(true).SetMessage(
-                    toStaging
-                        ? $"Version {versionId} marked as InStaging."
-                        : $"Version {versionId} marked as InStorage|Completed. Size: {resolvedSize} bytes.");
+                return fb.SetStatus(true).SetMessage(toStaging ? $"Version {versionId} marked as InStaging." : $"Version {versionId} marked as InStorage|Completed. Size: {resolvedSize} bytes.");
 
             } catch (Exception ex) {
                 return fb.SetMessage(ex.Message);

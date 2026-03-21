@@ -1,4 +1,4 @@
-﻿namespace Haley.Enums {
+namespace Haley.Enums {
     public enum VaultObjectType {
        Client,
        Module,

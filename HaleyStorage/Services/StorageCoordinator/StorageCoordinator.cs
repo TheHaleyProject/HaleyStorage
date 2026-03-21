@@ -69,7 +69,7 @@ namespace Haley.Services {
             // In ReadOnly mode, skip creating default structures.
             // Path resolution falls back to existing .meta files and the indexer.
             if (WriteMode) {
-                var defObj = new VaultProfile(VaultConstants.DEFAULT_NAME);
+                var defObj = new VaultStorable(VaultConstants.DEFAULT_NAME);
                 await RegisterClient(defObj); //Registers default client, module and workspace
             }
             _isInitialized = true;

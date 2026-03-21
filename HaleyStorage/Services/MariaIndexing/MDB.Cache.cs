@@ -44,12 +44,11 @@ namespace Haley.Utils {
         /// and adds the object to the cache. Returns a success <see cref="IFeedback"/> with the ID as <c>Result</c>.
         /// </summary>
         async Task<IFeedback> ValidateAndCache(string query, string title, IVaultObject info, Func<IVaultObject, Task> preProcess, params (string key, object value)[] parameters) {
-            var result = await _agw.Scalar(new AdapterArgs(_key) { Query = query }, parameters);
-            if (result != null && result.IsNumericType()) {
-                if (long.TryParse(result.ToString(), out var id)) info.Id = id;
-                //Every time a client is sucessfully done. We validate if it is present or not.
+            var id = await _agw.ScalarAsync<long?>(_key, query, default, Array.ConvertAll(parameters, p => (DbArg)p));
+            if (id.HasValue) {
+                info.Id = id.Value;
                 await AddComponentCache(info, preProcess);
-                return new Feedback(true, $@"{title} - {info.Name} Indexed.") { Result = id };
+                return new Feedback(true, $@"{title} - {info.Name} Indexed.") { Result = id.Value };
             }
             return new Feedback(false, "Unable to index");
         }

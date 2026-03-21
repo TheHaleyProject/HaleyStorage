@@ -56,8 +56,7 @@ namespace Haley.Abstractions {
         ///
         /// This is the seam that decouples "what the file is" from "how the provider stores it".
         /// </summary>
-        string BuildStorageRef(string logicalId, string extension,
-            Func<bool, (int length, int depth)> splitProvider, string suffix);
+        string BuildStorageRef(string logicalId, string extension, Func<bool, (int length, int depth)> splitProvider, string suffix);
 
         /// <summary>
         /// Returns a time-limited access URL for the given storage reference, or <c>null</c>

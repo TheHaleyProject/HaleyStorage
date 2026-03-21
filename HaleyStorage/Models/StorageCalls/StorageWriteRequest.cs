@@ -23,8 +23,7 @@ namespace Haley.Models {
         public Stream FileStream { get; set; }
 
         /// <summary>Fluent override that returns <see cref="StorageWriteRequest"/> instead of the base type, enabling method chaining.</summary>
-        public new StorageWriteRequest SetComponent(VaultProfile input, Enums.VaultObjectType type) {
-             base.SetComponent(input,type);
+        public new StorageWriteRequest SetComponent(IVaultObject input, Enums.VaultObjectType type) { base.SetComponent(input, type);
             return this;
         }
         public StorageWriteRequest() : this(null, null, null) {

@@ -40,15 +40,13 @@ namespace Haley.Services {
         /// On success: the <c>versionId</c> (used for subsequent part and complete calls)
         /// and the <c>versionCuid</c> (compact-N GUID identifying the file version).
         /// </returns>
-        public async Task<IFeedback<(long versionId, string versionCuid)>> InitiateChunkedUpload(
-            IVaultFileWriteRequest request,
-            long chunkSizeMb,
-            int totalParts) {
+        public async Task<IFeedback<(long versionId, string versionCuid)>> InitiateChunkedUpload(IVaultFileWriteRequest request, long chunkSizeMb, int totalParts) {
 
             var fb = new Feedback<(long, string)>();
             try {
                 if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.ReadOnlyMode) return fb.SetMessage("Request is in Read-Only mode.");
                 if (string.IsNullOrWhiteSpace(request.OriginalName))
                     return fb.SetMessage("FileName is required for chunked upload initiation.");
                 if (chunkSizeMb < 1) return fb.SetMessage("ChunkSizeMb must be >= 1.");
@@ -79,12 +77,7 @@ namespace Haley.Services {
                 if (Indexer != null && request.Scope?.Module != null) {
                     moduleCuid = request.Scope.Module.Cuid.ToString("N");
 
-                    var chunkResult = await Indexer.UpsertChunkInfo(
-                        moduleCuid, versionId,
-                        chunkSizeMb, totalParts,
-                        versionCuid, chunkDir,
-                        isCompleted: false,
-                        callId: request.CallID);
+                    var chunkResult = await Indexer.UpsertChunkInfo( moduleCuid, versionId, chunkSizeMb, totalParts, versionCuid, chunkDir, isCompleted: false, callId: request.CallID);
 
                     if (!chunkResult.Status) {
                         if (Indexer is MariaDBIndexing mdIdx) mdIdx.FinalizeTransaction(request.CallID, false);
@@ -163,9 +156,7 @@ namespace Haley.Services {
                 if (!_chunkSessions.TryGetValue(versionId, out var session))
                     return fb.SetMessage($"No active chunk session for versionId {versionId}.");
 
-                var partFiles = Directory.GetFiles(session.TempDir)
-                    .OrderBy(f => Path.GetFileName(f))
-                    .ToList();
+                var partFiles = Directory.GetFiles(session.TempDir).OrderBy(f => Path.GetFileName(f)).ToList();
 
                 if (partFiles.Count < 1)
                     return fb.SetMessage("No chunk parts found in temp directory. Nothing to assemble.");
@@ -214,15 +205,7 @@ namespace Haley.Services {
                     var callId = Guid.NewGuid().ToString("N");
 
                     // Flags: ChunkedMode(1) | ChunkArea(2) | InStorage(8) | ChunksDeleted(16) | Completed(64) = 91
-                    var fileRoute = new StorageFileRoute {
-                        Id         = versionId,
-                        Cuid       = session.FileCuid,
-                        StorageRef = session.FinalPath,
-                        StorageName = Path.GetFileName(session.FinalPath),
-                        Size       = totalSize,
-                        Flags      = 1 | 2 | 8 | 16 | 64,
-                        Hash       = finalHash
-                    };
+                    var fileRoute = new StorageFileRoute { Id         = versionId, Cuid       = session.FileCuid, StorageRef = session.FinalPath, StorageName = Path.GetFileName(session.FinalPath), Size       = totalSize, Flags      = 1 | 2 | 8 | 16 | 64, Hash       = finalHash };
 
                     var updateResult = await Indexer.UpdateDocVersionInfo(session.ModuleCuid, fileRoute, callId);
                     var markResult   = await Indexer.MarkChunkCompleted(session.ModuleCuid, versionId, callId);
@@ -264,8 +247,7 @@ namespace Haley.Services {
                         Directory.Delete(session.TempDir, true);
                 } catch { /* best-effort */ }
 
-                return Task.FromResult<IFeedback>(fb.SetStatus(true)
-                    .SetMessage($"Chunk session {versionId} aborted and temp directory deleted."));
+                return Task.FromResult<IFeedback>(fb.SetStatus(true) .SetMessage($"Chunk session {versionId} aborted and temp directory deleted."));
             } catch (Exception ex) {
                 return Task.FromResult<IFeedback>(fb.SetMessage(ex.Message));
             }
@@ -282,13 +264,9 @@ namespace Haley.Services {
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return Task.FromResult<IFeedback>(fb.SetMessage("No active session found. It may have already completed or never been initiated."));
 
-            int received = Directory.Exists(session.TempDir)
-                ? Directory.GetFiles(session.TempDir).Length
-                : 0;
+            int received = Directory.Exists(session.TempDir)? Directory.GetFiles(session.TempDir).Length : 0;
 
-            return Task.FromResult<IFeedback>(fb
-                .SetStatus(true)
-                .SetResult(new { TotalParts = session.TotalParts, ReceivedParts = received, Pending = session.TotalParts - received }.ToJson()));
+            return Task.FromResult<IFeedback>(fb .SetStatus(true) .SetResult(new { TotalParts = session.TotalParts, ReceivedParts = received, Pending = session.TotalParts - received }.ToJson()));
         }
     }
 }

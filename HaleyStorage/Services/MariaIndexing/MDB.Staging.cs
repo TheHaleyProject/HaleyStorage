@@ -27,15 +27,7 @@ namespace Haley.Utils {
                 var rows = await _agw.RowsAsync(moduleCuid, INSTANCE.STAGING.GET_PENDING, default, (LIMIT_ROWS, batchSize));
                 var result = new List<StagedVersionRef>();
                 foreach (var row in rows) {
-                    result.Add(new StagedVersionRef {
-                        VersionId     = row.TryGetValue("version_id",    out var vid)  && long.TryParse(vid?.ToString(),  out var vl)  ? vl  : 0L,
-                        StorageName   = row.TryGetValue("storage_name",  out var sn)   ? sn?.ToString()  : null,
-                        StorageRef    = row.TryGetValue("storage_ref",   out var sr)   ? sr?.ToString()  : null,
-                        StagingRef    = row.TryGetValue("staging_ref",   out var stgr) ? stgr?.ToString() : null,
-                        ProfileInfoId = row.TryGetValue("profile_info_id", out var pid) && long.TryParse(pid?.ToString(), out var pl)  ? pl  : 0L,
-                        WorkspaceCuid = row.TryGetValue("workspace_cuid", out var wc)  ? wc?.ToString()  : null,
-                        ModuleCuid    = moduleCuid,
-                    });
+                    result.Add(new StagedVersionRef { VersionId     = row.TryGetValue("version_id",    out var vid)  && long.TryParse(vid?.ToString(),  out var vl)  ? vl  : 0L, StorageName   = row.TryGetValue("storage_name",  out var sn)   ? sn?.ToString()  : null, StorageRef    = row.TryGetValue("storage_ref",   out var sr)   ? sr?.ToString()  : null, StagingRef    = row.TryGetValue("staging_ref",   out var stgr) ? stgr?.ToString() : null, ProfileInfoId = row.TryGetValue("profile_info_id", out var pid) && long.TryParse(pid?.ToString(), out var pl)  ? pl  : 0L, WorkspaceCuid = row.TryGetValue("workspace_cuid", out var wc)  ? wc?.ToString()  : null, ModuleCuid    = moduleCuid });
                 }
                 return result;
             } catch (Exception ex) {
@@ -52,13 +44,7 @@ namespace Haley.Utils {
                 if (versionId < 1)                          return fb.SetMessage("versionId must be > 0.");
                 if (!_agw.ContainsKey(moduleCuid))          return fb.SetMessage($"No adapter found for module {moduleCuid}.");
 
-                await _agw.ExecAsync(moduleCuid, INSTANCE.STAGING.UPDATE_PROMOTION, default,
-                    (ID,        versionId),
-                    (PATH,      storageRef),
-                    (FLAGS,     newFlags),
-                    (SYNCED_AT, syncedAt),
-                    (SIZE,      size),
-                    (HASH,      (object?)hash ?? DBNull.Value));
+                await _agw.ExecAsync(moduleCuid, INSTANCE.STAGING.UPDATE_PROMOTION, default, (ID,        versionId), (PATH,      storageRef), (FLAGS,     newFlags), (SYNCED_AT, syncedAt), (SIZE,      size), (HASH,      (object?)hash ?? DBNull.Value));
 
                 return fb.SetStatus(true);
             } catch (Exception ex) {
