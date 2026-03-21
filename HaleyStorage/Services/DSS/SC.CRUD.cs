@@ -250,8 +250,11 @@ namespace Haley.Services {
             }
 
             // For files: ask the provider.
-            // For directories: virtual dirs are in DB (TODO: query indexer); physical workspace dirs checked via FS.
-            feedback.Status = isFilePath ? ResolveProvider(input).Exists(path) : Directory.Exists(path);
+            // For directories: virtual dirs are in DB — physical check only applies to FS provider.
+            // Cloud providers cannot determine virtual folder existence without an indexer query (not yet implemented).
+            feedback.Status = isFilePath
+                ? ResolveProvider(input).Exists(path)
+                : (ResolveProvider(input) is FileSystemStorageProvider && Directory.Exists(path));
             if (!feedback.Status) feedback.Message = $"Does not exist: {path}";
             return feedback;
         }

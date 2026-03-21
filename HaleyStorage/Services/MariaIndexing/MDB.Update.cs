@@ -114,5 +114,28 @@ namespace Haley.Utils {
             }
         }
 
+        /// <summary>
+        /// Overwrites the human-readable <c>doc_info.display_name</c> for the document that owns
+        /// <paramref name="versionId"/>. Used by <c>CreatePlaceholder</c> to apply a custom display
+        /// name that differs from the raw file name registered during document creation.
+        /// </summary>
+        public async Task<IFeedback> UpdateDocDisplayName(string moduleCuid, long versionId, string displayName) {
+            var fb = new Feedback();
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid) || versionId < 1 || string.IsNullOrWhiteSpace(displayName))
+                    return fb.SetMessage("moduleCuid, versionId, and displayName are all required.");
+                if (!_agw.ContainsKey(moduleCuid))
+                    return fb.SetMessage($"No adapter found for key {moduleCuid}.");
+
+                var docId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.GET_DOCUMENT_ID_BY_VERSION_ID, default, (VALUE, versionId));
+                if (!(docId > 0))
+                    return fb.SetMessage($"Version {versionId} not found in module {moduleCuid}.");
+
+                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.INSERT_INFO, default, (PARENT, docId!.Value), (DNAME, displayName));
+                return fb.SetStatus(true);
+            } catch (Exception ex) {
+                return fb.SetMessage(ex.Message);
+            }
+        }
     }
 }

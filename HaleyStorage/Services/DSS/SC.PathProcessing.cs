@@ -86,7 +86,9 @@ namespace Haley.Services {
                 AddComponentPath<VaultClient>(request, paths, provider);
                 AddComponentPath<StorageModule>(request, paths, provider);
                 AddComponentPath<StorageWorkspace>(request, paths, provider);
-                result = Path.Combine(paths.ToArray());
+                result = provider is FileSystemStorageProvider
+                    ? Path.Combine(paths.ToArray())
+                    : string.Join("/", paths.Select(p => p.Trim('/', '\\')));
             }
 
             _logger?.LogDebug($"Workspace base path: {result}");
@@ -328,8 +330,11 @@ namespace Haley.Services {
                 }
             }
 
+            var joinedPath = provider is FileSystemStorageProvider
+                ? Path.Combine(paths.ToArray())
+                : string.Join("/", paths.Select(p => p.Trim('/', '\\')));
             _pathCache.TryAdd(info.cuid, string.Empty);
-            _pathCache.TryUpdate(info.cuid, Path.Combine(paths.ToArray()), string.Empty);
+            _pathCache.TryUpdate(info.cuid, joinedPath, string.Empty);
         }
 
         /// <summary>

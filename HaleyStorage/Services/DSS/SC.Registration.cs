@@ -26,7 +26,7 @@ namespace Haley.Services {
         }
         /// <summary>Convenience overload — registers a workspace by name under the given client and module.</summary>
         public Task<IFeedback> RegisterWorkSpace(string workspace_name=null, string client_name = null, string module_name = null, VaultControlMode content_control = VaultControlMode.Number, VaultParseMode content_pmode = VaultParseMode.Generate, bool is_virtual = false) {
-            return RegisterWorkSpace(new VaultProfile(workspace_name, VaultControlMode.Guid, VaultParseMode.Generate, isVirtual:is_virtual), new VaultProfile(client_name), new VaultProfile(module_name), content_control, content_pmode);
+            return RegisterWorkSpace(new VaultProfile(workspace_name, VaultControlMode.Guid, content_pmode, isVirtual:is_virtual), new VaultProfile(client_name), new VaultProfile(module_name), content_control, content_pmode);
         }
 
         /// <summary>

@@ -55,9 +55,6 @@ namespace Haley.Services {
                     FileStream = null
                 };
 
-                if (!string.IsNullOrWhiteSpace(displayName) && writeReq.File != null)
-                    writeReq.File.SetDisplayName(displayName);
-
                 writeReq.GenerateCallId();
                 ProcessAndBuildStoragePath(writeReq, true);
 
@@ -68,6 +65,7 @@ namespace Haley.Services {
                 string versionCuid = writeReq.File.Cuid;
                 string storageRef  = writeReq.OverrideRef;   // full path (FS) or object key (cloud)
                 string storageName = writeReq.File.StorageName;
+                var resolvedProvider = ResolveProvider(writeReq);
 
                 // ── Staging ref ───────────────────────────────────────────────
                 string stagingRef = null;
@@ -79,7 +77,7 @@ namespace Haley.Services {
                 }
 
                 // ── FS: pre-create the shard directory ────────────────────────
-                if (GetDefaultProvider() is FileSystemStorageProvider && !string.IsNullOrWhiteSpace(storageRef)) {
+                if (resolvedProvider is FileSystemStorageProvider && !string.IsNullOrWhiteSpace(storageRef)) {
                     var dir = Path.GetDirectoryName(storageRef);
                     if (!string.IsNullOrWhiteSpace(dir))
                         Directory.CreateDirectory(dir);
@@ -106,6 +104,11 @@ namespace Haley.Services {
 
                 if (!ok)
                     return fb.SetMessage($"DB placeholder record failed: {updateResult.Message}");
+
+                // Persist a custom display name to doc_info if provided.
+                // The auto-registered entry uses the raw fileName; this overwrites it.
+                if (!string.IsNullOrWhiteSpace(displayName))
+                    await Indexer.UpdateDocDisplayName(moduleCuid, versionId, displayName);
 
                 return fb.SetStatus(true).SetResult(new PlaceholderInfo {
                     VersionId   = versionId,
@@ -167,8 +170,9 @@ namespace Haley.Services {
                     return fb.SetMessage("Could not retrieve version CUID from the stored record.");
 
                 // ── Auto-detect size for FS primary storage ────────────────────
+                var resolvedProvider = ResolveProvider(request);
                 long resolvedSize = size ?? 0;
-                if (!size.HasValue && !toStaging && GetDefaultProvider() is FileSystemStorageProvider) {
+                if (!size.HasValue && !toStaging && resolvedProvider is FileSystemStorageProvider) {
                     var fullPath = string.IsNullOrWhiteSpace(storedPath)
                         ? null
                         : Path.IsPathRooted(storedPath)

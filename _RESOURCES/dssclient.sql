@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `chunked_files` (
   `id` bigint(20) NOT NULL,
   `part` bigint(20) NOT NULL,
   `size` int(11) NOT NULL DEFAULT 0 COMMENT 'in MB',
-  `uplodaed` datetime NOT NULL DEFAULT current_timestamp(),
+  `uploaded` datetime NOT NULL DEFAULT current_timestamp(),
   `hash` varchar(128) DEFAULT NULL COMMENT 'SHA-256 hash of this individual chunk for per-chunk integrity verification',
   PRIMARY KEY (`id`,`part`),
   CONSTRAINT `fk_chunked_files_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS `chunk_info` (
   `path` varchar(200) NOT NULL,
   PRIMARY KEY (`id`),
   CONSTRAINT `fk_chunk_info_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  CONSTRAINT `cns_chunk_info` CHECK (`parts` > 1),
-  CONSTRAINT `cns_chunk_info_0` CHECK (`size` > 1)
+  CONSTRAINT `cns_chunk_info` CHECK (`parts` >= 1),
+  CONSTRAINT `cns_chunk_info_0` CHECK (`size` >= 1)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Data exporting was unselected.
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS `version_info` (
   `staging_ref` varchar(300) DEFAULT NULL,
   `size` bigint(20) NOT NULL DEFAULT 0 COMMENT 'SIZE IN BYTES',
   `metadata` text DEFAULT NULL,
-  `flags` int(11) NOT NULL DEFAULT 0 COMMENT 'Flags:\n0 - None\n1 - Chunked-Upload Mode (Marked)\n2 - Uploaded to Chunking Area (Chunks are always deleted upon moving out)\n4 - Uploaded to Staging Area (Optional)\n8 - Uploaded to Storage Area (Final)\n16 - Deleted Chunked Files (Mandatory)\n32 - Deleted Staging Copy (Optional)\n64 - Upload Process Completed\n128 - Synced to Internal Storage (was ExternalTemp, now pulled to local disk)',
+  `flags` int(11) NOT NULL DEFAULT 0 COMMENT 'Flags:\n0 - None\n1 - Chunked-Upload Mode (Marked)\n2 - Uploaded to Chunking Area (Chunks are always deleted upon moving out)\n4 - Uploaded to Staging Area (Optional)\n8 - Uploaded to Storage Area (Final)\n16 - Deleted Chunked Files (Mandatory)\n32 - Deleted Staging Copy (Optional)\n64 - Upload Process Completed\n128 - Synced to Internal Storage (was ExternalTemp, now pulled to local disk)\n256 - PlaceHolder (DB Reserved, no content copied yet)',
   `hash` varchar(128) DEFAULT NULL COMMENT 'SHA-256 hash of the fully assembled/final file for integrity verification and sync validation',
   `synced_at` timestamp NULL DEFAULT NULL COMMENT 'Timestamp set by background sync worker when file is successfully pulled from external storage to internal disk. NULL means file was always internal or sync has not completed yet.',
   PRIMARY KEY (`id`),
