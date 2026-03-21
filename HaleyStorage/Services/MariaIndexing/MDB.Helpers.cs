@@ -31,7 +31,7 @@ namespace Haley.Utils {
     /// Contains the workspace/directory/namestore "ensure" helpers and the low-level
     /// <c>InsertAndFetchID*</c> check-then-insert pattern.
     /// </summary>
-    public partial class MariaDBIndexing : IVaultIndexing {
+    internal partial class MariaDBIndexing {
         /// <summary>
         /// Thread-safe one-shot validation: runs <see cref="Validate"/> the first time it is called.
         /// Subsequent calls are no-ops, guarded by a <see cref="SemaphoreSlim"/>.

@@ -8,7 +8,7 @@ namespace Haley.Utils {
     /// All registered clients, modules, and workspaces are stored here by their CUID (compact-N)
     /// to avoid repeated DB round-trips during path resolution.
     /// </summary>
-    public partial class MariaDBIndexing : IVaultIndexing {
+    internal partial class MariaDBIndexing {
         //We also need to cache the results to avoid frequent calls to the DB.
         ConcurrentDictionary<string, IVaultObject> _cache = new ConcurrentDictionary<string, IVaultObject>();
 

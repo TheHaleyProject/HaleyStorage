@@ -31,7 +31,7 @@ namespace Haley.Utils {
     /// Writes storage name, path, size, hash, staging path, flags, and metadata for a doc_version.
     /// Extended fields (staging_path, flags, metadata) are only written when the caller provides them.
     /// </summary>
-    public partial class MariaDBIndexing : IVaultIndexing {
+    internal partial class MariaDBIndexing {
         /// <summary>
         /// Upserts <c>version_info</c> core fields (storage_name, storage_path, size, hash, synced_at)
         /// then conditionally updates extended fields (staging_path, flags, metadata) when present on

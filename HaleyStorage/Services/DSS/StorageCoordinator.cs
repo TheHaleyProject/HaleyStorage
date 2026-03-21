@@ -49,7 +49,7 @@ namespace Haley.Services {
         /// <param name="write_mode">When <c>false</c>, all mutating operations are rejected.</param>
         /// <param name="indexer">Optional DB-backed indexer. Pass <c>null</c> to run in file-system-only mode.</param>
         /// <param name="throwExceptions">When <c>true</c>, exceptions propagate instead of being swallowed as error messages.</param>
-        public StorageCoordinator(string basePath, bool write_mode, IVaultIndexing indexer, bool throwExceptions, ILogger logger =null) {
+        internal StorageCoordinator(string basePath, bool write_mode, IVaultIndexing indexer, bool throwExceptions, ILogger logger =null) {
             BasePath = basePath?.Trim();
             WriteMode = write_mode;
             ThrowExceptions = throwExceptions;
@@ -164,10 +164,9 @@ namespace Haley.Services {
         /// Replaces the active indexer and re-runs initialization so default client/module/workspace
         /// structures are created against the new indexer.
         /// </summary>
-        public IStorageCoordinator SetIndexer(IVaultIndexing service) {
+        private void SetIndexer(IVaultIndexing service) {
             Indexer = service;
             Initialize(true)?.Wait();
-            return this;
         }
 
         /// <summary>Replaces the registry configuration. Passing <c>null</c> resets to the default <see cref="StorageRegistryConfig"/>.</summary>

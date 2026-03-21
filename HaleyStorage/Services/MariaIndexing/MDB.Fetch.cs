@@ -33,7 +33,7 @@ namespace Haley.Utils {
     /// All public overloads ultimately delegate to the internal <c>GetDocVersionInfoInternal</c>
     /// or to the name-based workspace search path.
     /// </summary>
-    public partial class MariaDBIndexing : IVaultIndexing {
+    internal partial class MariaDBIndexing {
         /// <summary>Fetches the latest <c>version_info</c> row for a doc_version identified by its auto-increment ID.</summary>
         public Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id) {
             return GetDocVersionInfoInternal(moduleCuid, id, string.Empty);

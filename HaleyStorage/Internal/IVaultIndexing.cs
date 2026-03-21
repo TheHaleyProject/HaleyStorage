@@ -1,0 +1,56 @@
+using System.Threading.Tasks;
+using System;
+using Haley.Models;
+using Haley.Enums;
+
+namespace Haley.Services {
+    /// <summary>
+    /// Internal contract for DB-backed vault indexing.
+    /// Consumers never implement or inject this — the implementation is wired up internally
+    /// by <see cref="StorageCoordinator"/> based on the DB choice (currently MariaDB only).
+    /// </summary>
+    internal interface IVaultIndexing {
+        bool ThrowExceptions { get; }
+        Task<IFeedback> RegisterClient(IVaultClient info);
+        Task<IFeedback> RegisterModule(IVaultModule info);
+        Task<IFeedback> RegisterWorkspace(IVaultWorkSpace info);
+        Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultInfo holder);
+        Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IVaultFileRoute file, string callId = null);
+        Task<IFeedback> UpdateDocDisplayName(string moduleCuid, long versionId, string displayName);
+        Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id);
+        Task<IFeedback> GetDocVersionInfo(string moduleCuid, string cuid);
+        Task<IFeedback> GetDocVersionInfo(string moduleCuid, string wsCuid, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);
+        Task<IFeedback> GetDocVersionInfo(string moduleCuid, long wsId, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);
+        Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50);
+        /// <summary>
+        /// Searches for matching folders and files (latest version only) across the workspace.
+        /// The term is matched against vault names (filename stems); extension is a separate filter.
+        /// </summary>
+        Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, long directoryId = 0, bool recursive = false, int page = 1, int pageSize = 50);
+        Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest request);
+        Task Validate();
+        bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
+        bool TryAddInfo(IVaultObject dirInfo, bool replace = false);
+        Task<IFeedback<string>> GetParentName(IVaultFileReadRequest request);
+        // Chunking
+        Task<IFeedback> UpsertChunkInfo(string moduleCuid, long versionId, long chunkSizeMb, int totalParts, string chunkFolderName, string chunkFolderPath, bool isCompleted = false, string callId = null);
+        Task<IFeedback> UpsertChunkPart(string moduleCuid, long versionId, long partNumber, int sizeMb, string hash = null, string callId = null);
+        Task<IFeedback> MarkChunkCompleted(string moduleCuid, long versionId, string callId = null);
+        // Storage profiles
+        Task<long> UpsertProvider(string displayName, string description = null);
+        Task<long> UpsertProfile(string displayName);
+        Task<long> UpsertProfileInfo(int profileId, int version, int mode, string storageProviderKey, string stagingProviderKey, string metadataJson);
+        Task<bool> SetModuleStorageProfile(string moduleCuid, int profileId);
+        Task<bool> SetWorkspaceStorageProfile(string workspaceCuid, int profileInfoId);
+        /// <summary>
+        /// Walks all cached workspaces and restores any persisted storage-profile overrides from the DB.
+        /// Call once at startup after all registrations are complete.
+        /// </summary>
+        Task RehydrateWorkspaceProfilesAsync();
+        /// <summary>
+        /// Fetches the resolved provider keys and mode for a specific <c>profile_info.id</c>.
+        /// Returns a dictionary with keys: <c>storage_provider_key</c>, <c>staging_provider_key</c>, <c>mode</c>.
+        /// </summary>
+        Task<IFeedback> GetProfileInfo(long profileInfoId);
+    }
+}

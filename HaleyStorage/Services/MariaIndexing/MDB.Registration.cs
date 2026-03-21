@@ -29,7 +29,7 @@ namespace Haley.Utils {
     /// <summary>
     /// Partial class — vault hierarchy registration (client, module, workspace) and document registration.
     /// </summary>
-    public partial class MariaDBIndexing : IVaultIndexing {
+    internal partial class MariaDBIndexing {
         /// <summary>
         /// Public entry point for document registration. Delegates to <c>RegisterDocumentsInternal</c>.
         /// </summary>

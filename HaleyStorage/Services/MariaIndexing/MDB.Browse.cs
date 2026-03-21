@@ -11,7 +11,7 @@ namespace Haley.Utils {
     /// <summary>
     /// Partial class — DB-backed browse/explore APIs for folders and file history.
     /// </summary>
-    public partial class MariaDBIndexing : IVaultIndexing {
+    internal partial class MariaDBIndexing {
         public async Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50) {
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {

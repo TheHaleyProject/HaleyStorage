@@ -13,7 +13,7 @@ namespace Haley.Utils {
     /// Manages the <c>provider</c>, <c>profile</c>, and <c>profile_info</c> tables
     /// in the core DB, and links profiles to modules and workspaces.
     /// </summary>
-    public partial class MariaDBIndexing {
+    internal partial class MariaDBIndexing {
 
         /// <summary>
         /// Inserts or updates a provider record in the core DB's <c>provider</c> table.

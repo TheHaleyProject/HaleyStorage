@@ -14,7 +14,7 @@ namespace Haley.Utils {
     /// Searches vault names (filename stems) using LIKE patterns; extension is a separate filter.
     /// Supports three scope modes: entire workspace, single directory, recursive subtree.
     /// </summary>
-    public partial class MariaDBIndexing : IVaultIndexing {
+    internal partial class MariaDBIndexing {
 
         public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(
             IVaultReadRequest request,

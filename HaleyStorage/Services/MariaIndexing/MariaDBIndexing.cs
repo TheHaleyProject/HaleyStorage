@@ -1,5 +1,6 @@
 ﻿using Haley.Abstractions;
 using Haley.Models;
+using Haley.Services;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -14,14 +15,14 @@ namespace Haley.Utils {
     /// an open-transaction handler dictionary keyed by <c>callId###dbId</c>.
     /// Split into partial classes: Cache, Chunking, Fetch, Helpers, Registration, StorageProfile, Update.
     /// </summary>
-    public partial class MariaDBIndexing : IVaultIndexing {
+    internal partial class MariaDBIndexing : IVaultIndexing {
         const string DB_CORE_SQL_FILE = "dsscore.sql";
         const string DB_CLIENT_SQL_FILE = "dssclient.sql";
         const string DB_CORE_FALLBACK_NAME = "mss_core";
         const string DB_CORE_SEARCH_TERM = "dss_core";
         const string DB_CLIENT_SEARCH_TERM = "dss_client";
         const string DB_SQL_FILE_LOCATION = "Resources";
-        public const string DB_MODULE_NAME_PREFIX = "dssm_";
+        internal const string DB_MODULE_NAME_PREFIX = "dssm_";
         ConcurrentDictionary<string, (ITransactionHandler handler, DateTime created)> _handlers = new ConcurrentDictionary<string, (ITransactionHandler handler, DateTime created)>();
         ILogger _logger;
         string _key;

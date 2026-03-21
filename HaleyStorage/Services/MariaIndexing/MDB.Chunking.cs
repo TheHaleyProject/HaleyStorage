@@ -13,7 +13,7 @@ namespace Haley.Utils {
     /// Manages <c>chunk_info</c> (session metadata) and <c>chunked_files</c> (per-part records)
     /// in the per-module MariaDB instance.
     /// </summary>
-    public partial class MariaDBIndexing {
+    internal partial class MariaDBIndexing {
 
         /// <summary>
         /// Inserts or updates a <c>chunk_info</c> row for a doc_version, recording the expected
