@@ -67,5 +67,7 @@ namespace Haley.Internal {
         public const string IS_COMPLETED = $@"@{nameof(IS_COMPLETED)}"; // chunk_info.is_completed
         public const string PART = $@"@{nameof(PART)}";                 // chunked_files.part
         public const string FILESIZE_MB = $@"@{nameof(FILESIZE_MB)}";   // chunked_files.size (MB)
+        public const string LIMIT_ROWS = $@"@{nameof(LIMIT_ROWS)}";     // browse pagination LIMIT
+        public const string OFFSET_ROWS = $@"@{nameof(OFFSET_ROWS)}";   // browse pagination OFFSET
     }
 }

@@ -104,6 +104,82 @@ namespace Haley.Internal {
                 public const string INSERT = $@"insert ignore into directory (workspace,parent,name,display_name) values ({WSPACE},{PARENT},{NAME},{DNAME});";
                 public const string GET = $@"select dir.id from directory as dir where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={NAME} and dir.deleted = 0;";
                 public const string GET_BY_CUID = $@"select dir.id from directory as dir where dir.cuid = {CUID} and dir.deleted = 0;";
+                public const string GET_DETAILS = $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.parent, dir.workspace, dir.created, dir.modified
+                                                     from directory as dir
+                                                     where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME} and dir.deleted = 0
+                                                     limit 1;";
+                public const string GET_DETAILS_BY_CUID = $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.parent, dir.workspace, dir.created, dir.modified
+                                                             from directory as dir
+                                                             where dir.cuid = {VALUE} and dir.deleted = 0
+                                                             limit 1;";
+                public const string GET_DETAILS_BY_ID = $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.parent, dir.workspace, dir.created, dir.modified
+                                                           from directory as dir
+                                                           where dir.id = {VALUE} and dir.deleted = 0
+                                                           limit 1;";
+                public const string COUNT_CHILDREN = $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.deleted = 0;";
+                public const string BROWSE_ITEMS =
+                    $@"select *
+                       from (
+                            select
+                                0 as sort_group,
+                                'folder' as item_type,
+                                dir.id,
+                                dir.cuid as uid,
+                                dir.display_name,
+                                dir.parent as parent_id,
+                                dir.created,
+                                dir.modified,
+                                null as version_id,
+                                null as version_cuid,
+                                null as version_no,
+                                null as version_count,
+                                null as version_created,
+                                null as size,
+                                null as storage_name,
+                                null as storage_ref,
+                                null as staging_ref,
+                                null as flags,
+                                null as hash,
+                                null as synced_at
+                            from directory as dir
+                            where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.deleted = 0
+
+                            union all
+
+                            select
+                                1 as sort_group,
+                                'file' as item_type,
+                                d.id,
+                                d.cuid as uid,
+                                coalesce(di.display_name, '') as display_name,
+                                d.parent as parent_id,
+                                d.created,
+                                d.modified,
+                                dv.id as version_id,
+                                dv.cuid as version_cuid,
+                                dv.ver as version_no,
+                                latest.version_count,
+                                dv.created as version_created,
+                                vi.size,
+                                vi.storage_name,
+                                vi.storage_ref,
+                                vi.staging_ref,
+                                vi.flags,
+                                vi.hash,
+                                vi.synced_at
+                            from document as d
+                            left join doc_info as di on di.file = d.id
+                            inner join (
+                                select dvi.parent, max(dvi.ver) as max_ver, count(*) as version_count
+                                from doc_version as dvi
+                                group by dvi.parent
+                            ) as latest on latest.parent = d.id
+                            inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver
+                            left join version_info as vi on vi.id = dv.id
+                            where d.workspace = {WSPACE} and d.parent = {PARENT} and d.deleted = 0
+                       ) as browse_items
+                       order by browse_items.sort_group asc, browse_items.display_name asc, browse_items.id asc
+                       limit {LIMIT_ROWS} offset {OFFSET_ROWS};";
                 public const string GET_BY_DOC_VERSION_CUID = $@"SELECT dir.display_name,dir.cuid,dir.name FROM doc_version AS dv
                     JOIN document AS d ON d.id = dv.parent AND d.deleted = 0
                     JOIN directory AS dir ON dir.id = d.parent AND dir.deleted = 0
@@ -135,6 +211,22 @@ namespace Haley.Internal {
                 public const string INSERT_INFO = $@"insert into doc_info (file,display_name) values ({PARENT}, {DNAME}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name);";
                 public const string GET_BY_PARENT = $@"select doc.id from document as doc where doc.parent= {PARENT} and doc.name = {NAME} and doc.deleted = 0;";
                 public const string GET_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.deleted = 0;";
+                public const string COUNT_BY_DIRECTORY = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT} and doc.deleted = 0;";
+                public const string GET_DETAILS_BY_ID =
+                    $@"select
+                            d.id as document_id,
+                            d.cuid as document_cuid,
+                            d.workspace as workspace_id,
+                            dir.id as directory_id,
+                            dir.cuid as directory_cuid,
+                            dir.display_name as directory_name,
+                            dir.parent as directory_parent_id,
+                            coalesce(di.display_name, '') as display_name
+                       from document as d
+                       left join doc_info as di on di.file = d.id
+                       inner join directory as dir on dir.id = d.parent and dir.deleted = 0
+                       where d.id = {ID} and d.deleted = 0
+                       limit 1;";
                 public const string GET_BY_NAME = $@"SELECT dv.id FROM document AS dv
                         INNER JOIN
                             (SELECT ns.id FROM name_store AS ns
@@ -153,6 +245,8 @@ namespace Haley.Internal {
                 public const string EXISTS_BY_ID = $@"select 1 from doc_version as dv where dv.id = {ID};";
                 public const string INSERT = $@"insert ignore into doc_version (parent,ver) values({PARENT},{VERSION});";
                 public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT};";
+                public const string GET_DOCUMENT_ID_BY_VERSION_ID = $@"select dv.parent from doc_version as dv where dv.id = {VALUE} limit 1;";
+                public const string GET_DOCUMENT_ID_BY_VERSION_CUID = $@"select dv.parent from doc_version as dv where dv.cuid = {VALUE} limit 1;";
 
                 // Writes -> storage_name/storage_ref/size/hash/synced_at
                 // hash and synced_at are nullable — pass DBNull.Value when not available.
@@ -241,6 +335,25 @@ namespace Haley.Internal {
                       INNER JOIN version_info AS vi ON vi.id = dv.id
                       LEFT JOIN doc_info as di on di.file = {PARENT}
                       WHERE dv.parent = {PARENT};";
+
+                public const string GET_ALL_BY_PARENT =
+                    $@"select
+                            dv.id as version_id,
+                            dv.cuid as version_cuid,
+                            dv.ver as version_no,
+                            dv.created as version_created,
+                            vi.size,
+                            vi.storage_name,
+                            vi.storage_ref,
+                            vi.staging_ref,
+                            vi.flags,
+                            vi.hash,
+                            vi.synced_at,
+                            vi.metadata
+                       from doc_version as dv
+                       left join version_info as vi on vi.id = dv.id
+                       where dv.parent = {PARENT}
+                       order by dv.ver desc;";
 
                 // Optional extended update — only called when caller explicitly provides these fields.
                 // hash/synced_at use COALESCE so a NULL param leaves the existing value unchanged.

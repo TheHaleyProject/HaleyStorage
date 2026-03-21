@@ -261,9 +261,7 @@
 				<comment><![CDATA[name with which the storage provider identifies it.. For FS, provider, it might be a  number or a GUID. For B2 , S3 , Azure provider or something else, it might be the refernce id provided by that service]]></comment>
 			</column>
 			<column name="storage_ref" prior="storage_path" type="TEXT" mandatory="y" />
-			<column name="staging_ref" prior="staging_path" type="VARCHAR" length="300" >
-				<comment><![CDATA[Optional Staging path, if present.]]></comment>
-			</column>
+			<column name="staging_ref" prior="staging_path" type="VARCHAR" length="300" />
 			<column name="size" type="BIGINT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 				<comment><![CDATA[SIZE IN BYTES]]></comment>
@@ -280,7 +278,8 @@
 16 - Deleted Chunked Files (Mandatory)
 32 - Deleted Staging Copy (Optional)
 64 - Upload Process Completed
-128 - Synced to Internal Storage (was ExternalTemp, now pulled to local disk)]]></comment>
+128 - Synced to Internal Storage (was ExternalTemp, now pulled to local disk)
+256 - PlaceHolder (DB Reserved, no content copied yet)]]></comment>
 			</column>
 			<column name="hash" type="VARCHAR" length="128" >
 				<comment><![CDATA[SHA-256 hash of the fully assembled/final file for integrity verification and sync validation]]></comment>
@@ -490,13 +489,9 @@ Thus, a provider is only about HOW. The WHERE portion is stored in the storage p
 			</column>
 			<column name="storagename_mode" prior="control_mode" type="INT" mandatory="y" >
 				<defo><![CDATA[1]]></defo>
-				<comment><![CDATA[1 - numbers - Semi or Fully managed
-2 - hash - Semi or fully managed.]]></comment>
 			</column>
 			<column name="storagename_parse" prior="parse_mode" type="INT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
-				<comment><![CDATA[0- Parse //Semi Managed. You prepare the ID From outside.. Application will only prepare folders.
-1- Generate //Fully Managed, Application will generate the id as required.]]></comment>
 			</column>
 			<column name="created" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
@@ -520,11 +515,14 @@ Thus, a provider is only about HOW. The WHERE portion is stored in the storage p
 			<index name="unq_workspace_1" unique="UNIQUE_KEY" >
 				<column name="cuid" />
 			</index>
+			<index name="fk_workspace_profile_info" unique="NORMAL" >
+				<column name="storage_profile" />
+			</index>
 			<constraint name="cns_workspace" >
-				<string><![CDATA[`control_mode` >= 1 and `control_mode` <= 2]]></string>
+				<string><![CDATA[`storagename_mode` >= 1 and `storagename_mode` <= 2]]></string>
 			</constraint>
 			<constraint name="cns_workspace_0" >
-				<string><![CDATA[`parse_mode` >= 0 and `parse_mode` <= 1]]></string>
+				<string><![CDATA[`storagename_parse` >= 0 and `storagename_parse` <= 1]]></string>
 			</constraint>
 			<fk name="fk_workspace_module" to_schema="dss_core" to_table="module" >
 				<fk_column name="parent" pk="id" />
