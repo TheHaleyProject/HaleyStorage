@@ -4,13 +4,13 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Abstractions {
-    public interface IVaultWorkSpace : IVaultStorable {
+    internal interface IStorageWorkSpace : IVaultStorable {
         /// <summary>Physical path segment (FS) or key prefix (cloud) for this workspace. Populated during registration.</summary>
         string StorageRef { get; set; }
         IVaultObject Client { get; set; }
         IVaultObject Module { get; set; }
-        StorageNameMode NameMode { get; set; }
-        StorageNameParseMode ParseMode { get; set; }
+        VaultNameMode NameMode { get; set; }
+        VaultNameParseMode ParseMode { get; set; }
         string DatabaseName { get; set; }
         /// <summary>
         /// Base segment for this workspace's storage area.
@@ -23,7 +23,7 @@ namespace Haley.Abstractions {
         /// <summary>Optional override staging provider key. When set, takes precedence over the module's staging provider.</summary>
         string StagingProviderKey { get; set; }
         /// <summary>Upload routing mode override. Only effective when <see cref="StorageProviderKey"/> is set.</summary>
-        StorageProfileMode ProfileMode { get; set; }
+        VaultProfileMode ProfileMode { get; set; }
         /// <summary>
         /// The <c>dsscore.profile_info.id</c> that was used to configure this workspace's provider settings.
         /// Set during storage-profile hydration. 0 when configured via provider keys alone.

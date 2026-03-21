@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Haley.Abstractions {
-    public interface IVaultSummaryResponse : IFeedback {
+    internal interface IStorageSummaryResponse : IFeedback {
         int Passed { get; set; }
         int Failed { get; set; }
         string TotalSizeUploaded { get; set; }

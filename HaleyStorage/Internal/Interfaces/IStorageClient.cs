@@ -1,10 +1,10 @@
-﻿using Haley.Enums;
+using Haley.Enums;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace Haley.Abstractions {
-    public interface IVaultClient : IVaultObject {
+    internal interface IStorageClient : IVaultObject {
         //If created in 
         string SigningKey { get; set; }
         string EncryptKey { get; set; }
