@@ -47,7 +47,7 @@ namespace Haley.Internal {
             public const string UPDATE_STORAGE_PROFILE_BY_ID = $@"update workspace set storage_profile = {STORAGE_PROFILE} where id = {ID};";
             /// <summary>Returns all workspaces that have a storage_profile assigned, with resolved provider name strings.</summary>
             public const string GET_ALL_PROFILES_WITH_KEYS =
-                $@"SELECT ws.cuid, pi.mode,
+                $@"SELECT ws.cuid, pi.id AS profile_info_id, pi.mode,
                           sp.name  AS storage_provider_key,
                           stp.name AS staging_provider_key
                    FROM workspace AS ws
@@ -73,7 +73,7 @@ namespace Haley.Internal {
             public const string EXISTS = $@"select pi.id from profile_info as pi where pi.profile = {PROFILE_ID} and pi.version = {VERSION} LIMIT 1;";
             /// <summary>Loads a profile_info row together with the resolved provider name strings.</summary>
             public const string GET_WITH_PROVIDER_KEYS =
-                $@"SELECT pi.mode, pi.metadata,
+                $@"SELECT pi.id AS profile_info_id, pi.mode, pi.metadata,
                           sp.name  AS storage_provider_key,
                           stp.name AS staging_provider_key
                    FROM profile_info AS pi
@@ -248,17 +248,19 @@ namespace Haley.Internal {
                 public const string GET_DOCUMENT_ID_BY_VERSION_ID = $@"select dv.parent from doc_version as dv where dv.id = {VALUE} limit 1;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_CUID = $@"select dv.parent from doc_version as dv where dv.cuid = {VALUE} limit 1;";
 
-                // Writes -> storage_name/storage_ref/size/hash/synced_at
-                // hash and synced_at are nullable — pass DBNull.Value when not available.
+                // Writes -> storage_name/storage_ref/size/hash/synced_at/profile_info_id
+                // hash, synced_at, and profile_info_id are nullable — pass DBNull.Value when not available.
+                // profile_info_id uses COALESCE on update so existing stamped values are never overwritten.
                 public const string INSERT_INFO =
-                    $@"insert into version_info (id, storage_name, storage_ref, size, hash, synced_at)
-                       values({ID},{SAVENAME},{PATH},{SIZE},{HASH},{SYNCED_AT})
+                    $@"insert into version_info (id, storage_name, storage_ref, size, hash, synced_at, profile_info_id)
+                       values({ID},{SAVENAME},{PATH},{SIZE},{HASH},{SYNCED_AT},{PROFILE_INFO_ID})
                        ON DUPLICATE KEY UPDATE
                             storage_name = VALUES(storage_name),
                             storage_ref = VALUES(storage_ref),
                             size = VALUES(size),
                             hash = COALESCE(VALUES(hash), hash),
-                            synced_at = COALESCE(VALUES(synced_at), synced_at);";
+                            synced_at = COALESCE(VALUES(synced_at), synced_at),
+                            profile_info_id = COALESCE(VALUES(profile_info_id), profile_info_id);";
 
                 // Aliases: storage_name→saveas_name, storage_ref→path, staging_ref→staging_path (backward compat with PopulateFileFromDic)
                 public const string GET_INFO =
@@ -271,7 +273,8 @@ namespace Haley.Internal {
                             hash,
                             synced_at,
                             metadata,
-                            flags
+                            flags,
+                            profile_info_id
                        from version_info
                        where id = {ID};";
 
@@ -289,6 +292,7 @@ namespace Haley.Internal {
                             vi.synced_at,
                             vi.flags,
                             vi.metadata,
+                            vi.profile_info_id,
                             di.display_name as dname
                       FROM doc_version AS dv
                       INNER JOIN version_info AS vi ON vi.id = dv.id
@@ -309,6 +313,7 @@ namespace Haley.Internal {
                             vi.synced_at,
                             vi.flags,
                             vi.metadata,
+                            vi.profile_info_id,
                             di.display_name as dname
                       FROM doc_version AS dv
                       INNER JOIN version_info AS vi ON vi.id = dv.id
@@ -329,6 +334,7 @@ namespace Haley.Internal {
                             vi.synced_at,
                             vi.flags,
                             vi.metadata,
+                            vi.profile_info_id,
                             di.display_name as dname
                       FROM doc_version AS dv
                       INNER JOIN (select MAX(dvi.ver) AS ver from doc_version as dvi where dvi.parent = {PARENT}) AS dvo ON dvo.ver = dv.ver

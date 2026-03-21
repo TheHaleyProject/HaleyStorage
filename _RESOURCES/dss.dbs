@@ -2,29 +2,36 @@
 <project name="haley-dss" database="MariaDb" id="93003ef9-df78-41a8-abf9-c1beee74eaca" >
 	<schema name="dss_client" >
 		<table name="chunk_info" prior="chunk_" >
-			<column name="id" type="BIGINT" mandatory="y" />
+			<comment><![CDATA[Header record for a chunked-upload session. One row per doc_version that uses multi-part uploading. Tracks the expected chunk size, total part count, the staging directory name/path, and whether all parts have been merged. Paired with chunked_files which holds one row per received chunk part.]]></comment>
+			<column name="id" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[PK and FK → doc_version.id. One-to-one: only chunked doc_versions have a chunk_info row. Created at the start of a chunked upload session.]]></comment>
+			</column>
 			<column name="size" type="BIGINT" mandatory="y" >
 				<defo><![CDATA[1]]></defo>
-				<comment><![CDATA[in MB]]></comment>
+				<comment><![CDATA[Expected size of each individual chunk in MEGABYTES. All chunks except possibly the last one will be exactly this size. Example: size=10 means each chunk is ~10 MB. Minimum 1 (enforced by CHECK constraint).]]></comment>
 			</column>
 			<column name="parts" type="INT" mandatory="y" >
 				<defo><![CDATA[2]]></defo>
+				<comment><![CDATA[Total number of chunk parts expected for this upload. E.g. a 95 MB file with size=10 MB → parts=10 (9 full chunks + 1 partial). Minimum 1 (enforced by CHECK constraint). When len(chunked_files rows) = parts, the upload is considered complete.]]></comment>
 			</column>
 			<column name="name" type="VARCHAR" length="64" mandatory="y" >
-				<comment><![CDATA[directory name for the for the chunked_files. Inside the directory, we create files with just numbers. file.mp4.001, file.mp4.002 etc.]]></comment>
+				<comment><![CDATA[Name of the temporary staging directory that holds the chunk files. Named after the upload session, e.g. "chunks_abc123def456". Inside this directory files are named sequentially: file.mp4.001, file.mp4.002, etc.]]></comment>
 			</column>
 			<column name="is_completed" type="BIT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
+				<comment><![CDATA[Completion flag. 0=upload in progress (not all parts received or not yet merged). 1=all parts received AND the application has successfully merged them into the final file. Set by MarkChunkCompleted() in MariaDBIndexing.]]></comment>
 			</column>
-			<column name="path" type="VARCHAR" length="200" mandatory="y" />
+			<column name="path" type="VARCHAR" length="200" mandatory="y" >
+				<comment><![CDATA[Full path to the temporary chunk staging directory on the staging storage provider. E.g. "/staging/acme/hr/chunks_abc123/". The application streams individual chunks into files under this directory, then reads them back in order during merge.]]></comment>
+			</column>
 			<index name="pk_chunk_info" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<constraint name="cns_chunk_info" >
-				<string><![CDATA[`parts` > 1]]></string>
+				<string><![CDATA[`parts` >= 1]]></string>
 			</constraint>
 			<constraint name="cns_chunk_info_0" >
-				<string><![CDATA[`size` > 1]]></string>
+				<string><![CDATA[`size` >= 1]]></string>
 			</constraint>
 			<fk name="fk_chunk_info_doc_version" to_schema="dss_client" to_table="doc_version" >
 				<fk_column name="id" pk="id" />
@@ -32,17 +39,23 @@
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="chunked_files" prior="chunked_file" >
-			<column name="id" type="BIGINT" mandatory="y" />
-			<column name="part" type="BIGINT" mandatory="y" />
+			<comment><![CDATA[Per-chunk tracking table for multi-part uploads. One row per received chunk part. Used to track upload progress, support resume (identify which parts are missing), verify per-chunk hashes, and confirm completion (row count = chunk_info.parts). Rows are cleaned up after the merge is complete and version_info.flags bit 16 (Chunked Files Deleted) is set.]]></comment>
+			<column name="id" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[FK → doc_version.id. Identifies which upload session this chunk belongs to. Part of the composite PK.]]></comment>
+			</column>
+			<column name="part" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[1-based sequential chunk number within this upload session. Part 1 is the first chunk, part N is the last. Combined with id to form the composite PK, ensuring each part number is recorded exactly once per session.]]></comment>
+			</column>
 			<column name="size" type="INT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
-				<comment><![CDATA[in MB]]></comment>
+				<comment><![CDATA[Size of this individual chunk in MEGABYTES. All parts except the last are expected to match chunk_info.size. The final part may be smaller. Used for integrity checking during merge.]]></comment>
 			</column>
 			<column name="uploaded" prior="uplodaed" type="DATETIME" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Timestamp when this specific chunk was received and written to the staging directory. Useful for diagnosing stalled uploads (e.g. if part 2 arrived but part 3 has not for 24 hours).]]></comment>
 			</column>
 			<column name="hash" type="VARCHAR" length="128" >
-				<comment><![CDATA[SHA-256 hash of this individual chunk for per-chunk integrity verification]]></comment>
+				<comment><![CDATA[SHA-256 hex digest of this individual chunk, supplied by the caller at upload time. Allows per-chunk integrity verification before merge. NULL if the caller did not supply a hash for this part. Example: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08".]]></comment>
 			</column>
 			<index name="pk_chunked_files" unique="PRIMARY_KEY" >
 				<column name="id" />
@@ -54,30 +67,41 @@
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="directory" prior="directo" >
+			<comment><![CDATA[Virtual folder hierarchy within a workspace. Directories are logical — they exist in the DB only and do not map to physical filesystem folders. Supports soft-delete, parent-child nesting (parent=0 for root), and CUID-based external referencing.]]></comment>
 			<column name="id" type="BIGINT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Surrogate PK. Referenced by document.parent and by child directories via the parent column.]]></comment>
 			</column>
-			<column name="display_name" type="VARCHAR" length="120" mandatory="y" />
+			<column name="display_name" type="VARCHAR" length="120" mandatory="y" >
+				<comment><![CDATA[Human-readable folder label displayed in the UI. May contain spaces and mixed case, e.g. "Project Documents" or "Year 2024 Invoices".]]></comment>
+			</column>
 			<column name="created" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Timestamp when the directory record was first created.]]></comment>
 			</column>
 			<column name="modified" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 				<column_options><![CDATA[ON UPDATE CURRENT_TIMESTAMP]]></column_options>
+				<comment><![CDATA[Automatically updated whenever any column in this row changes.]]></comment>
 			</column>
 			<column name="cuid" prior="guid" type="VARCHAR" length="48" mandatory="y" >
 				<defo><![CDATA['uuid()']]></defo>
+				<comment><![CDATA[Collision-resistant unique identifier for this directory. Stable across renames. Used by the application layer as an external-safe reference (avoids exposing numeric auto-increment IDs in APIs).]]></comment>
 			</column>
 			<column name="deleted" type="BIT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
-				<comment><![CDATA[soft delete]]></comment>
+				<comment><![CDATA[Soft-delete flag. 0=active, 1=deleted. Deleted directories are hidden from browse results but retained in the database for audit and foreign-key integrity.]]></comment>
 			</column>
-			<column name="name" type="VARCHAR" length="120" mandatory="y" />
+			<column name="name" type="VARCHAR" length="120" mandatory="y" >
+				<comment><![CDATA[Normalised folder slug used in uniqueness checks and path construction, e.g. "project_docs" or "invoices". Should be lowercase and URL-safe. Different from display_name which may have spaces.]]></comment>
+			</column>
 			<column name="parent" type="BIGINT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
-				<comment><![CDATA[Can be null for root folders. We mark it as 0 for root folders]]></comment>
+				<comment><![CDATA[FK → directory.id of the parent folder. Set to 0 for top-level (root) directories in the workspace — the application treats 0 as the sentinel for "no parent". Checked against (workspace, parent, name) unique constraint.]]></comment>
 			</column>
-			<column name="workspace" type="BIGINT" mandatory="y" />
+			<column name="workspace" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[FK → workspace.id. Every directory belongs to exactly one workspace. A directory created under workspace=12 cannot contain documents from workspace=15.]]></comment>
+			</column>
 			<index name="pk_directory" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -97,8 +121,13 @@
 ]]></options>
 		</table>
 		<table name="doc_info" prior="doc_name" >
-			<column name="file" type="BIGINT" mandatory="y" />
-			<column name="display_name" prior="name" type="VARCHAR" length="200" mandatory="y" />
+			<comment><![CDATA[Optional display name override for a document. When present, the application shows display_name instead of the raw filename derived from name_store. Inserted/updated by UpdateDocDisplayName(). Not every document has a row here.]]></comment>
+			<column name="file" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[PK and FK → document.id. One-to-one optional relationship — insert a row here to attach a custom display name to the document. Omit to use the raw filename derived from name_store.]]></comment>
+			</column>
+			<column name="display_name" prior="name" type="VARCHAR" length="200" mandatory="y" >
+				<comment><![CDATA[Human-readable label for the document. Free-form text, may include spaces, punctuation, and Unicode. E.g. "Q1 2024 Invoice – ACME Corp" or "Employee Handbook v3 (Draft)". Written by the application; not auto-derived.]]></comment>
+			</column>
 			<index name="pk_doc_info" unique="PRIMARY_KEY" >
 				<column name="file" />
 			</index>
@@ -111,19 +140,26 @@
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="doc_version" prior="file_version" >
+			<comment><![CDATA[One row per file upload event. A document accumulates version rows over time (ver=1, 2, 3...). The version row is the FK anchor for all physical storage metadata (version_info) and chunking state (chunk_info, chunked_files).]]></comment>
 			<column name="id" type="BIGINT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Surrogate PK. Used as the FK anchor for version_info, chunk_info, and chunked_files. Also returned to callers as the "versionId" in upload responses.]]></comment>
 			</column>
 			<column name="cuid" type="VARCHAR" length="48" mandatory="y" >
 				<defo><![CDATA['uuid()']]></defo>
+				<comment><![CDATA[Collision-resistant unique identifier for this specific version. Stable and safe for external API exposure. Distinct from the parent document CUID. Example: "f3a8b2c1d9e4a7b0c6d5e3f2a8b1c4d7".]]></comment>
 			</column>
 			<column name="created" prior="created_at" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Timestamp when this version record was created, i.e. when the upload began. For placeholder uploads this marks when the DB record was reserved, not when the file bytes arrived.]]></comment>
 			</column>
 			<column name="ver" prior="version" type="INT" mandatory="y" >
 				<defo><![CDATA[1]]></defo>
+				<comment><![CDATA[Monotonically increasing version number within the parent document. Starts at 1 for the first upload. The (parent, ver) unique constraint prevents gaps or duplicates. The latest version is MAX(ver) for a given parent.]]></comment>
 			</column>
-			<column name="parent" prior="doc" type="BIGINT" mandatory="y" />
+			<column name="parent" prior="doc" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[FK → document.id. Links this version to its parent logical document.]]></comment>
+			</column>
 			<index name="pk_doc_version" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -145,27 +181,37 @@
 ]]></options>
 		</table>
 		<table name="document" prior="doc_master" >
+			<comment><![CDATA[Logical file identity. One row per unique filename within a directory/workspace combination. Does not store the filename string directly — uses name_store FK for normalised filename lookup. Multiple uploads of the same file create new doc_version rows, not new document rows.]]></comment>
 			<column name="id" type="BIGINT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Surrogate PK. Referenced by doc_version.parent, doc_info.file, and other version-level tables.]]></comment>
 			</column>
 			<column name="cuid" prior="guid" type="VARCHAR" length="48" mandatory="y" >
 				<defo><![CDATA['uuid()']]></defo>
-				<comment><![CDATA[Collision Resistant Global unique identifier]]></comment>
+				<comment><![CDATA[Collision-resistant unique identifier for this document. Stable across version uploads and renames. Safe to expose in external APIs. Example: "2b3a8f1c9e4d7a0b6c5e2f3d8a1b4c7e".]]></comment>
 			</column>
 			<column name="created" prior="created_at" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Timestamp when the document record was first created (i.e. when the first version was uploaded).]]></comment>
 			</column>
 			<column name="modified" prior="modified_on" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 				<column_options><![CDATA[ON UPDATE CURRENT_TIMESTAMP]]></column_options>
+				<comment><![CDATA[Automatically updated whenever any column in this row changes (e.g. when the document is moved or soft-deleted).]]></comment>
 			</column>
-			<column name="parent" prior="dir" type="BIGINT" mandatory="y" />
-			<column name="name" prior="saveas_name" type="BIGINT" mandatory="y" />
+			<column name="parent" prior="dir" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[FK → directory.id. The virtual folder this document lives in. Changing this value moves the document to a different folder.]]></comment>
+			</column>
+			<column name="name" prior="saveas_name" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[FK → name_store.id. Represents the logical filename (stem + extension). E.g. name_store id=7 maps to "invoice_jan_2024.pdf". Do not confuse with a varchar name — this is a numeric FK.]]></comment>
+			</column>
 			<column name="deleted" type="BIT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
-				<comment><![CDATA[Soft delete]]></comment>
+				<comment><![CDATA[Soft-delete flag. 0=active, 1=deleted. Deleted documents are excluded from browse/search results but their version history is preserved for audit purposes.]]></comment>
 			</column>
-			<column name="workspace" prior="parent" type="BIGINT" mandatory="y" />
+			<column name="workspace" prior="parent" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[FK → workspace.id. Redundantly stored here (parent directory already implies a workspace) for fast workspace-scoped queries without joining through directory.]]></comment>
+			</column>
 			<index name="pk_document" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -199,10 +245,14 @@
 ]]></options>
 		</table>
 		<table name="extension" prior="extensions" >
+			<comment><![CDATA[Deduplicated registry of file extensions (lowercase, no dot). Paired with vault via name_store to form a full logical filename. Allows efficient type-based queries without scanning varchar filename columns.]]></comment>
 			<column name="id" type="INT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Surrogate PK. Referenced by name_store.extension.]]></comment>
 			</column>
-			<column name="name" type="VARCHAR" length="100" mandatory="y" />
+			<column name="name" type="VARCHAR" length="100" mandatory="y" >
+				<comment><![CDATA[File extension without the leading dot, always lowercase. E.g. "pdf", "mp4", "docx", "jpg". Normalised by the application before insert.]]></comment>
+			</column>
 			<index name="pk_extension" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -214,11 +264,17 @@
 ]]></options>
 		</table>
 		<table name="name_store" prior="name_" >
+			<comment><![CDATA[Normalised filename registry. Each row represents one unique (stem, extension) pair, e.g. ("invoice_jan_2024", "pdf"). document.name is a FK to this table, keeping the full filename string out of the document row.]]></comment>
 			<column name="id" type="BIGINT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Surrogate PK. Referenced by document.name.]]></comment>
 			</column>
-			<column name="extension" type="INT" mandatory="y" />
-			<column name="name" type="BIGINT" mandatory="y" />
+			<column name="extension" type="INT" mandatory="y" >
+				<comment><![CDATA[FK → extension.id. Identifies the file type half of the logical filename (e.g. "pdf").]]></comment>
+			</column>
+			<column name="name" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[FK → vault.id. Identifies the stem half of the logical filename (e.g. "invoice_jan_2024").]]></comment>
+			</column>
 			<index name="pk_name_store" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -241,10 +297,14 @@
 ]]></options>
 		</table>
 		<table name="vault" prior="name_vault" >
+			<comment><![CDATA[Deduplicated table of bare filename stems (no extension). Combined with the extension table via name_store to form a complete logical filename. Avoids repeating long filename strings across millions of document rows.]]></comment>
 			<column name="id" type="BIGINT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Surrogate PK. Referenced by name_store.name.]]></comment>
 			</column>
-			<column name="name" type="VARCHAR" length="200" mandatory="y" />
+			<column name="name" type="VARCHAR" length="200" mandatory="y" >
+				<comment><![CDATA[Bare filename stem without extension, e.g. "invoice_jan_2024" or "profile_photo". Normalised by the application before insert (trimmed, lowercased where appropriate).]]></comment>
+			</column>
 			<index name="pk_vault" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -256,20 +316,29 @@
 ]]></options>
 		</table>
 		<table name="version_info" prior="version_" >
-			<column name="id" type="BIGINT" mandatory="y" />
-			<column name="storage_name" prior="saveas_name" type="VARCHAR" length="200" mandatory="y" >
-				<comment><![CDATA[name with which the storage provider identifies it.. For FS, provider, it might be a  number or a GUID. For B2 , S3 , Azure provider or something else, it might be the refernce id provided by that service]]></comment>
+			<comment><![CDATA[Physical storage metadata for one document version. Stores WHERE the file is (storage_ref, staging_ref), HOW BIG it is (size), WHAT IT IS (hash), and WHAT STATE it is in (flags bitmask). The flags column is the authoritative lifecycle tracker — read it to determine whether a file is a placeholder, in staging, in primary storage, or fully completed.]]></comment>
+			<column name="id" type="BIGINT" mandatory="y" >
+				<comment><![CDATA[PK and FK → doc_version.id. One-to-one mandatory relationship: every doc_version must have a version_info row.]]></comment>
 			</column>
-			<column name="storage_ref" prior="storage_path" type="TEXT" mandatory="y" />
-			<column name="staging_ref" prior="staging_path" type="VARCHAR" length="300" />
+			<column name="storage_name" prior="saveas_name" type="VARCHAR" length="200" mandatory="y" >
+				<comment><![CDATA[Provider-level identifier for the file, used to build the shard path or object key. For FileSystem: a GUID or numeric ID, e.g. "2b4f8a1c3d9e7b0a". For cloud providers: may be a service-assigned reference. Combined with client/module/workspace path segments to locate the actual file bytes.]]></comment>
+			</column>
+			<column name="storage_ref" prior="storage_path" type="TEXT" mandatory="y" >
+				<comment><![CDATA[Full physical location of the file. FileSystem: absolute path, e.g. "/vault/acme/hr/general/f/2b4/2b4f8a1c.pdf". Cloud: object key, e.g. "acme/hr/general/2b4f8a1c.pdf". Empty string for Placeholder records (flags=256) until FinalizePlaceholder() is called.]]></comment>
+			</column>
+			<column name="staging_ref" prior="staging_path" type="VARCHAR" length="300" >
+				<comment><![CDATA[Full path or object key of the file in the staging provider (fast/temporary store), if staging is configured. Same format as storage_ref but points to the staging location. NULL when no staging provider is in use. Cleared after the file is promoted to primary storage and the staging copy is deleted.]]></comment>
+			</column>
 			<column name="size" type="BIGINT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
-				<comment><![CDATA[SIZE IN BYTES]]></comment>
+				<comment><![CDATA[File size in BYTES. 0 for Placeholder records until finalization. For chunked uploads, set to the total assembled file size after all chunks are merged. Example: a 250 MB file → size=262144000.]]></comment>
 			</column>
-			<column name="metadata" type="TEXT" />
+			<column name="metadata" type="TEXT" >
+				<comment><![CDATA[Arbitrary caller-supplied JSON metadata attached to this version. The DB imposes no schema. Example: {"source":"scanner","department":"finance","approved_by":"jdoe@acme.com"}. NULL if the caller did not supply metadata.]]></comment>
+			</column>
 			<column name="flags" type="INT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
-				<comment><![CDATA[Flags:
+				<comment><![CDATA[Bitmask tracking the lifecycle state of this version.
 0 - None
 1 - Chunked-Upload Mode (Marked)
 2 - Uploaded to Chunking Area (Chunks are always deleted upon moving out)
@@ -282,10 +351,13 @@
 256 - PlaceHolder (DB Reserved, no content copied yet)]]></comment>
 			</column>
 			<column name="hash" type="VARCHAR" length="128" >
-				<comment><![CDATA[SHA-256 hash of the fully assembled/final file for integrity verification and sync validation]]></comment>
+				<comment><![CDATA[SHA-256 hex digest of the fully assembled final file, used for integrity verification and sync deduplication. Example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855". NULL until the file is fully assembled and hashed (chunked uploads hash after merge; direct uploads hash during write).]]></comment>
 			</column>
 			<column name="synced_at" type="TIMESTAMP" >
-				<comment><![CDATA[Timestamp set by background sync worker when file is successfully pulled from external storage to internal disk. NULL means file was always internal or sync has not completed yet.]]></comment>
+				<comment><![CDATA[Timestamp set by the background sync worker when a file that was initially in external/cloud-only storage is successfully pulled to local internal disk (flag 128 set). NULL means either the file was always stored internally and never needed syncing, or the sync has not completed yet.]]></comment>
+			</column>
+			<column name="profile_info_id" type="BIGINT" >
+				<comment><![CDATA[if null, then we fall back to using the module's default current profile.. However, current profile could not be the correct one, may be the current profile got modified or changed .. May be we didn't use the module's profile, we used the workspace's profile.. or a workspace profile was addedin between.. so, having the profile_info_id  here is the best option to properly resolve the correct storage path.]]></comment>
 			</column>
 			<index name="pk_version_info" unique="PRIMARY_KEY" >
 				<column name="id" />
@@ -299,7 +371,10 @@
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="workspace" prior="module" >
-			<column name="id" type="BIGINT" length="20" mandatory="y" />
+			<comment><![CDATA[Anchor table: one row per registered workspace in this module. Mirrors dsscore.workspace.id so directories and documents can reference a workspace via FK without cross-database joins.]]></comment>
+			<column name="id" type="BIGINT" length="20" mandatory="y" >
+				<comment><![CDATA[Primary key — mirrors dsscore.workspace.id exactly. Set by the application at registration time; never AUTO_INCREMENT.]]></comment>
+			</column>
 			<index name="pk_workspace" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -308,20 +383,32 @@
 	</schema>
 	<schema name="dss_core" >
 		<table name="client" spec="" >
+			<comment><![CDATA[Top-level tenant / application that owns the entire storage hierarchy.
+Example: an application called "hr_portal" is registered as a client. Under it live modules such as "employee_docs" and "avatars".
+The client name is hashed (SHA-256, compact-N GUID) at runtime to produce a CUID that drives all internal routing — no database round-trip is needed once the client is cached at startup.
+Every file ultimately belongs to a client → module → workspace chain.]]></comment>
 			<column name="id" type="INT" length="11" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Auto-increment surrogate key.]]></comment>
 			</column>
-			<column name="name" type="VARCHAR" length="100" mandatory="y" />
-			<column name="display_name" type="VARCHAR" length="100" mandatory="y" />
-			<column name="guid" prior="hash_guid" type="VARCHAR" length="48" mandatory="y" >
-				<defo><![CDATA['uuid()']]></defo>
+			<column name="name" type="VARCHAR" length="100" mandatory="y" >
+				<comment><![CDATA[Machine-usable slug; lowercase-normalized (e.g. "myapp", "hr_portal"). Unique across all clients. Used as one input to derive the deterministic CUID and the on-disk directory name. Never changes after registration — renaming requires a full migration.]]></comment>
+			</column>
+			<column name="display_name" type="VARCHAR" length="100" mandatory="y" >
+				<comment><![CDATA[Human-readable label shown in UIs and logs (e.g. "HR Portal", "Customer Docs Service"). Has no effect on path computation or CUID derivation.]]></comment>
+			</column>
+			<column name="guid" prior="hash_guid" type="VARCHAR" length="42" mandatory="y" >
+				<defo><![CDATA[uuid()]]></defo>
+				<comment><![CDATA[Random GUID assigned at creation, kept for backward compatibility. The StorageCoordinator routes by the deterministic CUID (derived from the name hash); guid is advisory only.]]></comment>
 			</column>
 			<column name="created" prior="created_on" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Row creation timestamp (UTC).]]></comment>
 			</column>
 			<column name="modified" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 				<column_options><![CDATA[ON UPDATE CURRENT_TIMESTAMP]]></column_options>
+				<comment><![CDATA[Automatically updated whenever any column changes.]]></comment>
 			</column>
 			<index name="pk_client" unique="PRIMARY_KEY" >
 				<column name="id" />
@@ -337,10 +424,21 @@
 ]]></options>
 		</table>
 		<table name="client_keys" prior="client_key" >
-			<column name="client" type="INT" mandatory="y" />
-			<column name="signing" type="VARCHAR" length="300" mandatory="y" />
-			<column name="encrypt" type="VARCHAR" length="300" mandatory="y" />
-			<column name="password" type="VARCHAR" length="120" mandatory="y" />
+			<comment><![CDATA[Security credentials for each client — hashed password plus server-generated signing and encryption keys.
+Separated from the client table so that credential rotation (key refresh, password change) does not touch the client identity row and does not affect any downstream FKs.
+Example: when "hr_portal" is registered, a random 512-char signing key and encrypt key are generated and stored here alongside the SHA-256 of the provided password.]]></comment>
+			<column name="client" type="INT" mandatory="y" >
+				<comment><![CDATA[FK to client.id. One key bundle per client — the primary key doubles as the foreign key.]]></comment>
+			</column>
+			<column name="signing" type="VARCHAR" length="300" mandatory="y" >
+				<comment><![CDATA[Server-generated random 512-character string used to sign JWTs and access tokens issued to this client. Rotated by re-registering the client with a new password.]]></comment>
+			</column>
+			<column name="encrypt" type="VARCHAR" length="300" mandatory="y" >
+				<comment><![CDATA[Server-generated random 512-character string used for symmetric encryption of payload data scoped to this client (e.g. encrypted cookie values, sealed metadata blobs).]]></comment>
+			</column>
+			<column name="password" type="VARCHAR" length="120" mandatory="y" >
+				<comment><![CDATA[SHA-256 hash of the client plaintext password. The plaintext is never stored. Verification hashes the candidate and compares it to this value.]]></comment>
+			</column>
 			<index name="pk_client_keys" unique="PRIMARY_KEY" >
 				<column name="client" />
 			</index>
@@ -350,27 +448,46 @@
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="module" prior="directory" >
-			<column name="parent" prior="parent_id" type="INT" mandatory="y" />
-			<column name="guid" prior="hash_guid" type="VARCHAR" length="48" mandatory="y" />
+			<comment><![CDATA[A logical feature area or application section inside a client (e.g. "documents", "invoices", "avatars").
+Each module gets its own isolated MariaDB schema named dss_module_<cuid> so file indexes for different feature areas are fully separated — a query for "invoices" never touches the "avatars" database.
+Example: client "hr_portal" → module "employee_docs". All files under this module are indexed in the "dss_module_<employee_docs_cuid>" database.
+The storage_profile column points to the cloud/FS provider configuration to use for uploads at the module level. Individual workspaces may override this with their own storage_profile.]]></comment>
+			<column name="parent" prior="parent_id" type="INT" mandatory="y" >
+				<comment><![CDATA[FK to client.id. Every module belongs to exactly one client.]]></comment>
+			</column>
+			<column name="guid" prior="hash_guid" type="VARCHAR" length="42" mandatory="y" >
+				<defo><![CDATA[uuid()]]></defo>
+				<comment><![CDATA[Random GUID assigned at creation. Advisory only — the CUID is the primary routing key.]]></comment>
+			</column>
 			<column name="cuid" type="VARCHAR" length="48" mandatory="y" >
-				<comment><![CDATA[collision resistant unique identifier]]></comment>
+				<comment><![CDATA[Deterministic compact-N GUID derived from SHA-256(client_name##module_name). Used as the per-module MariaDB schema name prefix (e.g. "dss_module_<cuid>"). Stable for as long as the client and module names do not change.]]></comment>
 			</column>
 			<column name="id" type="INT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Auto-increment surrogate key.]]></comment>
 			</column>
-			<column name="name" type="VARCHAR" length="120" mandatory="y" />
-			<column name="display_name" type="VARCHAR" length="120" mandatory="y" />
+			<column name="name" type="VARCHAR" length="120" mandatory="y" >
+				<comment><![CDATA[Machine-usable slug (e.g. "documents", "invoices", "avatars"). Combined with the parent client name to derive the CUID. Unique per client.]]></comment>
+			</column>
+			<column name="display_name" type="VARCHAR" length="120" mandatory="y" >
+				<comment><![CDATA[Human-readable label (e.g. "Document Archive", "Invoice Store"). No effect on routing or path computation.]]></comment>
+			</column>
 			<column name="active" prior="is_active" type="BIT" mandatory="y" >
 				<defo><![CDATA[1]]></defo>
+				<comment><![CDATA[1 = module is active and accepts new uploads. 0 = soft-disabled; existing files remain readable but new uploads are rejected.]]></comment>
 			</column>
 			<column name="created" prior="created_on" type="DATETIME" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Row creation timestamp (UTC).]]></comment>
 			</column>
 			<column name="modified" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 				<column_options><![CDATA[ON UPDATE CURRENT_TIMESTAMP]]></column_options>
+				<comment><![CDATA[Automatically updated whenever any column changes.]]></comment>
 			</column>
-			<column name="storage_profile" type="INT" />
+			<column name="storage_profile" type="INT" >
+				<comment><![CDATA[Optional FK to profile_info.id. When set, all workspaces under this module default to the specified provider and upload mode unless they override it with their own storage_profile. NULL means use the StorageCoordinator default (typically the local filesystem provider).]]></comment>
+			</column>
 			<index name="pk_module" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -399,37 +516,59 @@
 ]]></options>
 		</table>
 		<table name="profile" prior="prof" >
+			<comment><![CDATA[A named storage configuration group. Each profile can have multiple versioned profile_info rows to support side-by-side configurations during migrations.
+A profile defines WHAT to call a configuration; the actual settings (provider, mode, metadata) live in profile_info.
+Example: a profile named "prod-b2" might have version 1 pointing to Backblaze B2 us-west and version 2 pointing to B2 eu-central — useful when migrating buckets without downtime.]]></comment>
 			<column name="id" type="INT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Auto-increment surrogate key.]]></comment>
 			</column>
-			<column name="name" type="VARCHAR" length="120" mandatory="y" />
+			<column name="name" type="VARCHAR" length="120" mandatory="y" >
+				<comment><![CDATA[Human-readable name for this profile group (e.g. "prod-b2", "staging-fs", "azure-east-tier1"). Groups one or more versioned profile_info rows under a single logical label.]]></comment>
+			</column>
 			<index name="pk_profile" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="profile_info" prior="profile_config" >
+			<comment><![CDATA[One versioned configuration for a storage profile — links a profile to a primary provider, an optional staging provider, an upload mode, and JSON connection metadata.
+Assigning a profile_info.id to a workspace.storage_profile (or module.storage_profile) activates that configuration for all uploads into that scope.
+Example: profile "prod-b2" version 1 — mode=StageAndMove, storage_provider=B2-us-west, staging_provider=local-fs, metadata={"bucket":"vault-prod",...}. When a file is uploaded to any workspace pointing at this profile_info, it first lands on local-fs, then a background job moves it to the B2 bucket.]]></comment>
 			<column name="id" type="INT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Auto-increment surrogate key. This id is stored in workspace.storage_profile and module.storage_profile to activate this configuration for a workspace or module.]]></comment>
 			</column>
-			<column name="profile" type="INT" mandatory="y" />
+			<column name="profile" type="INT" mandatory="y" >
+				<comment><![CDATA[FK to profile.id. Groups this versioned configuration under a named profile.]]></comment>
+			</column>
 			<column name="version" type="INT" mandatory="y" >
 				<defo><![CDATA[1]]></defo>
+				<comment><![CDATA[Integer version of this configuration starting at 1, incremented on each change. The (profile, version) pair is unique — allows creating a new version before cutting over, supporting zero-downtime migrations.]]></comment>
 			</column>
 			<column name="mode" type="INT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
-				<comment><![CDATA[0 - Direct Save
-1 - Stage and Move
-2 - Stage and Retain a copy]]></comment>
+				<comment><![CDATA[Upload routing mode — determines what happens immediately after a file is received:
+0 - DirectSave: write directly to the primary storage provider and mark the upload complete right away. Simplest and fastest; suitable when the primary provider is always available and reachable.
+1 - StageAndMove: write to the staging provider first (flag=4, InStaging), then a background worker promotes the file to primary storage and removes the staging copy. Use this when the primary provider is slow, remote, or should receive files in bulk.
+2 - StageAndRetainCopy: write to both staging and primary simultaneously; the staging copy is kept for redundancy or CDN acceleration.]]></comment>
 			</column>
-			<column name="storage_provider" type="INT" unsigned="y" />
-			<column name="staging_provider" type="INT" unsigned="y" />
+			<column name="storage_provider" type="INT" unsigned="y" >
+				<comment><![CDATA[FK to provider.id. The primary permanent storage destination for uploads (e.g. Backblaze B2, AWS S3, local filesystem). NULL means use the StorageCoordinator default registered provider.]]></comment>
+			</column>
+			<column name="staging_provider" type="INT" unsigned="y" >
+				<comment><![CDATA[FK to provider.id. Temporary fast-landing zone used before promotion to primary (mode 1 or 2). Typically a local filesystem or a cheap/fast cloud bucket. NULL means no staging.]]></comment>
+			</column>
 			<column name="created" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Row creation timestamp (UTC).]]></comment>
 			</column>
 			<column name="metadata" type="TEXT" mandatory="y" >
-				<comment><![CDATA[Full config, including the information present in the profile (like storage provider name, id, staging provider info, profile mode etc)>
-Additionaly, for each provider configuration like region name, bucket name (if applicable) etc and whatever..]]></comment>
+				<comment><![CDATA[JSON blob carrying provider-specific connection configuration required to initialise the provider at runtime.
+For cloud providers this typically includes: bucket name, region, endpoint URL, and a reference to the credential (e.g. an env-var name or secrets-manager key).
+Example for S3: {"bucket":"my-vault","region":"us-east-1","endpoint":"https://s3.amazonaws.com","credential_ref":"env:AWS_SECRET_KEY"}
+Example for B2: {"bucketId":"abc123","bucketName":"my-vault","applicationKeyId":"key001","applicationKey":"env:B2_APP_KEY"}
+The StorageCoordinator reads this JSON at startup when initialising the provider connection.]]></comment>
 			</column>
 			<index name="pk_profile_info" unique="PRIMARY_KEY" >
 				<column name="id" />
@@ -456,51 +595,88 @@ Additionaly, for each provider configuration like region name, bucket name (if a
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="provider" prior="providers" >
-			<comment><![CDATA[A provider is nothing but the logic behind how the file is uploaded.. Like, an azure provider only knows how to upload the files to Azure Storage. Or an S3 provider will know how to upload to S3 compatible storage service, a BB provider for back blaze. HFS provider is for Haley File System Upload provider (the default in our case)
-
-Thus, a provider is only about HOW. The WHERE portion is stored in the storage profile.. One provider can have mtuliple storage locations (based on the profile)]]></comment>
+			<comment><![CDATA[A named storage backend — the HOW of file storage, not the WHERE.
+Examples: "hfs" = Haley FileSystem (default local disk provider), "b2" = Backblaze B2, "s3-east" = AWS S3 us-east-1, "azure-blob" = Azure Blob Storage.
+The application registers provider implementations at startup: AddProvider("b2", new BackblazeProvider()). This table is the authoritative record of which backend names are known to the system.
+One provider name can serve many workspaces and modules via different profile_info rows — the provider says HOW to talk to the storage service; the profile_info.metadata says WHERE (which bucket / region / path prefix).]]></comment>
 			<column name="id" type="INT" mandatory="y" unsigned="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Auto-increment surrogate key.]]></comment>
 			</column>
-			<column name="name" type="VARCHAR" length="120" />
+			<column name="name" type="VARCHAR" length="120" >
+				<comment><![CDATA[Registration key used by the StorageCoordinator to look up this provider at runtime (e.g. "hfs" for the default Haley FileSystem provider, "b2-prod", "s3-east-1", "azure-blob-tier1"). Must match the key passed to AddProvider() at application startup.]]></comment>
+			</column>
 			<column name="created" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Row creation timestamp (UTC).]]></comment>
 			</column>
-			<column name="description" type="TEXT" />
+			<column name="description" type="TEXT" >
+				<comment><![CDATA[Free-text description for operators (e.g. "Backblaze B2 production bucket — us-west-004, 1 TB allocated, auto-delete after 7 years").]]></comment>
+			</column>
 			<index name="pk_provider" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
 			<options><![CDATA[engine=InnoDB]]></options>
 		</table>
 		<table name="workspace" prior="workspa" >
+			<comment><![CDATA[A named storage container inside a module — like a dedicated folder for a specific purpose, tenant, or data set.
+Example: module "documents" → workspace "user-123-uploads" (all files for a specific user) or "global-templates" (shared assets).
+Each workspace has its own base path/prefix, file-naming mode, and can optionally point to a different cloud provider than its parent module.
+The CUID (derived from the full client+module+workspace name chain) is the key the StorageCoordinator uses to locate the workspace in the in-memory cache and resolve the storage path with zero DB round-trips after startup.
+The storagename_mode and storagename_parse settings are fixed at registration time and must not be changed after files exist in the workspace, as they determine how storage paths are reconstructed for reads.]]></comment>
 			<column name="id" type="INT" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+				<comment><![CDATA[Auto-increment surrogate key.]]></comment>
 			</column>
 			<column name="cuid" type="VARCHAR" length="48" mandatory="y" >
-				<comment><![CDATA[collision resistant unique identifier]]></comment>
+				<comment><![CDATA[Deterministic compact-N GUID derived from SHA-256(client_name##module_name##workspace_name). The StorageCoordinator uses this as the cache key to resolve the workspace base path and provider entirely in memory, with no DB query needed per request.]]></comment>
 			</column>
-			<column name="guid" prior="hash_guid" type="VARCHAR" length="48" mandatory="y" />
-			<column name="parent" type="INT" mandatory="y" />
-			<column name="name" type="VARCHAR" length="120" mandatory="y" />
-			<column name="display_name" type="VARCHAR" length="120" mandatory="y" />
-			<column name="storage_ref" prior="path" type="VARCHAR" length="200" mandatory="y" />
+			<column name="guid" prior="hash_guid" type="VARCHAR" length="42" mandatory="y" >
+				<defo><![CDATA['uuid()']]></defo>
+				<comment><![CDATA[Random GUID assigned at creation. Advisory only — CUID is the primary routing key.]]></comment>
+			</column>
+			<column name="parent" type="INT" mandatory="y" >
+				<comment><![CDATA[FK to module.id. Every workspace belongs to exactly one module.]]></comment>
+			</column>
+			<column name="name" type="VARCHAR" length="120" mandatory="y" >
+				<comment><![CDATA[Machine-usable slug (e.g. "user-files", "invoices-2024", "global-templates"). Combined with client and module names to derive the CUID. Unique per module.]]></comment>
+			</column>
+			<column name="display_name" type="VARCHAR" length="120" mandatory="y" >
+				<comment><![CDATA[Human-readable label shown in UIs (e.g. "User File Archive", "2024 Invoices"). No effect on path computation or CUID derivation.]]></comment>
+			</column>
+			<column name="storage_ref" prior="path" type="VARCHAR" length="200" mandatory="y" >
+				<comment><![CDATA[Relative path (FS) or object-key prefix (cloud) for this workspace root, computed from the workspace name hash via sharding at registration time.
+For FS example: "f1/2e/3b/" — a shard directory under the module base path on disk.
+For cloud example: "f12e3b/" — a flat prefix prepended to all object keys in this workspace.]]></comment>
+			</column>
 			<column name="active" type="BIT" mandatory="y" >
 				<defo><![CDATA[1]]></defo>
+				<comment><![CDATA[1 = accepts uploads. 0 = soft-disabled; reads still work.]]></comment>
 			</column>
 			<column name="storagename_mode" prior="control_mode" type="INT" mandatory="y" >
 				<defo><![CDATA[1]]></defo>
+				<comment><![CDATA[Controls how the physical storage file name is chosen for each file uploaded into this workspace:
+1 - Number mode: the auto-increment database id is used (e.g. doc_version.id = 1234 → file saved as "1234f.pdf"). Compact and fast to look up.
+2 - Guid mode: a compact-N UUID is used (e.g. "a3b2c1d4e5f67890...f.pdf"). Globally unique without a DB round-trip; preferred for distributed or multi-node deployments.]]></comment>
 			</column>
 			<column name="storagename_parse" prior="parse_mode" type="INT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
+				<comment><![CDATA[Controls whether the system generates the storage name or parses it from the caller-provided filename:
+0 - Generate (recommended): the system generates a new id or UUID for each file. The caller filename is stored as a display label in doc_info.display_name only.
+1 - Parse: the caller-provided filename IS the storage name. The filename must be a pure integer (Number mode) or a valid GUID (Guid mode). Used for pre-assigned IDs or migrated content.]]></comment>
 			</column>
 			<column name="created" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
+				<comment><![CDATA[Row creation timestamp (UTC).]]></comment>
 			</column>
 			<column name="modified" type="TIMESTAMP" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 				<column_options><![CDATA[ON UPDATE CURRENT_TIMESTAMP]]></column_options>
+				<comment><![CDATA[Automatically updated whenever any column changes.]]></comment>
 			</column>
-			<column name="storage_profile" type="INT" />
+			<column name="storage_profile" type="INT" >
+				<comment><![CDATA[Optional FK to profile_info.id. When set, this workspace uses its own provider and upload mode, overriding the parent module-level profile. Populated by SetWorkspaceStorageProfile() and rehydrated into the in-memory StorageWorkspace cache entry at startup via RehydrateWorkspaceProfilesAsync().]]></comment>
+			</column>
 			<index name="pk_workspace" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -568,15 +744,15 @@ END]]></string>
 		<diagram name="mssclient" id="3ffb53d2-b523-405c-b56e-4864481bd7c9" joined_routing="y" show_relation="cascade" >
 			<entity schema="dss_client" name="chunk_info" color="C1D8EE" x="95" y="209" />
 			<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="95" y="418" />
-			<entity schema="dss_client" name="directory" color="C1D8EE" x="551" y="570" />
-			<entity schema="dss_client" name="doc_info" color="C1D8EE" x="551" y="456" />
+			<entity schema="dss_client" name="directory" color="C1D8EE" x="551" y="589" />
+			<entity schema="dss_client" name="doc_info" color="C1D8EE" x="551" y="475" />
 			<entity schema="dss_client" name="doc_version" color="C1D8EE" x="323" y="304" />
-			<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="494" />
-			<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="722" />
-			<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="589" />
-			<entity schema="dss_client" name="vault" color="C1D8EE" x="171" y="722" />
+			<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="513" />
+			<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="741" />
+			<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="608" />
+			<entity schema="dss_client" name="vault" color="C1D8EE" x="171" y="741" />
 			<entity schema="dss_client" name="version_info" color="C1D8EE" x="532" y="209" />
-			<entity schema="dss_client" name="workspace" color="C1D8EE" x="342" y="722" />
+			<entity schema="dss_client" name="workspace" color="C1D8EE" x="342" y="741" />
 			<shape x="114" y="57" style="Rectangle" color="FF0000" >
 				<comment><![CDATA[If the workspace is controlled, then the directories are LOGICAL or else 
 the directories are PHYSICAL]]></comment>
@@ -705,13 +881,13 @@ ALTER TABLE dss_client.document MODIFY deleted BIT  NOT NULL DEFAULT 0  COMMENT 
 			</script>
 		</diagram>
 		<diagram name="msscore" id="24f2626d-ccb2-494d-bd2e-79024c8a6535" joined_routing="y" show_relation="cascade" >
-			<entity schema="dss_core" name="client" color="3986C1" x="76" y="304" />
-			<entity schema="dss_core" name="client_keys" color="C1D8EE" x="76" y="513" />
-			<entity schema="dss_core" name="module" color="C1D8EE" x="266" y="304" />
-			<entity schema="dss_core" name="profile" color="C1D8EE" x="95" y="684" />
-			<entity schema="dss_core" name="profile_info" color="C1D8EE" x="266" y="608" />
-			<entity schema="dss_core" name="provider" color="C1D8EE" x="513" y="646" />
-			<entity schema="dss_core" name="workspace" color="C1D8EE" x="494" y="304" />
+			<entity schema="dss_core" name="client" color="3986C1" x="76" y="323" />
+			<entity schema="dss_core" name="client_keys" color="C1D8EE" x="95" y="532" />
+			<entity schema="dss_core" name="module" color="C1D8EE" x="266" y="323" />
+			<entity schema="dss_core" name="profile" color="C1D8EE" x="95" y="703" />
+			<entity schema="dss_core" name="profile_info" color="C1D8EE" x="266" y="627" />
+			<entity schema="dss_core" name="provider" color="C1D8EE" x="513" y="665" />
+			<entity schema="dss_core" name="workspace" color="C1D8EE" x="494" y="323" />
 			<shape x="57" y="57" style="Rectangle" color="FF0000" >
 				<comment><![CDATA[The concept of 'CONTROLLED' is that it expects all the names to be in either
 GUID or number format such that the application expects that the name related

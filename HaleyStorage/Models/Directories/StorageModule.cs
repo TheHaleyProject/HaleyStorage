@@ -29,6 +29,12 @@ namespace Haley.Models {
         /// </summary>
         public StorageProfileMode ProfileMode { get; set; } = StorageProfileMode.DirectSave;
         /// <summary>
+        /// The dsscore.profile_info.id that backs the current provider configuration for this module.
+        /// Set by <see cref="ConfigureModuleProviders"/> when the caller supplies a profileInfoId.
+        /// 0 when configured via provider keys alone (no profile_info link).
+        /// </summary>
+        public long ProfileInfoId { get; set; } = 0;
+        /// <summary>
         /// Validates that the storage name, path, and client reference are all populated.
         /// Returns <c>false</c> with a descriptive message when any required field is missing.
         /// </summary>

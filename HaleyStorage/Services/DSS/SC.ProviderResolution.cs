@@ -1,24 +1,42 @@
 using Haley.Abstractions;
 using Haley.Enums;
 using Haley.Models;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Haley.Services {
 
     /// <summary>
     /// Partial class — provider resolution and provider configuration.
-    /// Resolution order: workspace override → module → default.
-    /// Workspace override is only active when <see cref="StorageWorkspace.StorageProviderKey"/> is set
-    /// (populated via <see cref="ConfigureWorkspaceProviders"/> or loaded from the DB profile).
+    /// Resolution order (writes): workspace profile_info_id → module profile_info_id → workspace key → module key → default.
+    /// Resolution order (reads): version_info.profile_info_id → workspace override → module → default.
+    /// When a file version carries <c>version_info.profile_info_id</c>, that profile_info always wins on reads,
+    /// ensuring old files are never reinterpreted through a changed module/workspace profile.
     /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
+
+        // ── Profile-info cache ────────────────────────────────────────────────
+        // Keyed by profile_info.id → (storageProviderKey, stagingProviderKey, mode).
+        // Populated lazily on the first resolution for each profile_info_id.
+        readonly ConcurrentDictionary<long, (string storageKey, string stagingKey, StorageProfileMode mode)>
+            _profileInfoCache = new();
 
         // ── Primary provider ──────────────────────────────────────────────────
 
         /// <summary>
         /// Returns the effective primary <see cref="IStorageProvider"/> for the request.
-        /// Resolution order: workspace StorageProviderKey → module StorageProviderKey → default.
+        /// Resolution order:
+        ///   1. file's stored profile_info_id (version_info.profile_info_id) — preserves history
+        ///   2. workspace StorageProviderKey — workspace-level override
+        ///   3. module StorageProviderKey    — module default
+        ///   4. global default provider
         /// </summary>
         internal IStorageProvider ResolveProvider(IVaultReadRequest request) {
+            // Priority 1: file's stored profile_info_id (read path only — write path stamps it after resolution)
+            if (request is IVaultFileReadRequest fr && fr.File is StorageFileRoute sfr && sfr.ProfileInfoId > 0) {
+                var p = ResolveByProfileInfoId(sfr.ProfileInfoId);
+                if (p != null) return p;
+            }
             if (Indexer != null) {
                 if (TryResolveWorkspaceProvider(request, out var wp)) return wp;
                 if (request?.Scope?.Module != null)
@@ -44,11 +62,20 @@ namespace Haley.Services {
         /// Returns the staging <see cref="IStorageProvider"/> for the request, or <c>null</c>
         /// if staging is not configured or is explicitly disabled.
         /// Resolution order:
-        ///   — workspace has StorageProviderKey set → workspace owns its complete profile;
-        ///     use workspace StagingProviderKey (null/empty = staging explicitly disabled, do NOT fall to module).
-        ///   — workspace has no StorageProviderKey → inherit module staging provider.
+        ///   1. file's stored profile_info_id → use its staging provider (null = staging disabled for that profile)
+        ///   2. workspace has StorageProviderKey set → workspace owns its complete profile;
+        ///      use workspace StagingProviderKey (null/empty = staging explicitly disabled, do NOT fall to module).
+        ///   3. workspace has no StorageProviderKey → inherit module staging provider.
         /// </summary>
         internal IStorageProvider ResolveStagingProvider(IVaultReadRequest request) {
+            // Priority 1: file's stored profile
+            if (request is IVaultFileReadRequest fr && fr.File is StorageFileRoute sfr && sfr.ProfileInfoId > 0) {
+                TryGetProfileInfoCached(sfr.ProfileInfoId, out _, out var stagingKey, out _);
+                if (!string.IsNullOrWhiteSpace(stagingKey) && _providers.TryGetValue(stagingKey, out var pp))
+                    return pp;
+                // Profile exists but no staging key = staging disabled for this profile; don't fall through
+                if (_profileInfoCache.ContainsKey(sfr.ProfileInfoId)) return null;
+            }
             if (Indexer != null && TryGetWorkspace(request, out StorageWorkspace ws)
                 && !string.IsNullOrWhiteSpace(ws.StorageProviderKey)) {
                 // Workspace owns its full profile — honor its staging setting; empty = disabled.
@@ -78,14 +105,16 @@ namespace Haley.Services {
 
         /// <summary>
         /// Returns the upload routing mode for the request.
-        /// Resolution order: workspace ProfileMode (when workspace has an explicit StorageProviderKey)
-        /// → module ProfileMode → DirectSave.
-        /// Note: workspace ProfileMode is only honoured when StorageProviderKey is also set on the
-        /// workspace. To override only the mode while keeping the module's primary provider, set
-        /// StorageProviderKey to the same key as the module — this makes the workspace own its full
-        /// profile and all three fields (primary, staging, mode) are read from the workspace.
+        /// Resolution order:
+        ///   1. file's stored profile_info_id (read path) → use its mode
+        ///   2. workspace ProfileMode (when workspace has an explicit StorageProviderKey)
+        ///   3. module ProfileMode → DirectSave.
         /// </summary>
         internal StorageProfileMode ResolveProfileMode(IVaultReadRequest request) {
+            // Priority 1: file's stored profile
+            if (request is IVaultFileReadRequest fr && fr.File is StorageFileRoute sfr && sfr.ProfileInfoId > 0
+                && TryGetProfileInfoCached(sfr.ProfileInfoId, out _, out _, out var pMode))
+                return pMode;
             if (Indexer != null && TryGetWorkspace(request, out StorageWorkspace ws)
                 && !string.IsNullOrWhiteSpace(ws.StorageProviderKey))
                 return ws.ProfileMode;
@@ -125,11 +154,58 @@ namespace Haley.Services {
                 && _providers.TryGetValue(ws.StagingProviderKey, out provider);
         }
 
+        // ── Profile-info resolution helpers ──────────────────────────────────
+
+        /// <summary>
+        /// Tries to retrieve provider keys and mode for a <c>profile_info.id</c> from the local cache.
+        /// On a cache miss, fetches from the DB via the indexer and populates the cache.
+        /// Returns <c>true</c> when the profile was found (even if both provider keys are empty).
+        /// </summary>
+        bool TryGetProfileInfoCached(long profileInfoId,
+            out string storageKey, out string stagingKey, out StorageProfileMode mode) {
+            storageKey = null; stagingKey = null; mode = StorageProfileMode.DirectSave;
+            if (profileInfoId < 1 || Indexer == null) return false;
+
+            if (_profileInfoCache.TryGetValue(profileInfoId, out var cached)) {
+                storageKey = cached.storageKey; stagingKey = cached.stagingKey; mode = cached.mode;
+                return true;
+            }
+
+            // Cache miss — fetch from DB (sync, expected to be rare).
+            var fb = Indexer.GetProfileInfo(profileInfoId).GetAwaiter().GetResult();
+            if (fb?.Status != true || fb.Result is not Dictionary<string, object> row)
+                return false;
+
+            var sk = row.TryGetValue("storage_provider_key", out var spk) ? spk?.ToString() ?? string.Empty : string.Empty;
+            var stk = row.TryGetValue("staging_provider_key", out var spv) ? spv?.ToString() ?? string.Empty : string.Empty;
+            var m2 = StorageProfileMode.DirectSave;
+            if (row.TryGetValue("mode", out var mv) && int.TryParse(mv?.ToString(), out var mInt))
+                m2 = (StorageProfileMode)mInt;
+
+            var entry = (sk, stk, m2);
+            _profileInfoCache.TryAdd(profileInfoId, entry);
+            storageKey = sk; stagingKey = stk; mode = m2;
+            return true;
+        }
+
+        /// <summary>
+        /// Resolves the primary provider from a specific <c>profile_info.id</c>.
+        /// Returns <c>null</c> when the profile is not found or its storage key is not registered.
+        /// </summary>
+        IStorageProvider ResolveByProfileInfoId(long profileInfoId) {
+            if (!TryGetProfileInfoCached(profileInfoId, out var storageKey, out _, out _))
+                return null;
+            if (!string.IsNullOrWhiteSpace(storageKey) && _providers.TryGetValue(storageKey, out var p))
+                return p;
+            return null;
+        }
+
         // ── Runtime provider configuration ────────────────────────────────────
 
         /// <inheritdoc/>
         public bool ConfigureModuleProviders(string moduleCuid, string storageProviderKey,
-            string stagingProviderKey = null, StorageProfileMode mode = StorageProfileMode.DirectSave) {
+            string stagingProviderKey = null, StorageProfileMode mode = StorageProfileMode.DirectSave,
+            long profileInfoId = 0) {
 
             if (string.IsNullOrWhiteSpace(moduleCuid)) return false;
             if (Indexer == null || !Indexer.TryGetComponentInfo<StorageModule>(moduleCuid, out StorageModule m) || m == null)
@@ -144,6 +220,7 @@ namespace Haley.Services {
             m.StorageProviderKey = storageProviderKey ?? string.Empty;
             m.StagingProviderKey = stagingProviderKey ?? string.Empty;
             m.ProfileMode = mode;
+            if (profileInfoId > 0) m.ProfileInfoId = profileInfoId;
             return true;
         }
 

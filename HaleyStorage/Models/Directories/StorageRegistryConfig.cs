@@ -28,6 +28,13 @@ namespace Haley.Models {
         public int SplitLengthHash { get; set; } = 2;
         /// <summary>Maximum sharding depth for hash/GUID IDs (default 7).</summary>
         public int DepthHash { get; set; } = 7;
+        /// <summary>
+        /// Number of revision backup copies to keep when a FileSystem file is overwritten
+        /// (upload with an existing CUID). The most recent N revisions are retained as
+        /// <c>&lt;filename&gt;.ext##R1</c>, <c>##R2</c>, … beside the live file.
+        /// Set to 0 to disable revision backups entirely. Default: 3.
+        /// </summary>
+        public int MaxRevisionCopies { get; set; } = 3;
 
         public StorageRegistryConfig() { }
     }

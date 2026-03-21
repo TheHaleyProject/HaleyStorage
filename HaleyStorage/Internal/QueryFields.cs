@@ -57,8 +57,9 @@ namespace Haley.Internal {
         public const string FLAGS = $@"@{nameof(FLAGS)}";
 
         // CLIENT : VERSION INFO (new columns)
-        public const string HASH = $@"@{nameof(HASH)}";             // version_info.hash / chunked_files.hash
-        public const string SYNCED_AT = $@"@{nameof(SYNCED_AT)}";   // version_info.synced_at
+        public const string HASH = $@"@{nameof(HASH)}";                         // version_info.hash / chunked_files.hash
+        public const string SYNCED_AT = $@"@{nameof(SYNCED_AT)}";               // version_info.synced_at
+        public const string PROFILE_INFO_ID = $@"@{nameof(PROFILE_INFO_ID)}";   // version_info.profile_info_id
 
         // CLIENT : CHUNKING
         public const string CHUNK_SIZE = $@"@{nameof(CHUNK_SIZE)}";     // chunk_info.size (MB)

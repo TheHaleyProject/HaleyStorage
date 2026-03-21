@@ -54,13 +54,15 @@ namespace Haley.Utils {
                 var docvExists = await _agw.Scalar(new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.EXISTS_BY_ID }.ForTransaction(handler), (ID, file.Id));
                 if (docvExists == null) return result.SetMessage($@"Unable to find any document version with cuid {file.Cuid} and id {file.Id} in DB {moduleCuid}");
 
-                // Extract hash and synced_at — nullable, pass DBNull when not provided.
+                // Extract hash, synced_at, and profile_info_id — nullable, pass DBNull when not provided.
                 object hashVal = DBNull.Value;
                 object syncedAtVal = DBNull.Value;
+                object profileInfoIdVal = DBNull.Value;
                 if (file.TryGetProp<string>(out var hv, "Hash", "hash") && !string.IsNullOrWhiteSpace(hv)) hashVal = hv;
                 if (file.TryGetProp<DateTime>(out var sav, "SyncedAt", "synced_at")) syncedAtVal = sav;
+                if (file.TryGetProp<long>(out var piv, "ProfileInfoId", "profile_info_id") && piv > 0) profileInfoIdVal = piv;
 
-                // Core upsert: storage_name/storage_path/size/hash/synced_at
+                // Core upsert: storage_name/storage_path/size/hash/synced_at/profile_info_id
                 await _agw.NonQuery(
                     new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.INSERT_INFO }.ForTransaction(handler),
                     (ID, file.Id),
@@ -68,7 +70,8 @@ namespace Haley.Utils {
                     (PATH, file.StorageRef),
                     (SIZE, file.Size),
                     (HASH, hashVal),
-                    (SYNCED_AT, syncedAtVal)
+                    (SYNCED_AT, syncedAtVal),
+                    (PROFILE_INFO_ID, profileInfoIdVal)
                 );
 
                 // Optional extended update (only if caller provides these fields)

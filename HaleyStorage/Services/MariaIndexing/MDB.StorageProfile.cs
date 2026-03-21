@@ -134,6 +134,22 @@ namespace Haley.Utils {
             ws.StagingProviderKey = row.TryGetValue("staging_provider_key", out var stk) ? stk?.ToString() ?? string.Empty : string.Empty;
             if (row.TryGetValue("mode", out var mode) && int.TryParse(mode?.ToString(), out var modeInt))
                 ws.ProfileMode = (StorageProfileMode)modeInt;
+            if (row.TryGetValue("profile_info_id", out var pid) && long.TryParse(pid?.ToString(), out var pidLong) && pidLong > 0)
+                ws.ProfileInfoId = pidLong;
+        }
+
+        /// <inheritdoc/>
+        public async Task<IFeedback> GetProfileInfo(long profileInfoId) {
+            var fb = new Feedback();
+            try {
+                if (profileInfoId < 1) return fb.SetMessage("profileInfoId must be > 0.");
+                var row = await _agw.RowAsync(_key, PROFILE_INFO.GET_WITH_PROVIDER_KEYS, default, (PROFILE_ID, profileInfoId));
+                if (row == null || row.Count == 0)
+                    return fb.SetMessage($"profile_info id={profileInfoId} not found.");
+                return fb.SetStatus(true).SetResult(row);
+            } catch (Exception ex) {
+                return fb.SetMessage(ex.Message);
+            }
         }
     }
 }

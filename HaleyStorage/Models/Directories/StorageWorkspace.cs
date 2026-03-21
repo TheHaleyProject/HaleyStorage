@@ -30,6 +30,14 @@ namespace Haley.Models {
         public string StagingProviderKey { get; set; }
         /// <summary>Upload routing mode override. Only effective when <see cref="StorageProviderKey"/> is set.</summary>
         public StorageProfileMode ProfileMode { get; set; } = StorageProfileMode.DirectSave;
+        /// <summary>
+        /// The dsscore.profile_info.id that was used to configure this workspace's provider settings.
+        /// Set during <see cref="SetWorkspaceStorageProfile"/> hydration. 0 when the workspace was
+        /// configured via <see cref="ConfigureWorkspaceProviders"/> (no DB-backed profile_info).
+        /// Written to version_info.profile_info_id so files can always be resolved via their
+        /// original profile rather than the module's current profile.
+        /// </summary>
+        public long ProfileInfoId { get; set; } = 0;
 
         /// <summary>Throws <see cref="ArgumentNullException"/> if required fields are missing or inconsistent.</summary>
         public void Assert() {

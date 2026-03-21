@@ -20,6 +20,13 @@ namespace Haley.Models {
         /// Non-null only while flags bit 4 (InStaging) is set and bit 8 (InStorage) is not.
         /// </summary>
         public string StagingRef { get; set; }
+        /// <summary>
+        /// The dsscore.profile_info.id that was active when this version was written.
+        /// Populated from version_info.profile_info_id on read, and stamped on write
+        /// so provider resolution always uses the original profile — not the current one.
+        /// 0 means unknown (legacy version written before profile tracking was added).
+        /// </summary>
+        public long ProfileInfoId { get; set; } = 0;
 
         public IVaultFileRoute SetId(long id) { Id = id; return this; }
         public IVaultFileRoute SetDisplayName(string name) { DisplayName = name; return this; }

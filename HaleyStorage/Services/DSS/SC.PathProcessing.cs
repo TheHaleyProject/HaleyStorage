@@ -231,6 +231,21 @@ namespace Haley.Services {
                 if (string.IsNullOrWhiteSpace(input.File.StorageName)) input.File.StorageName = holder.StorageName;
                 if (input.File.Id < 1) input.File.SetId(holder.Id);
                 if (forupload) input.File.Size = inputW!.FileStream?.Length ?? 0;
+
+                // Stamp the effective profile_info_id so UpdateDocVersionInfo persists it to version_info.
+                // Priority: workspace (most specific) → module.
+                // This records exactly which profile was active when the file was stored,
+                // enabling future reads to reconstruct the original provider even after a profile change.
+                if (forupload && input.File is StorageFileRoute sfrWrite && sfrWrite.ProfileInfoId == 0) {
+                    long activeProfileInfoId = 0;
+                    if (TryGetWorkspace(input, out StorageWorkspace wsW) && wsW.ProfileInfoId > 0)
+                        activeProfileInfoId = wsW.ProfileInfoId;
+                    else if (Indexer != null
+                        && Indexer.TryGetComponentInfo<StorageModule>(input.Scope.Module.Cuid.ToString("N"), out StorageModule mW)
+                        && mW.ProfileInfoId > 0)
+                        activeProfileInfoId = mW.ProfileInfoId;
+                    if (activeProfileInfoId > 0) sfrWrite.ProfileInfoId = activeProfileInfoId;
+                }
             }
         }
 
@@ -394,10 +409,15 @@ namespace Haley.Services {
             // saveas_name = vi.storage_name alias; dname = di.display_name (human readable)
             input.File.StorageName = dic.TryGetValue("saveas_name", out var sn) ? sn?.ToString() ?? string.Empty : string.Empty;
 
-            // Flags and staging path are carried on StorageFileRoute (concrete type).
+            // Flags, staging path, and stored profile_info_id are carried on StorageFileRoute (concrete type).
             if (input.File is StorageFileRoute sfr) {
                 if (int.TryParse(dic["flags"]?.ToString(), out var flags)) sfr.Flags = flags;
                 sfr.StagingRef = stagingPath ?? string.Empty;
+                // Restore the profile_info_id that was active when this version was written.
+                // ResolveProvider will use it to reconstruct the exact original provider chain.
+                if (dic.TryGetValue("profile_info_id", out var pidObj)
+                    && long.TryParse(pidObj?.ToString(), out var pid) && pid > 0)
+                    sfr.ProfileInfoId = pid;
             }
 
             return true;
