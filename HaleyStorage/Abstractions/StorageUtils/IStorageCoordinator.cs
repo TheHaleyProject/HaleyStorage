@@ -4,26 +4,11 @@ using System.Threading.Tasks;
 using Haley.Models;
 
 namespace Haley.Abstractions {
-    public interface IStorageCoordinator : IStorageOperations, IVaultManagement, IFileFormatPolicy,IStorageProviderRegistry {
+    public interface IStorageCoordinator : IFileStorageOperations, IVaultManagement, IFileFormatPolicy,IStorageProviderRegistry, IChunkedUploadOperations, IStorageDirectoryOperations {
         IStorageCoordinator SetConfig(IVaultRegistryConfig config);
         bool ThrowExceptions { get; }
         string GetStorageRoot();
-        Task<IVaultDirResponse> GetDirectoryInfo(IVaultReadRequest input);
-        Task<IFeedback<string>> GetParent(IVaultFileReadRequest input);
-        Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest input, int page = 1, int pageSize = 50);
-        /// <summary>
-        /// Searches for folders and files whose vault name matches <paramref name="searchTerm"/>
-        /// (using <paramref name="searchMode"/>), optionally filtered by extension.
-        /// Scope: entire workspace (<paramref name="directoryId"/> = 0), a single directory, or
-        /// a full recursive subtree (<paramref name="recursive"/> = true).
-        /// Returns the latest file version for each matching document. Paginated.
-        /// </summary>
-        Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest input, string searchTerm, VaultSearchMode searchMode, string extension = null, long directoryId = 0, bool recursive = false, int page = 1, int pageSize = 50);
-        Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest input);
-        Task<IVaultResponse> CreateDirectory(IVaultReadRequest input, string rawname);
-        Task<IFeedback> DeleteDirectory(IVaultReadRequest input, bool recursive);
         bool WriteMode { get; }
-
         // ── Provider / profile configuration ─────────────────────────────────
         /// <summary>
         /// Sets the runtime provider routing for a registered module without requiring a
@@ -90,28 +75,5 @@ namespace Haley.Abstractions {
         /// <param name="hash">Optional SHA-256 hash of the copied file.</param>
         Task<IFeedback> FinalizePlaceholder(IVaultReadRequest request, long versionId,
             bool toStaging = false, long? size = null, string hash = null);
-
-        // ── Chunked Upload ────────────────────────────────────────────────────
-        /// <summary>
-        /// Registers the document in DB, creates a temp chunk directory, and returns the
-        /// versionId + versionCuid needed for subsequent part uploads and completion.
-        /// </summary>
-        Task<IFeedback<(long versionId, string versionCuid)>> InitiateChunkedUpload(IVaultFileWriteRequest request, long chunkSizeMb, int totalParts);
-
-        /// <summary>Writes one chunk part to the temp directory and records it in DB.</summary>
-        Task<IFeedback> UploadChunkPart(long versionId, int partNumber, Stream chunkStream, string hash = null);
-
-        /// <summary>Assembles all parts into the final storage path, finalizes DB records, and cleans up temp files.</summary>
-        Task<IFeedback> CompleteChunkedUpload(long versionId, string finalHash = null);
-
-        /// <summary>Returns how many parts have been received for an active session.</summary>
-        Task<IFeedback> GetChunkStatus(long versionId);
-
-        /// <summary>
-        /// Cancels an active chunk session: removes it from the in-memory cache and
-        /// deletes the temp chunk directory. DB chunk records are left orphaned for
-        /// offline cleanup. Returns success even when no session exists (idempotent).
-        /// </summary>
-        Task<IFeedback> AbortChunkedUpload(long versionId);
     }
 }

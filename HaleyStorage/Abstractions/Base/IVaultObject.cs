@@ -1,5 +1,14 @@
+﻿
+using Haley.Enums;
+using System;
+
 namespace Haley.Abstractions {
-    /// <obsolete>Removed. Client and module use <see cref="IVaultBase"/>; workspace uses <see cref="IVaultStorable"/>.</obsolete>
-    [System.Obsolete("IVaultObject is removed. Use IVaultBase or IVaultStorable directly.")]
-    public interface IVaultObject : IVaultStorable { }
+    public interface IVaultObject : IIdentityBase {
+        Guid Cuid { get; } //Collision resistance Unique Identifier 
+        string DisplayName { get; }
+        bool TryValidate(out string message);
+        IVaultObject UpdateCUID(params string[] parentNames);
+        IVaultObject SetCuid(string guid);
+        IVaultObject SetCuid(Guid guid);
+    }
 }

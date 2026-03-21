@@ -19,12 +19,12 @@ namespace Haley.Models {
         public string StorageName { get; set; } //Should be the controlled name or a name compatible for the database 
         public bool IsVirtual { get; set; }
         public int Version { get; set; } = 0;
-        public VaultControlMode ControlMode { get; set; } //Parsing or create mode is defined at application level?
-        public VaultParseMode ParseMode { get; set; } //If false, we fall back to parsing.
+        public StorageNameMode ControlMode { get; set; } //Parsing or create mode is defined at application level?
+        public StorageNameParseMode ParseMode { get; set; } //If false, we fall back to parsing.
         public override IVaultStorable UpdateCUID(params string[] parentNames) {
             return (IVaultStorable)base.UpdateCUID(parentNames);
         }
-        public VaultProfile(string displayname, VaultControlMode control = VaultControlMode.Number, VaultParseMode parse = VaultParseMode.Parse, bool isVirtual = false) : base(displayname) {
+        public VaultProfile(string displayname, StorageNameMode control = StorageNameMode.Number, StorageNameParseMode parse = StorageNameParseMode.Parse, bool isVirtual = false) : base(displayname) {
             ControlMode = control;
             ParseMode = parse;
             GenerateCuid();

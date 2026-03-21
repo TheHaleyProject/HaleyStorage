@@ -112,12 +112,12 @@ namespace Haley.Utils {
             var exists = await _agw.Scalar(new AdapterArgs(_key) { Query = WORKSPACE.EXISTS_BY_CUID }, (CUID, info.Cuid.ToString("N")));
             if (exists != null && long.TryParse(exists.ToString(), out var wsId)) {
                 //Workspace exists — just update it.
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPDATE }, (DNAME, info.DisplayName), (STORAGE_REF, info.Base), (STORAGENAME_MODE, (int)info.StorageNameMode), (STORAGENAME_PARSE, (int)info.StorageNameParseMode), (ID, wsId));
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.UPDATE }, (DNAME, info.DisplayName), (STORAGE_REF, info.Base), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode), (ID, wsId));
             } else {
                 var moduleCuid = StorageUtils.GenerateCuid(info.Client.Name, info.Module.Name);
                 var mexists = await _agw.Scalar(new AdapterArgs(_key) { Query = MODULE.EXISTS_BY_CUID }, (CUID, moduleCuid));
                 if (mexists == null || !long.TryParse(mexists.ToString(), out var modId)) throw new ArgumentException($@"Module {info.Module.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
-                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.INSERT }, (PARENT, modId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (STORAGE_REF, info.Base), (CUID, info.Cuid.ToString("N")), (STORAGENAME_MODE, (int)info.StorageNameMode), (STORAGENAME_PARSE, (int)info.StorageNameParseMode));
+                await _agw.NonQuery(new AdapterArgs(_key) { Query = WORKSPACE.INSERT }, (PARENT, modId), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (STORAGE_REF, info.Base), (CUID, info.Cuid.ToString("N")), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode));
             }
             return await ValidateAndCache(WORKSPACE.EXISTS_BY_CUID, "Workspace", info, null, (CUID, info.Cuid.ToString("N")));
         }

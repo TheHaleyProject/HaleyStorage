@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Haley.Abstractions {
-    public interface IStorageOperations {
+    public interface IFileStorageOperations {
         //Onus of generating the path doesn't lie with the Storage service.
         //We need Store, Fetch, Delete
         Task<IVaultResponse> Upload(IVaultFileWriteRequest input);

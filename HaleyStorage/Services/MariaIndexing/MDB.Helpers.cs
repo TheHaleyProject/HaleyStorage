@@ -287,7 +287,7 @@ namespace Haley.Utils {
         /// then duplicates the adapter gateway entry under the module's CUID so all subsequent per-module
         /// queries target the correct database.
         /// </summary>
-        async Task CreateModuleDBInstance(IVaultBase dirInfo) {
+        async Task CreateModuleDBInstance(IVaultObject dirInfo) {
             if (!(dirInfo is IVaultModule info)) return;
             if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid.ToString("N")}";
             //What if the CUID is changed? Should we use the guid instead? 

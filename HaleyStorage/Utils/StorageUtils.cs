@@ -54,16 +54,16 @@ namespace Haley.Utils
         /// Optional delegate that registers the object in the DB and returns <c>(id, guid)</c>.
         /// Pass <c>null</c> for GUID-controlled paths (GUID is derived deterministically from the name).
         /// </param>
-        public static (string name, string path) GenerateFileSystemSavePath(this IVaultStorable nObj, VaultParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultStorable, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
+        public static (string name, string path) GenerateFileSystemSavePath(this IVaultStorable nObj, StorageNameParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultStorable, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
             // ControlMode, ParseMode, IsVirtual live on VaultProfile (not on IVaultStorable).
             if (!(nObj is VaultProfile profile)) return (string.Empty, string.Empty);
             if (profile.IsVirtual) return (nObj.Name, "");
-            IVaultBase uidInfo = null;
+            IVaultObject uidInfo = null;
 
             //Partially or fully managed
             if (nObj.DisplayName.TryPopulateControlledID(out uidInfo, profile.ControlMode, parse_overwrite ?? profile.ParseMode, uidManager, nObj, throwExceptions)) {
-                nObj.StorageName = (profile.ControlMode == VaultControlMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
+                nObj.StorageName = (profile.ControlMode == StorageNameMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
             }
 
             var result = PreparePath(nObj.StorageName, splitProvider, profile.ControlMode, suffix, Path.GetExtension(nObj.Name));
@@ -78,7 +78,7 @@ namespace Haley.Utils
         /// Used by both <see cref="FileSystemStorageProvider.BuildStorageRef"/> (FS provider) and by
         /// <see cref="StorageCoordinator"/> when reconstructing paths for cloud providers.
         /// </summary>
-        public static string PreparePath(string input, Func<bool, (int length, int depth)> splitProvider = null, VaultControlMode control_mode = VaultControlMode.Number, string suffix = null, string extension = null) {
+        public static string PreparePath(string input, Func<bool, (int length, int depth)> splitProvider = null, StorageNameMode control_mode = StorageNameMode.Number, string suffix = null, string extension = null) {
             if (string.IsNullOrWhiteSpace(input)) return input;
             if (splitProvider == null) splitProvider = defaultSplitProvider;
             bool isNumber = input.IsNumber();
@@ -202,13 +202,13 @@ namespace Haley.Utils
        
         /// <summary>
         /// Parses or generates a controlled ID (number or GUID) from <paramref name="value"/>
-        /// and returns it in a <see cref="IVaultBase"/> carrier.
+        /// and returns it in a <see cref="IVaultObject"/> carrier.
         /// In <c>Parse</c> mode, extracts the number/GUID from the string.
         /// In <c>Generate</c> mode, calls <paramref name="idManager"/> (or SHA-256 hashes for GUID mode).
         /// </summary>
         /// <param name="idManager">Delegate to the indexer for registering/resolving the ID.</param>
         /// <param name="holder">The parent <see cref="IVaultStorable"/> passed through to the idManager.</param>
-        public static bool TryPopulateControlledID(this string value, out IVaultBase result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultStorable, (long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
+        public static bool TryPopulateControlledID(this string value, out IVaultObject result, StorageNameMode cmode, StorageNameParseMode pmode , Func<IVaultStorable, (long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
             result = null;
             
             if (string.IsNullOrWhiteSpace(value)) {
@@ -217,33 +217,33 @@ namespace Haley.Utils
             }
             string workingValue = Path.GetFileNameWithoutExtension(value); //WITHOUT EXTENSION, ONLY FILE NAME
            
-            var data = (pmode == VaultParseMode.Parse) ? HandleParseUID(workingValue, cmode, idManager,holder, throwExceptions) : HandleGenerateUID(workingValue, cmode,idManager,holder,throwExceptions);
+            var data = (pmode == StorageNameParseMode.Parse) ? HandleParseUID(workingValue, cmode, idManager,holder, throwExceptions) : HandleGenerateUID(workingValue, cmode,idManager,holder,throwExceptions);
 
             if (!data.status) return false; //Dont' proceed.
 
             result = new VaultUID(data.id, data.guid);
 
-            if (cmode == VaultControlMode.Number && data.id < 1) {
+            if (cmode == StorageNameMode.Number && data.id < 1) {
                 if (throwExceptions) throw new ArgumentNullException("The final generated id is less than 1. Not acceptable. Please check the inputs.");
                 return false;
-            } else if (cmode == VaultControlMode.Guid && data.guid == Guid.Empty) {
+            } else if (cmode == StorageNameMode.Guid && data.guid == Guid.Empty) {
                 if (throwExceptions) throw new ArgumentNullException("The final generated guid is an empty value. Not acceptable. Please check the inputs.");
                 return false;
             }
             return true;
         }
         
-        static (bool status, long id, Guid guid) HandleParseUID(this string value, VaultControlMode cmode, Func<IVaultStorable,(long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleParseUID(this string value, StorageNameMode cmode, Func<IVaultStorable,(long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
             //PARTIALLY MANAGED. IT SHOULD ALSO ALLOW ME TO STORE THE INFORMATION IN THE DATABASE??
 
             long resNumber = 0;
             Guid resGuid = Guid.Empty;
-            if (cmode == VaultControlMode.Number) {
+            if (cmode == StorageNameMode.Number) {
                 if (!long.TryParse(value, out resNumber)) {
                     if (throwExceptions) throw new ArgumentNullException($@"The provided input is not in the number format. Unable to parse a long value. ID Manager status : {idManager != null}");
                     return (false, resNumber, resGuid);
                 }
-            } else if (cmode == VaultControlMode.Guid) {
+            } else if (cmode == StorageNameMode.Guid) {
                 if (value.IsValidGuid(out resGuid)) { //Parse
                 } else if (value.IsCompactGuid(out resGuid)) { //Parse
                 } else {
@@ -255,13 +255,13 @@ namespace Haley.Utils
             return (true, resNumber, resGuid);
         }
         
-        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, VaultControlMode cmode, Func<IVaultStorable,(long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, StorageNameMode cmode, Func<IVaultStorable,(long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
             long resNumber = 0;
             Guid resGuid = Guid.Empty;
             (long id, Guid guid)? dbInfo = null;
 
             if (idManager == null) {
-                if (cmode == VaultControlMode.Guid) {
+                if (cmode == StorageNameMode.Guid) {
                     //Only for GUID, we can autogenerate the hash based on the input. So, we can go ahead and create it.
                     resGuid = value.ToDBName().CreateGUID(HashMethod.Sha256);
                 } else {

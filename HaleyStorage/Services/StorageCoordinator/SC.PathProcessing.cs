@@ -136,9 +136,9 @@ namespace Haley.Services {
                 string logicalId = null;
                 string ext = Path.GetExtension(input.File.StorageName ?? input.RequestedName ?? string.Empty);
 
-                if (wInfo.StorageNameMode == VaultControlMode.Number && input.File.Id > 0)
+                if (wInfo.NameMode == StorageNameMode.Number && input.File.Id > 0)
                     logicalId = input.File.Id.ToString();
-                else if (wInfo.StorageNameMode == VaultControlMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
+                else if (wInfo.NameMode == StorageNameMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
                     // Storage names are always generated as compact-N (no dashes).
                     // Normalize regardless of what form the caller provided (dashed, braced, compact).
                     if (Guid.TryParse(input.File.Cuid, out var g))
@@ -194,7 +194,7 @@ namespace Haley.Services {
                 if (string.IsNullOrWhiteSpace(targetFileName))
                     throw new ArgumentNullException("No target file name specified for this request.");
 
-                var holder = new VaultProfile(targetFileName, wInfo.StorageNameMode, wInfo.StorageNameParseMode, isVirtual: false);
+                var holder = new VaultProfile(targetFileName, wInfo.NameMode, wInfo.ParseMode, isVirtual: false);
 
                 // Step A: register with indexer and populate holder.Id / holder.Cuid / holder.StorageName.
                 // GenerateFileSystemSavePath is reused here only for the ID-registration side-effect;
@@ -277,7 +277,7 @@ namespace Haley.Services {
                 break;
 
                 case Enums.VaultObjectType.WorkSpace:
-                var suffixAddon = (input is VaultProfile pp && pp.ParseMode == VaultParseMode.Generate) ? "f" : "p";
+                var suffixAddon = (input is VaultProfile pp && pp.ParseMode == StorageNameParseMode.Generate) ? "f" : "p";
                 suffix = suffixAddon + Config.SuffixWorkSpace;
                 length = 1; depth = 5;
                 break;
@@ -289,7 +289,7 @@ namespace Haley.Services {
                     "Use StorageUtils.GenerateFileSystemSavePath for file path generation.");
             }
 
-            return StorageUtils.GenerateFileSystemSavePath(input, VaultParseMode.Generate,
+            return StorageUtils.GenerateFileSystemSavePath(input, StorageNameParseMode.Generate,
                 (n) => (length, depth), suffix: suffix, throwExceptions: false, caseSensitive: case_sensitive);
         }
 
@@ -428,7 +428,7 @@ namespace Haley.Services {
 
         /// <summary>
         /// Fast-path for reads where <see cref="IVaultFileRoute.StorageName"/> is already known.
-        /// Validates the name matches the workspace's <see cref="VaultControlMode"/> then calls
+        /// Validates the name matches the workspace's <see cref="StorageNameMode"/> then calls
         /// <see cref="IStorageProvider.BuildStorageRef"/> to reconstruct the sharded/flat key without a DB round-trip.
         /// Returns <c>false</c> for uploads or when StorageName is empty.
         /// </summary>
@@ -437,10 +437,10 @@ namespace Haley.Services {
             var sname = Path.GetFileNameWithoutExtension(input.File.StorageName);
             var extension = Path.GetExtension(input.File.StorageName);
 
-            if (wInfo.StorageNameMode == VaultControlMode.Number && !sname.IsNumber())
+            if (wInfo.NameMode == StorageNameMode.Number && !sname.IsNumber())
                 throw new ArgumentException("StorageName must be numeric for this workspace.");
 
-            if (wInfo.StorageNameMode == VaultControlMode.Guid) {
+            if (wInfo.NameMode == StorageNameMode.Guid) {
                 if (sname.IsCompactGuid(out Guid g) || sname.IsValidGuid(out g))
                     sname = g.ToString("N");
                 else

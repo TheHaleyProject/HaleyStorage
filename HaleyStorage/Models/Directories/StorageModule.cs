@@ -12,8 +12,7 @@ namespace Haley.Models {
     /// that controls upload routing for files in this module.
     /// </summary>
     public class StorageModule : VaultComponent, IVaultModule {
-        /// <summary>Parent client reference required by <see cref="IVaultModule"/>.</summary>
-        public IVaultBase Client { get; set; }      // IVaultModule requires IVaultBase
+        public IVaultObject Client { get; set; }
         /// <summary>Name of the per-module MariaDB schema (e.g. <c>dssm_{cuid}</c>).</summary>
         public string DatabaseName { get; set; }
         /// <summary>Logical profile name associated with this module's storage configuration.</summary>

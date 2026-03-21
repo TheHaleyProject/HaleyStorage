@@ -15,9 +15,9 @@ namespace Haley.Models {
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
         public string OverrideRef { get; protected set; }
         public string RequestedName { get; protected set; }
-        public IVaultBase Client { get; protected set; }
-        public IVaultBase Module { get; protected set; }
-        public IVaultBase Workspace { get; protected set; }
+        public IVaultObject Client { get; protected set; }
+        public IVaultObject Module { get; protected set; }
+        public IVaultObject Workspace { get; protected set; }
         public IVaultFolderRoute Folder { get; protected set; }
         public bool ReadOnlyMode { get; protected set; }
 
@@ -39,7 +39,7 @@ namespace Haley.Models {
         /// Sets the client, module, or workspace component and recomputes all CUIDs to reflect
         /// the updated hierarchy.
         /// </summary>
-        public virtual IVaultReadRequest SetComponent(IVaultBase input, Enums.VaultObjectType type) {
+        public virtual IVaultReadRequest SetComponent(IVaultObject input, Enums.VaultObjectType type) {
             switch (type) {
                 case Enums.VaultObjectType.Client:
                 Client = input;

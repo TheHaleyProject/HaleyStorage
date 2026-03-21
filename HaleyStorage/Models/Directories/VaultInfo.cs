@@ -8,16 +8,16 @@ using System.Linq;
 
 namespace Haley.Models {
     /// <summary>
-    /// Base implementation of <see cref="IVaultBase"/> that owns the display name, DB-safe name,
+    /// Base implementation of <see cref="IVaultObject"/> that owns the display name, DB-safe name,
     /// deterministic <see cref="Guid"/> (SHA-256 hash of the name), and the mutable <see cref="Cuid"/>
     /// (composite SHA-256 GUID derived from parent names).
     /// Setting <see cref="DisplayName"/> automatically derives <see cref="VaultInfo.Name"/> and <see cref="Guid"/>.
     /// </summary>
-    public class VaultInfo : IVaultBase {
+    public class VaultInfo : IVaultObject {
         public string Name { get; set; }
         public long Id { get; set; }                        // public set — required by IIdentityBase
         [IgnoreMapping] //Important.. should not map this.
-        public Guid Cuid { get; protected set; }            // Guid — matches IVaultBase.Cuid
+        public Guid Cuid { get; protected set; }
         public Guid Guid { get; private set; }              // Guid — matches IIdentityBase.Guid
         public string Key => Cuid == System.Guid.Empty ? Name : Cuid.ToString("N"); // IIdentityBase.Key
 
@@ -66,7 +66,7 @@ namespace Haley.Models {
         /// <paramref name="parentNames"/> (plus this object's own name appended if absent).
         /// Used to build a deterministic, hierarchy-scoped CUID.
         /// </summary>
-        public virtual IVaultBase UpdateCUID(params string[] parentNames) {
+        public virtual IVaultObject UpdateCUID(params string[] parentNames) {
             if (parentNames == null) return this;
             var inputList = parentNames.ToList();
             if (inputList.Count == 0 || inputList.Last().ToDBName() != Name) {
@@ -84,19 +84,19 @@ namespace Haley.Models {
         }
 
         /// <summary>Sets the DB auto-increment ID on this vault object.</summary>
-        public IVaultBase SetId(long setId) {
+        public IVaultObject SetId(long setId) {
             Id = setId;
             return this;
         }
 
         /// <summary>Directly sets the DB-safe <see cref="VaultInfo.Name"/> without triggering display-name derivation.</summary>
-        public IVaultBase SetName(string name) {
+        public IVaultObject SetName(string name) {
             Name = name;
             return this;
         }
 
         /// <summary>Directly sets the CUID to the given <see cref="Guid"/> value.</summary>
-        public IVaultBase SetCuid(Guid guid) {
+        public IVaultObject SetCuid(Guid guid) {
             Cuid = guid;
             return this;
         }
@@ -105,7 +105,7 @@ namespace Haley.Models {
         /// Parses and sets the CUID from a compact-N or standard-format GUID string.
         /// Throws when the value is empty or cannot be parsed as a GUID.
         /// </summary>
-        public IVaultBase SetCuid(string guid) {
+        public IVaultObject SetCuid(string guid) {
             if (string.IsNullOrWhiteSpace(guid)) throw new Exception("Cannot set CUID with empty value");
             System.Guid res;
             if (guid.IsCompactGuid(out res) || guid.IsValidGuid(out res)) {

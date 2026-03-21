@@ -14,6 +14,6 @@ namespace Haley.Abstractions {
         IVaultReadRequest SetRequestedName(string name);
         IVaultReadRequest SetOverrideRef(string storageRef);
         IVaultReadRequest SetFolder(IVaultFolderRoute folder);
-        IVaultReadRequest SetComponent(IVaultBase input, VaultObjectType type);
+        IVaultReadRequest SetComponent(IVaultObject input, VaultObjectType type);
     }
 }
