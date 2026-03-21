@@ -297,6 +297,42 @@ namespace Haley.Internal {
                     $@"update chunk_info set is_completed = b'1' where id = {ID};";
             }
 
+            public class STAGING {
+                /// <summary>
+                /// Selects the next batch of staged-but-not-yet-promoted rows.
+                /// Filter: flags bit 4 (InStaging) set, bit 8 (InStorage) not set, synced_at NULL.
+                /// Includes the workspace CUID (for profile resolution) and module CUID
+                /// (for selecting the correct per-module DB at the coordinator level — added via JOIN in implementation).
+                /// </summary>
+                public const string GET_PENDING =
+                    $@"select vi.id as version_id, vi.storage_name, vi.storage_ref,
+                              vi.staging_ref, vi.profile_info_id, ws.cuid as workspace_cuid
+                       from version_info as vi
+                       inner join doc_version as dv  on dv.id = vi.id
+                       inner join document    as d   on d.id = dv.parent  and d.deleted = 0
+                       inner join directory   as dir on dir.id = d.parent and dir.deleted = 0
+                       inner join workspace   as ws  on ws.id = dir.workspace
+                       where (vi.flags & 4) > 0
+                         and (vi.flags & 8) = 0
+                         and vi.synced_at is null
+                       order by vi.id asc
+                       limit {LIMIT_ROWS};";
+
+                /// <summary>
+                /// Atomically marks a promoted row: sets storage_ref, clears/sets flags, and stamps synced_at.
+                /// The caller computes <c>newFlags</c> based on <c>StorageProfileMode</c>:
+                /// <c>StageAndMove → 8|64</c>, <c>StageAndRetainCopy → 4|8|64</c>.
+                /// </summary>
+                public const string UPDATE_PROMOTION =
+                    $@"update version_info
+                       set storage_ref = {PATH},
+                           flags       = {FLAGS},
+                           synced_at   = {SYNCED_AT},
+                           size        = case when {SIZE} > 0 then {SIZE} else size end,
+                           hash        = case when {HASH} is not null then {HASH} else hash end
+                       where id = {ID};";
+            }
+
             public class SEARCH {
                 // Shared file-join columns used by every ITEMS query (same shape as BROWSE_ITEMS).
                 const string _FILE_COLS = $@"1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, d.parent as parent_id, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at";

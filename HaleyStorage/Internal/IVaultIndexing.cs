@@ -1,7 +1,9 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System;
 using Haley.Models;
 using Haley.Enums;
+using Haley.Abstractions;
 
 namespace Haley.Services {
     /// <summary>
@@ -52,5 +54,20 @@ namespace Haley.Services {
         /// Returns a dictionary with keys: <c>storage_provider_key</c>, <c>staging_provider_key</c>, <c>mode</c>.
         /// </summary>
         Task<IFeedback> GetProfileInfo(long profileInfoId);
+
+        // ── Staging promotion ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns the next batch of <see cref="StagedVersionRef"/> rows whose bytes are on a
+        /// staging provider but have not yet been promoted to primary storage.
+        /// Filter: <c>(flags &amp; 4) &gt; 0 AND (flags &amp; 8) = 0 AND synced_at IS NULL</c>.
+        /// </summary>
+        Task<IEnumerable<StagedVersionRef>> GetPendingStagedVersions(string moduleCuid, int batchSize = 20);
+
+        /// <summary>
+        /// Records the outcome of a successful promotion: writes the final <c>storage_ref</c>,
+        /// updates <c>flags</c> (e.g. <c>8|64</c> for StageAndMove), and stamps <c>synced_at</c>.
+        /// </summary>
+        Task<IFeedback> UpdateVersionPromotion(string moduleCuid, long versionId, string storageRef, int newFlags, DateTime syncedAt, long size = 0, string hash = null);
     }
 }

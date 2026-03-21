@@ -200,6 +200,24 @@ namespace Haley.Services {
             return null;
         }
 
+        // ── Promotion worker helper ────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns the primary provider, staging provider, and profile mode for a specific
+        /// <c>profile_info.id</c>. Falls back to the module-level configuration when the
+        /// profile is not found or when <paramref name="profileInfoId"/> is 0.
+        /// Used internally by <see cref="StagingPromotionWorker"/>.
+        /// </summary>
+        internal (IStorageProvider primary, IStorageProvider staging, StorageProfileMode mode)
+            GetProvidersForProfile(long profileInfoId, string moduleCuid) {
+            if (profileInfoId > 0 && TryGetProfileInfoCached(profileInfoId, out var sk, out var stk, out var pMode)) {
+                var primary  = (!string.IsNullOrEmpty(sk)  && _providers.TryGetValue(sk,  out var pp)) ? pp : GetDefaultProvider();
+                var staging  = (!string.IsNullOrEmpty(stk) && _providers.TryGetValue(stk, out var sp)) ? sp : null;
+                return (primary, staging, pMode);
+            }
+            return (ResolveProvider(moduleCuid), ResolveStagingProvider(moduleCuid), ResolveProfileMode(moduleCuid));
+        }
+
         // ── Runtime provider configuration ────────────────────────────────────
 
         /// <inheritdoc/>

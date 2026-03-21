@@ -126,7 +126,7 @@ namespace Haley.Services {
         public string BasePath { get; }
         /// <summary>When <c>false</c>, all mutating operations (upload, delete, register) are rejected.</summary>
         public bool WriteMode { get; set; }
-        IVaultIndexing Indexer;
+        internal IVaultIndexing Indexer;
 
         // --- IStorageProviderRegistry ---
         readonly Dictionary<string, IStorageProvider> _providers = new Dictionary<string, IStorageProvider>(StringComparer.OrdinalIgnoreCase);
