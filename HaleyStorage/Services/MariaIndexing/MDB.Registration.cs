@@ -34,7 +34,7 @@ namespace Haley.Utils {
         /// Public entry point for document registration. Delegates to <c>RegisterDocumentsInternal</c>.
         /// </summary>
         /// <param name="holder">Receives the assigned DB ID and CUID after successful registration.</param>
-        public async Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultInfo holder) {
+        public async Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultStorable holder) {
             return await RegisterDocumentsInternal(request, holder);
         }
         /// <summary>

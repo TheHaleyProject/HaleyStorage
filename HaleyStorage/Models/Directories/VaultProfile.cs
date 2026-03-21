@@ -15,14 +15,14 @@ namespace Haley.Models {
     /// whether the object is virtual (DB-only, no physical directory),
     /// and the current version number.
     /// </summary>
-    public class VaultProfile :VaultInfo , IVaultInfo{
+    public class VaultProfile : VaultInfo, IVaultStorable {
         public string StorageName { get; set; } //Should be the controlled name or a name compatible for the database 
         public bool IsVirtual { get; set; }
         public int Version { get; set; } = 0;
         public VaultControlMode ControlMode { get; set; } //Parsing or create mode is defined at application level?
         public VaultParseMode ParseMode { get; set; } //If false, we fall back to parsing.
-        public override IVaultInfo UpdateCUID(params string[] parentNames) {
-            return (IVaultInfo)base.UpdateCUID(parentNames);
+        public override IVaultStorable UpdateCUID(params string[] parentNames) {
+            return (IVaultStorable)base.UpdateCUID(parentNames);
         }
         public VaultProfile(string displayname, VaultControlMode control = VaultControlMode.Number, VaultParseMode parse = VaultParseMode.Parse, bool isVirtual = false) : base(displayname) {
             ControlMode = control;

@@ -54,9 +54,9 @@ namespace Haley.Utils
         /// Optional delegate that registers the object in the DB and returns <c>(id, guid)</c>.
         /// Pass <c>null</c> for GUID-controlled paths (GUID is derived deterministically from the name).
         /// </param>
-        public static (string name, string path) GenerateFileSystemSavePath(this IVaultInfo nObj, VaultParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultInfo, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
+        public static (string name, string path) GenerateFileSystemSavePath(this IVaultStorable nObj, VaultParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultStorable, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
-            // ControlMode, ParseMode, IsVirtual live on VaultProfile (not on IVaultInfo).
+            // ControlMode, ParseMode, IsVirtual live on VaultProfile (not on IVaultStorable).
             if (!(nObj is VaultProfile profile)) return (string.Empty, string.Empty);
             if (profile.IsVirtual) return (nObj.Name, "");
             IVaultBase uidInfo = null;
@@ -207,8 +207,8 @@ namespace Haley.Utils
         /// In <c>Generate</c> mode, calls <paramref name="idManager"/> (or SHA-256 hashes for GUID mode).
         /// </summary>
         /// <param name="idManager">Delegate to the indexer for registering/resolving the ID.</param>
-        /// <param name="holder">The parent <see cref="IVaultInfo"/> passed through to the idManager.</param>
-        public static bool TryPopulateControlledID(this string value, out IVaultBase result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultInfo, (long id, Guid guid)> idManager, IVaultInfo holder, bool throwExceptions = false) {
+        /// <param name="holder">The parent <see cref="IVaultStorable"/> passed through to the idManager.</param>
+        public static bool TryPopulateControlledID(this string value, out IVaultBase result, VaultControlMode cmode, VaultParseMode pmode , Func<IVaultStorable, (long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
             result = null;
             
             if (string.IsNullOrWhiteSpace(value)) {
@@ -233,7 +233,7 @@ namespace Haley.Utils
             return true;
         }
         
-        static (bool status, long id, Guid guid) HandleParseUID(this string value, VaultControlMode cmode, Func<IVaultInfo,(long id, Guid guid)> idManager, IVaultInfo holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleParseUID(this string value, VaultControlMode cmode, Func<IVaultStorable,(long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
             //PARTIALLY MANAGED. IT SHOULD ALSO ALLOW ME TO STORE THE INFORMATION IN THE DATABASE??
 
             long resNumber = 0;
@@ -255,7 +255,7 @@ namespace Haley.Utils
             return (true, resNumber, resGuid);
         }
         
-        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, VaultControlMode cmode, Func<IVaultInfo,(long id, Guid guid)> idManager, IVaultInfo holder, bool throwExceptions = false) {
+        static (bool status, long id, Guid guid) HandleGenerateUID(this string value, VaultControlMode cmode, Func<IVaultStorable,(long id, Guid guid)> idManager, IVaultStorable holder, bool throwExceptions = false) {
             long resNumber = 0;
             Guid resGuid = Guid.Empty;
             (long id, Guid guid)? dbInfo = null;

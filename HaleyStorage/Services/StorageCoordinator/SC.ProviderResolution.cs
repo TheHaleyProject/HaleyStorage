@@ -56,6 +56,9 @@ namespace Haley.Services {
             return GetDefaultProvider();
         }
 
+        /// <inheritdoc/>
+        public IStorageProvider GetPrimaryProvider(IVaultReadRequest request) => ResolveProvider(request);
+
         // ── Staging provider ──────────────────────────────────────────────────
 
         /// <summary>

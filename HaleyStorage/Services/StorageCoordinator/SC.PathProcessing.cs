@@ -258,7 +258,7 @@ namespace Haley.Services {
         /// (client, module, or workspace). Throws <see cref="InvalidOperationException"/> for
         /// <c>VaultObjectType.File</c> — use <c>StorageUtils.GenerateFileSystemSavePath</c> instead.
         /// </summary>
-        public (string name, string path) GenerateBasePath(IVaultInfo input, Enums.VaultObjectType component) {
+        public (string name, string path) GenerateBasePath(IVaultStorable input, Enums.VaultObjectType component) {
             string suffix = string.Empty;
             int length = 2, depth = 0;
             bool case_sensitive = false;
@@ -294,21 +294,21 @@ namespace Haley.Services {
         }
 
         /// <summary>
-        /// Extracts the relevant <see cref="IVaultInfo"/> target, its object type, the corresponding
+        /// Extracts the relevant <see cref="IVaultStorable"/> target, its object type, the corresponding
         /// meta-file name, and the CUID string for a hierarchy type <typeparamref name="T"/>.
         /// Used by <see cref="AddComponentPath{T}"/> to dispatch between client, module, and workspace.
         /// </summary>
-        (IVaultInfo target, Enums.VaultObjectType type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultObject {
-            IVaultInfo target = null;
+        (IVaultStorable target, Enums.VaultObjectType type, string metaFilePath, string cuid) GetTargetInfo<T>(IVaultReadRequest input) where T : IVaultStorable {
+            IVaultStorable target = null;
             Enums.VaultObjectType targetType = Enums.VaultObjectType.Client;
             string metaFilePath = string.Empty;
 
             if (typeof(IVaultClient).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultObjectType.Client; metaFilePath = CLIENTMETAFILE; target = input.Scope.Client;
+                targetType = Enums.VaultObjectType.Client; metaFilePath = CLIENTMETAFILE; target = input.Scope.Client as IVaultStorable;
             } else if (typeof(IVaultModule).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultObjectType.Module; metaFilePath = MODULEMETAFILE; target = input.Scope.Module;
+                targetType = Enums.VaultObjectType.Module; metaFilePath = MODULEMETAFILE; target = input.Scope.Module as IVaultStorable;
             } else if (typeof(IVaultWorkSpace).IsAssignableFrom(typeof(T))) {
-                targetType = Enums.VaultObjectType.WorkSpace; metaFilePath = WORKSPACEMETAFILE; target = input.Scope.Workspace;
+                targetType = Enums.VaultObjectType.WorkSpace; metaFilePath = WORKSPACEMETAFILE; target = input.Scope.Workspace as IVaultStorable;
             }
 
             return (target, targetType, metaFilePath, StorageUtils.GenerateCuid(input, targetType));
@@ -320,13 +320,16 @@ namespace Haley.Services {
         /// For the FileSystem provider, falls back to reading the .meta file from disk when
         /// the indexer cache is cold. Cloud providers have no on-disk meta files.
         /// </summary>
-        void AddComponentPath<T>(IVaultReadRequest input, List<string> paths, IStorageProvider provider) where T : IVaultObject {
+        void AddComponentPath<T>(IVaultReadRequest input, List<string> paths, IStorageProvider provider) where T : IVaultStorable {
             if (Indexer == null) return;
             var info = GetTargetInfo<T>(input);
             if (info.target == null) return;
 
             if (Indexer.TryGetComponentInfo(info.cuid, out T obj)) {
-                if (!string.IsNullOrWhiteSpace(obj.StorageRef)) paths.Add(obj.StorageRef);
+                // StorageRef lives on IVaultWorkSpace (workspace) or VaultComponent (client/module concrete).
+                // For cloud providers, StorageRef is empty for client/module — GenerateBasePath handles those.
+                var storedRef = (obj as IVaultWorkSpace)?.StorageRef ?? (obj as VaultComponent)?.StorageRef;
+                if (!string.IsNullOrWhiteSpace(storedRef)) paths.Add(storedRef);
             } else {
                 var tuple = GenerateBasePath(info.target, info.type);
                 paths.Add(tuple.path);

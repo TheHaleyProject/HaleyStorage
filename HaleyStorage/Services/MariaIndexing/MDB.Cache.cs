@@ -10,13 +10,13 @@ namespace Haley.Utils {
     /// </summary>
     internal partial class MariaDBIndexing {
         //We also need to cache the results to avoid frequent calls to the DB.
-        ConcurrentDictionary<string, IVaultObject> _cache = new ConcurrentDictionary<string, IVaultObject>();
+        ConcurrentDictionary<string, IVaultBase> _cache = new ConcurrentDictionary<string, IVaultBase>();
 
         /// <summary>
-        /// Adds or replaces an <see cref="IVaultObject"/> in the cache keyed by its CUID.
+        /// Adds or replaces an <see cref="IVaultBase"/> in the cache keyed by its CUID.
         /// Returns <c>false</c> when the entry already exists and <paramref name="replace"/> is <c>false</c>.
         /// </summary>
-        public bool TryAddInfo(IVaultObject dirInfo, bool replace = false) {
+        public bool TryAddInfo(IVaultBase dirInfo, bool replace = false) {
             if (dirInfo == null || !dirInfo.Name.AssertValue(false) || dirInfo.Cuid == Guid.Empty) return false;
             var key = dirInfo.Cuid.ToString("N");
             if (_cache.ContainsKey(key)) {
@@ -27,10 +27,10 @@ namespace Haley.Utils {
             }
         }
         /// <summary>
-        /// Retrieves a strongly-typed <see cref="IVaultObject"/> from the cache by CUID.
+        /// Retrieves a strongly-typed <see cref="IVaultBase"/> from the cache by CUID.
         /// Returns <c>false</c> when not found or when the cached object is not of type <typeparamref name="T"/>.
         /// </summary>
-        public bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject {
+        public bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultBase {
             component = default;
             if (string.IsNullOrWhiteSpace(key) || !_cache.ContainsKey(key)) return false;
             var data = _cache[key];
@@ -43,7 +43,7 @@ namespace Haley.Utils {
         /// runs an optional <paramref name="preProcess"/> action (e.g. <c>CreateModuleDBInstance</c>),
         /// and adds the object to the cache. Returns a success <see cref="IFeedback"/> with the ID as <c>Result</c>.
         /// </summary>
-        async Task<IFeedback> ValidateAndCache(string query, string title, IVaultObject info, Func<IVaultObject, Task> preProcess, params (string key, object value)[] parameters) {
+        async Task<IFeedback> ValidateAndCache(string query, string title, IVaultBase info, Func<IVaultBase, Task> preProcess, params (string key, object value)[] parameters) {
             var result = await _agw.Scalar(new AdapterArgs(_key) { Query = query }, parameters);
             if (result != null && result.IsNumericType()) {
                 if (long.TryParse(result.ToString(), out var id)) info.Id = id;
@@ -54,10 +54,10 @@ namespace Haley.Utils {
             return new Feedback(false, "Unable to index");
         }
         /// <summary>
-        /// Adds an <see cref="IVaultObject"/> to the cache after running the optional pre-process action.
+        /// Adds an <see cref="IVaultBase"/> to the cache after running the optional pre-process action.
         /// No-op if the CUID already has a non-null cache entry, preventing duplicate DB instance creation.
         /// </summary>
-        async Task AddComponentCache(IVaultObject info, Func<IVaultObject,Task> preProcess = null) {
+        async Task AddComponentCache(IVaultBase info, Func<IVaultBase,Task> preProcess = null) {
             if (info == null) return;
             var key = info.Cuid.ToString("N");
             if (_cache.ContainsKey(key) && _cache[key] != null) return;

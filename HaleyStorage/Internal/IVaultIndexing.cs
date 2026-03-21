@@ -16,7 +16,7 @@ namespace Haley.Services {
         Task<IFeedback> RegisterClient(IVaultClient info);
         Task<IFeedback> RegisterModule(IVaultModule info);
         Task<IFeedback> RegisterWorkspace(IVaultWorkSpace info);
-        Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultInfo holder);
+        Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultStorable holder);
         Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IVaultFileRoute file, string callId = null);
         Task<IFeedback> UpdateDocDisplayName(string moduleCuid, long versionId, string displayName);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id);
@@ -31,8 +31,8 @@ namespace Haley.Services {
         Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, long directoryId = 0, bool recursive = false, int page = 1, int pageSize = 50);
         Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest request);
         Task Validate();
-        bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
-        bool TryAddInfo(IVaultObject dirInfo, bool replace = false);
+        bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultBase;
+        bool TryAddInfo(IVaultBase dirInfo, bool replace = false);
         Task<IFeedback<string>> GetParentName(IVaultFileReadRequest request);
         // Chunking
         Task<IFeedback> UpsertChunkInfo(string moduleCuid, long versionId, long chunkSizeMb, int totalParts, string chunkFolderName, string chunkFolderPath, bool isCompleted = false, string callId = null);
