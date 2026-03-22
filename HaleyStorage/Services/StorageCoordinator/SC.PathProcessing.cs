@@ -279,6 +279,7 @@ namespace Haley.Services {
             if (Indexer.TryGetComponentInfo(wsCuid, out VaultWorkSpace ws)) {
                 if (ws.IsVirtual) return; // virtual — no physical path segment
                 if (!string.IsNullOrWhiteSpace(ws.StorageRef)) {
+                    if (!string.IsNullOrWhiteSpace(ws.Base)) paths.Add(ws.Base);
                     paths.Add(ws.StorageRef);
                 } else {
                     var seg = BuildFallbackWorkspacePath(input);
@@ -287,7 +288,6 @@ namespace Haley.Services {
             } else {
                 var seg = BuildFallbackWorkspacePath(input);
                 paths.Add(seg);
-
             }
 
             var joinedPath = provider is FileSystemStorageProvider

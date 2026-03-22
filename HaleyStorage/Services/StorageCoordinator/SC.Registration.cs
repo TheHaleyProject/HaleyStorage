@@ -110,14 +110,14 @@ namespace Haley.Services {
             if (!isVirtual && hasRealName) {
                 var wsCarrier = new VaultStorable(wspace.DisplayName, VaultNameMode.Guid, VaultNameParseMode.Generate);
                 wsSegment = GenerateBasePath(wsCarrier, VaultObjectType.WorkSpace).path;
-                wsPath = Path.Combine(clientDir, moduleDir, wsSegment); // full relative path stored in DB
+                wsPath = wsSegment; // only the workspace segment is stored in DB
                 if (isFs && WriteMode) {
                     var wsFullPath = Path.GetFullPath(Path.Combine(baseDir, wsSegment));
                     if (!Directory.Exists(wsFullPath)) Directory.CreateDirectory(wsFullPath);
                 }
             }
 
-            var wsInfo = wspace.MapProperties(new VaultWorkSpace(client.Name, module.Name, wspace.DisplayName, isVirtual) { StorageRef = wsPath, NameMode = content_control, ParseMode = content_pmode, CaseSensitive = caseSensitive });
+            var wsInfo = wspace.MapProperties(new VaultWorkSpace(client.Name, module.Name, wspace.DisplayName, isVirtual) { StorageRef = wsPath, Base = Path.Combine(clientDir, moduleDir), NameMode = content_control, ParseMode = content_pmode, CaseSensitive = caseSensitive });
 
             var result = new Feedback(true, $"Workspace {wspace.DisplayName} is registered");
             if (!isVirtual && hasRealName && isFs && !Directory.Exists(Path.GetFullPath(Path.Combine(baseDir, wsSegment))))
