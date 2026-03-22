@@ -13,15 +13,16 @@ namespace Haley.Utils {
     /// </summary>
     internal partial class MariaDBIndexing {
         /// <summary>
-        /// Thread-safe one-shot validation: runs <see cref="Validate"/> the first time it is called.
+        /// Thread-safe one-shot validation: runs <see cref="CreateCoreDB"/> the first time it is called.
         /// Subsequent calls are no-ops, guarded by a <see cref="SemaphoreSlim"/>.
         /// </summary>
-        async Task EnsureValidation() {
+        public async Task EnsureValidation() {
             if (isValidated) return;
             await _validateLock.WaitAsync();
             try {
                 if (!isValidated) {
-                    await Validate();
+                   var status = await CreateCoreDB();
+                    if (status == null || !status.Status) throw new Exception(status.Message);
                     isValidated = true;
                 }
             } finally {
@@ -253,17 +254,6 @@ namespace Haley.Utils {
                 return (0, Guid.Empty);
             }
         }
-        /// <summary>
-        /// Creates a per-module MariaDB schema from the <c>dssclient.sql</c> template if it does not already exist,
-        /// then duplicates the adapter gateway entry under the module's CUID so all subsequent per-module
-        /// queries target the correct database.
-        /// </summary>
-        async Task CreateModuleDBInstance(IVaultObject dirInfo) {
-            if (!(dirInfo is IVaultModule info)) return;
-            if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid.ToString("N")}";
-            //So, when we create the module, we use the cuid as the database name.
-            //TODO : IF A CUID IS CHANGED, THEN WE NEED TO UPDATE THE DATABASE NAME IN THE DB.
-            await _agw.CreateDatabase(new DbCreationArgs(info.Cuid.ToString("N")) { ContentProcessor = (content, dbname) => { return content.Replace(DB_CLIENT_SEARCH_TERM, dbname); }, FallBackDBName = info.DatabaseName, DBName = info.DatabaseName, SQLPath = Path.Combine(AssemblyUtils.GetBaseDirectory(), DB_SQL_FILE_LOCATION, DB_CLIENT_SQL_FILE), CloningAdapterKey = _key });
-        }
+       
     }
 }

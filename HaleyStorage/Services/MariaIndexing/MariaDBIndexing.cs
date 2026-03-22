@@ -21,8 +21,10 @@ namespace Haley.Utils {
         const string DB_CORE_FALLBACK_NAME = "mss_core";
         const string DB_CORE_SEARCH_TERM = "dss_core";
         const string DB_CLIENT_SEARCH_TERM = "dss_client";
-        const string DB_SQL_FILE_LOCATION = "Resources";
+        const string DB_SQL_FILE_LOCATION = "Scripts";
         internal const string DB_MODULE_NAME_PREFIX = "dssm_";
+        const string EMBEDDED_DBCORE_FILE = $@"Haley.{DB_SQL_FILE_LOCATION}.{DB_CORE_SQL_FILE}";
+        const string EMBEDDED_DBCLIENT_FILE = $@"Haley.{DB_SQL_FILE_LOCATION}.{DB_CLIENT_SQL_FILE}";
         ConcurrentDictionary<string, (ITransactionHandler handler, DateTime created)> _handlers = new ConcurrentDictionary<string, (ITransactionHandler handler, DateTime created)>();
         ILogger _logger;
         string _key;

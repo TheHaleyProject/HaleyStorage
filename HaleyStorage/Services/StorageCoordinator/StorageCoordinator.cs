@@ -71,8 +71,8 @@ namespace Haley.Services {
             // In ReadOnly mode, skip creating default structures.
             // Path resolution falls back to existing .meta files and the indexer.
             if (WriteMode) {
-                var defObj = new VaultStorable(VaultConstants.DEFAULT_NAME);
-                await RegisterClient(defObj);
+                //Either we ask the indexer to directly create the database or we try to register a client.. either way,we ensure that the database is created.
+                await Indexer.EnsureValidation(); //to create the database.
                 // Persist the default provider/profile/profile_info to DB (steps 1–3 only).
                 // Workspace linking (step 4) is deferred to RegisterFromSource, after
                 // all workspaces are registered and RehydrateWorkspaceProfilesAsync has run.

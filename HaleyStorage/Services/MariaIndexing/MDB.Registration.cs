@@ -1,29 +1,8 @@
 using Haley.Abstractions;
-using Haley.Enums;
 using Haley.Models;
-using Haley.Utils;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Runtime.CompilerServices;
-using System.Security.AccessControl;
-using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using System.Xml.XPath;
 using static Haley.Internal.IndexingConstant;
 using static Haley.Internal.IndexingQueries;
-using static System.Net.Mime.MediaTypeNames;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Haley.Utils {
     /// <summary>
@@ -121,9 +100,36 @@ namespace Haley.Utils {
         /// Creates the core <c>dss_core</c> schema from the <c>dsscore.sql</c> template if it does not already exist.
         /// Called once at startup via <c>EnsureValidation</c>.
         /// </summary>
-        public async Task Validate() {
+        async Task<IFeedback> CreateCoreDB() {
             //var toReplace = new Dictionary<string, string> { ["lifecycle_state"] = }
-               await _agw.CreateDatabase(new DbCreationArgs(_key) { ContentProcessor = (content, dbname) => { return content.Replace(DB_CORE_SEARCH_TERM, dbname); }, FallBackDBName = DB_CORE_FALLBACK_NAME, SQLPath = Path.Combine(AssemblyUtils.GetBaseDirectory(), DB_SQL_FILE_LOCATION, DB_CORE_SQL_FILE) });
+               return await _agw.CreateDatabase(new DbCreationArgs(_key) {
+                   ContentProcessor = (content, dbname) => {
+                       return content.Replace(DB_CORE_SEARCH_TERM, dbname);
+                   },
+                   FallBackDBName = DB_CORE_FALLBACK_NAME,
+                   SQLContent = Encoding.UTF8.GetString(ResourceUtils.GetEmbeddedResource(EMBEDDED_DBCORE_FILE))
+                   //SQLPath = Path.Combine(AssemblyUtils.GetBaseDirectory(), DB_SQL_FILE_LOCATION, DB_CORE_SQL_FILE) 
+               });
+        }
+
+        /// <summary>
+        /// Creates a per-module MariaDB schema from the <c>dssclient.sql</c> template if it does not already exist,
+        /// then duplicates the adapter gateway entry under the module's CUID so all subsequent per-module
+        /// queries target the correct database.
+        /// </summary>
+        async Task CreateModuleDBInstance(IVaultObject dirInfo) {
+            if (!(dirInfo is IVaultModule info)) return;
+            if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid.ToString("N")}";
+            //So, when we create the module, we use the cuid as the database name.
+            //TODO : IF A CUID IS CHANGED, THEN WE NEED TO UPDATE THE DATABASE NAME IN THE DB.
+            await _agw.CreateDatabase(new DbCreationArgs(info.Cuid.ToString("N")) { 
+                ContentProcessor = (content, dbname) => {
+                    return content.Replace(DB_CLIENT_SEARCH_TERM, dbname); },
+                FallBackDBName = info.DatabaseName, 
+                DBName = info.DatabaseName,
+                SQLContent = Encoding.UTF8.GetString(ResourceUtils.GetEmbeddedResource(EMBEDDED_DBCLIENT_FILE)),
+                //SQLPath = Path.Combine(AssemblyUtils.GetBaseDirectory(), DB_SQL_FILE_LOCATION, DB_CLIENT_SQL_FILE), 
+                CloningAdapterKey = _key });
         }
     }
 }

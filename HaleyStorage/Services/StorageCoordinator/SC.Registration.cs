@@ -14,8 +14,8 @@ namespace Haley.Services {
     /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
         /// <summary>Convenience overload — registers a client by name with an optional password.</summary>
-        public Task<IFeedback> RegisterClient(string client_name, string password = null) {
-            return RegisterClient(new VaultObject(client_name), password);
+        public Task<IFeedback> RegisterClient(string client_name, string password = null, bool addDefaultModule = false) {
+            return RegisterClient(new VaultObject(client_name), password,addDefaultModule);
         }
         /// <summary>Convenience overload — registers a module by name under the given client.</summary>
         public Task<IFeedback> RegisterModule(string module_name = null, string client_name = null) {
@@ -31,7 +31,7 @@ namespace Haley.Services {
         /// Clients are purely a hierarchy node; all physical storage is owned by workspaces.
         /// </summary>
         /// <param name="password">Plaintext password; defaults to <c>"admin"</c> when null.</param>
-        public async Task<IFeedback> RegisterClient(IVaultObject client, string password = null) {
+        public async Task<IFeedback> RegisterClient(IVaultObject client, string password = null, bool addDefaultModule = false) {
             if (client == null) return new Feedback(false, "Name cannot be empty");
             if (!client.TryValidate(out var msg)) return new Feedback(false, msg);
             if (string.IsNullOrWhiteSpace(password)) password = DEFAULTPWD;
@@ -45,6 +45,9 @@ namespace Haley.Services {
             if (Indexer == null || !WriteMode) return result;
             var idxResult = await Indexer.RegisterClient(clientInfo);
             result.Result = idxResult.Result;
+
+            if (addDefaultModule) await RegisterModule(client_name: client.DisplayName);
+
             return result;
         }
 

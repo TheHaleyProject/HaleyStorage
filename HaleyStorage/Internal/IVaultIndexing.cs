@@ -31,7 +31,7 @@ namespace Haley.Services {
         /// </summary>
         Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, long directoryId = 0, bool recursive = false, int page = 1, int pageSize = 50);
         Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest request);
-        Task Validate();
+        Task EnsureValidation();
         bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
         bool TryAddInfo(IVaultObject dirInfo, bool replace = false);
         IEnumerable<T> GetAllComponents<T>() where T : IVaultObject;
