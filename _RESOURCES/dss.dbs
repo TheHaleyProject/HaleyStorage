@@ -85,7 +85,7 @@
 				<comment><![CDATA[Automatically updated whenever any column in this row changes.]]></comment>
 			</column>
 			<column name="cuid" prior="guid" type="VARCHAR" length="48" mandatory="y" >
-				<defo><![CDATA['uuid()']]></defo>
+				<defo><![CDATA[uuid()]]></defo>
 				<comment><![CDATA[Collision-resistant unique identifier for this directory. Stable across renames. Used by the application layer as an external-safe reference (avoids exposing numeric auto-increment IDs in APIs).]]></comment>
 			</column>
 			<column name="deleted" type="BIT" mandatory="y" >
@@ -146,7 +146,7 @@
 				<comment><![CDATA[Surrogate PK. Used as the FK anchor for version_info, chunk_info, and chunked_files. Also returned to callers as the "versionId" in upload responses.]]></comment>
 			</column>
 			<column name="cuid" type="VARCHAR" length="48" mandatory="y" >
-				<defo><![CDATA['uuid()']]></defo>
+				<defo><![CDATA[uuid()]]></defo>
 				<comment><![CDATA[Collision-resistant unique identifier for this specific version. Stable and safe for external API exposure. Distinct from the parent document CUID. Example: "f3a8b2c1d9e4a7b0c6d5e3f2a8b1c4d7".]]></comment>
 			</column>
 			<column name="created" prior="created_at" type="TIMESTAMP" mandatory="y" >
@@ -187,7 +187,7 @@
 				<comment><![CDATA[Surrogate PK. Referenced by doc_version.parent, doc_info.file, and other version-level tables.]]></comment>
 			</column>
 			<column name="cuid" prior="guid" type="VARCHAR" length="48" mandatory="y" >
-				<defo><![CDATA['uuid()']]></defo>
+				<defo><![CDATA[uuid()]]></defo>
 				<comment><![CDATA[Collision-resistant unique identifier for this document. Stable across version uploads and renames. Safe to expose in external APIs. Example: "2b3a8f1c9e4d7a0b6c5e2f3d8a1b4c7e".]]></comment>
 			</column>
 			<column name="created" prior="created_at" type="TIMESTAMP" mandatory="y" >
