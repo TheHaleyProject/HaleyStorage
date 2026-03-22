@@ -13,7 +13,9 @@ namespace Haley.Models {
         [FromQuery(Name = "d")]
         public string? DirectoryName { get; set; } 
         [FromQuery(Name = "dp")]
-        public long? DirectoryParent { get; set; } 
+        public long? DirectoryParent { get; set; }
+        [FromQuery(Name = "pc")]
+        public string? ParentCuid { get; set; }
         public VaultApiInput() {
         }
     }
