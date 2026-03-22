@@ -33,7 +33,19 @@ namespace Haley.Utils {
                 if (!ws.status) return fb.SetMessage("Workspace not found or not registered.");
 
                 var dbid = request.Scope.Module.Cuid.ToString("N");
+
+                // Resolve the parent folder ID.
+                // Priority: explicit Id → resolve by CUID or DisplayName → 0 (root).
                 var parentId = request.Scope?.Folder?.Id ?? 0;
+                if (parentId == 0 && request.Scope?.Folder != null) {
+                    var f = request.Scope.Folder;
+                    if (!string.IsNullOrWhiteSpace(f.Cuid) || !string.IsNullOrWhiteSpace(f.DisplayName)) {
+                        var parentInfo = await ResolveFolderInfo(dbid, request, ws.id);
+                        if (parentInfo.status && !parentInfo.isRoot)
+                            parentId = parentInfo.id;
+                    }
+                }
+
                 var dirDbName = folderName.ToDBName();
 
                 var dirInfo = await InsertAndFetchIDRead(dbid,

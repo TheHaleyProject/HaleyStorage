@@ -66,7 +66,7 @@ namespace Haley.Utils {
                     if (dirId < 1 && string.IsNullOrWhiteSpace(dirCuid))
                         return (INSTANCE.DIRECTORY.EXISTS, Consolidate((WSPACE, ws_id), (PARENT, dirParent), (NAME, dirDbName)));
                     var query = dirId < 1 ? INSTANCE.DIRECTORY.EXISTS_BY_CUID : INSTANCE.DIRECTORY.EXISTS_BY_ID;
-                    return (query, Consolidate((VALUE, dirId < 1 ? dirCuid : dirId)));
+                    return (query, Consolidate((VALUE, dirId < 1 ? (object)ToDbCuid(dirCuid) : dirId)));
                 },
                 () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws_id), (PARENT, dirParent), (NAME, dirDbName), (DNAME, dirName))),
                 readOnly: request.ReadOnlyMode,
@@ -169,6 +169,23 @@ namespace Haley.Utils {
 
         /// <summary>Builds the composite cache key used to store transaction handlers: <c>callid###dbid</c> (lowercase dbid).</summary>
         string GetHandlerKey(string callid, string dbid) { return $@"{callid}###{dbid.ToLower()}"; }
+
+        /// <summary>
+        /// Normalises a GUID string to the dashed format used by MariaDB's <c>uuid()</c> default
+        /// (<c>xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</c>).
+        /// <para>
+        /// Required because callers (e.g. <c>AsObjectReadRequest</c>) pass compact-N GUIDs, but
+        /// <c>directory</c>, <c>document</c>, and <c>doc_version</c> CUIDs are DB-generated via
+        /// <c>DEFAULT uuid()</c> which always produces dashed UUIDs. Passing compact-N to a
+        /// <c>WHERE cuid = @VALUE</c> clause would silently return no rows.
+        /// </para>
+        /// Returns the original string unchanged when it is not a valid GUID.
+        /// </summary>
+        static string ToDbCuid(string cuid) {
+            if (!string.IsNullOrWhiteSpace(cuid) && Guid.TryParse(cuid, out var g))
+                return g.ToString(); // default format = "D" (dashed)
+            return cuid;
+        }
 
         /// <summary>
         /// Core document-registration flow: ensures workspace → directory → name-store → document → doc_version,

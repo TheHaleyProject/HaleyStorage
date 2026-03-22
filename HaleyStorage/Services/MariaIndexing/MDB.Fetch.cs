@@ -85,7 +85,7 @@ namespace Haley.Utils {
 
                 if (!_agw.ContainsKey(moduleCuid)) return fb.SetMessage($@"No adapter found for the key {moduleCuid}");
 
-                var row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_BY_DOC_VERSION_CUID, default, (CUID, request.File.Cuid));
+                var row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_BY_DOC_VERSION_CUID, default, (CUID, ToDbCuid(request.File.Cuid)));
                 if (row == null) return fb.SetMessage($@"Unable to fetch the parent information for {request.File.Cuid}");
                 return fb.SetStatus(true).SetResult(row.GetString("display_name"));
             } catch (Exception ex) {
@@ -105,6 +105,8 @@ namespace Haley.Utils {
                 if (string.IsNullOrWhiteSpace(moduleCuid)) return result.SetMessage($@"Module CUID is mandatory to fetch document info");
                 if (id < 1 && string.IsNullOrWhiteSpace(cuid)) return result.SetMessage($@"Either Id or CUID value is required.");
                 if (!_agw.ContainsKey(moduleCuid)) return result.SetMessage($@"No adapter found for the key {moduleCuid}");
+
+                cuid = ToDbCuid(cuid); // doc_version.cuid is DB-generated (uuid()) — normalise to dashed for WHERE comparison
 
                 var query = id < 1 ? INSTANCE.DOCVERSION.GET_FULL_BY_CUID : INSTANCE.DOCVERSION.GET_FULL_BY_ID;
                 var dic = await _agw.RowAsync(moduleCuid, query, default, (VALUE, id < 1 ? (object)cuid : id));

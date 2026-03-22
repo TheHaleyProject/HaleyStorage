@@ -99,7 +99,7 @@ namespace Haley.Utils {
             if (folder.Id > 0) {
                 row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS_BY_ID, default, (VALUE, folder.Id));
             } else if (!string.IsNullOrWhiteSpace(folder.Cuid)) {
-                row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS_BY_CUID, default, (VALUE, folder.Cuid));
+                row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS_BY_CUID, default, (VALUE, ToDbCuid(folder.Cuid)));
             } else {
                 var parentId = folder.Parent?.Id ?? 0;
                 row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS, default, (WSPACE, workspaceId), (PARENT, parentId), (NAME, folder.DisplayName.ToDBName()));
@@ -117,7 +117,7 @@ namespace Haley.Utils {
             }
 
             if (!string.IsNullOrWhiteSpace(request?.File?.Cuid)) {
-                return await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.GET_DOCUMENT_ID_BY_VERSION_CUID, default, (VALUE, request.File.Cuid)) ?? 0;
+                return await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.GET_DOCUMENT_ID_BY_VERSION_CUID, default, (VALUE, ToDbCuid(request.File.Cuid))) ?? 0;
             }
 
             if (request?.Scope?.Workspace == null || request.Scope.Workspace.Cuid == Guid.Empty) return 0;
