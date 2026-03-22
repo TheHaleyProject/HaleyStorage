@@ -151,7 +151,9 @@ namespace Haley.Services {
                     // No redirect — stream bytes from staging.
                     var stagingRead = await stagingProvider.ReadAsync(sfr.StagingRef, auto_search_extension, comparison);
                     if (!stagingRead.Success) { result.Message = stagingRead.Message; return result; }
-                    result.SaveName = input.File.StorageName;
+                    result.SaveName = !string.IsNullOrWhiteSpace(input.File?.DisplayName)
+                        ? input.File.DisplayName
+                        : input.File?.StorageName;
                     result.Status = true;
                     result.Extension = stagingRead.Extension;
                     result.Stream = stagingRead.Stream;
@@ -164,7 +166,11 @@ namespace Haley.Services {
 
             if (!readResult.Success) { result.Message = readResult.Message; return result; }
 
-            result.SaveName = input.File?.StorageName;
+            // Prefer the human-readable display name (from doc_info) when available.
+            // Fall back to the internal storage name so the download always has a filename.
+            result.SaveName = !string.IsNullOrWhiteSpace(input.File?.DisplayName)
+                ? input.File.DisplayName
+                : input.File?.StorageName;
             result.Status = true;
             result.Extension = readResult.Extension;
             result.Stream = readResult.Stream;

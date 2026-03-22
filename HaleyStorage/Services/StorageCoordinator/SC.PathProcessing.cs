@@ -376,6 +376,10 @@ namespace Haley.Services {
             if (long.TryParse(dic["size"]?.ToString(), out var size)) input.File.Size = size;
             // saveas_name = vi.storage_name alias; dname = di.display_name (human readable)
             input.File.StorageName = dic.TryGetValue("saveas_name", out var sn) ? sn?.ToString() ?? string.Empty : string.Empty;
+            // Restore the human-readable display name from doc_info so callers can use it as the download filename.
+            var dname = dic.TryGetValue("dname", out var dn) ? dn?.ToString() : null;
+            if (!string.IsNullOrWhiteSpace(dname) && string.IsNullOrWhiteSpace(input.File.DisplayName))
+                input.File.SetDisplayName(dname);
 
             // Flags, staging path, and stored profile_info_id are carried on StorageFileRoute (concrete type).
             if (input.File is StorageFileRoute sfr) {

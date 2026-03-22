@@ -26,6 +26,13 @@ namespace Haley.Abstractions {
         /// </summary>
         IStorageProvider GetPrimaryProvider(IVaultReadRequest request);
 
+        /// <summary>
+        /// Returns the staging <see cref="IStorageProvider"/> configured for the given request scope,
+        /// or <c>null</c> when staging is not configured or is explicitly disabled.
+        /// Applies the same resolution order as the internal write/read paths.
+        /// </summary>
+        IStorageProvider GetStagingProvider(IVaultReadRequest request);
+
         bool ConfigureModuleProviders(string moduleCuid, string storageProviderKey, string stagingProviderKey = null, VaultProfileMode mode = VaultProfileMode.DirectSave, long profileInfoId = 0);
 
         /// <summary>

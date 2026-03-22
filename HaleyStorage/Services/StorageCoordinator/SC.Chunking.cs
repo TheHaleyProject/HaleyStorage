@@ -5,6 +5,7 @@ using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Haley.Services {
@@ -16,30 +17,29 @@ namespace Haley.Services {
     /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
 
-        // ── In-memory session cache ───────────────────────────────────────────
-        // Keyed by versionId. Survives only while the process is running.
-        // If the server restarts between initiation and completion, the session
-        // is lost. Persistent sessions can be added later using chunk_info.path.
-        sealed record ChunkSessionCache(string FinalPath, string TempDir, string ModuleCuid, string FileCuid, int TotalParts);
+        // ── In-memory session caches ──────────────────────────────────────────
+        // Primary: keyed by versionId (long) — used by UploadChunkPart / CompleteChunkedUpload.
+        // Secondary: keyed by versionCuid (string) — used by TUS PATCH/HEAD/DELETE which receive
+        // the CUID from the Location URL.
+        sealed record ChunkSessionCache(string FinalPath, string TempDir, string ModuleCuid, string FileCuid, int TotalParts, long ChunkSizeMb, long TotalLength);
         readonly ConcurrentDictionary<long, ChunkSessionCache> _chunkSessions = new();
+        readonly ConcurrentDictionary<string, long> _chunkSessionsByCuid = new();
 
         // ── Chunk temp directory root ─────────────────────────────────────────
         string ChunkRoot => Path.Combine(BasePath, "_chunks");
+
+        // ── Session metadata filename (written inside each chunk directory) ───
+        // Enables crash-recovery rehydration: read session info from disk without a DB round-trip.
+        const string SessionMetaFile = "_session.json";
 
         // ── 1. Initiate ───────────────────────────────────────────────────────
 
         /// <summary>
         /// Initiates a multi-part upload session. Registers a doc/doc_version record in the DB,
-        /// creates a temp chunk directory under <c>{BasePath}/_chunks/{versionCuid}/</c>, and
-        /// registers the session in <c>chunk_info</c> via the indexer.
+        /// creates a temp chunk directory under <c>{BasePath}/_chunks/{versionCuid}/</c>,
+        /// writes a <c>_session.json</c> metadata file for crash-recovery rehydration,
+        /// and registers the session in the in-memory caches.
         /// </summary>
-        /// <param name="request">Write request providing scope, file name, and conflict mode.</param>
-        /// <param name="chunkSizeMb">Expected size of each individual part in megabytes (must be ≥ 1).</param>
-        /// <param name="totalParts">Total number of parts expected (must be ≥ 2).</param>
-        /// <returns>
-        /// On success: the <c>versionId</c> (used for subsequent part and complete calls)
-        /// and the <c>versionCuid</c> (compact-N GUID identifying the file version).
-        /// </returns>
         public async Task<IFeedback<(long versionId, string versionCuid)>> InitiateChunkedUpload(IVaultFileWriteRequest request, long chunkSizeMb, int totalParts) {
 
             var fb = new Feedback<(long, string)>();
@@ -55,29 +55,41 @@ namespace Haley.Services {
                 request.GenerateCallId();
 
                 // Registers doc + doc_version in DB and generates the final storage path.
-                // After this call: request.File.Id = versionId, request.File.Cuid = versionCuid,
-                // request.OverrideRef = final assembled file destination.
                 ProcessAndBuildStoragePath(request, true);
 
                 if (request.File == null || request.File.Id < 1 || string.IsNullOrWhiteSpace(request.File.Cuid))
                     return fb.SetMessage("Failed to register document record. Check indexer configuration.");
 
                 long versionId = request.File.Id;
-                string versionCuid   = request.File.Cuid;
-                string finalPath  = request.OverrideRef;
+                string versionCuid = request.File.Cuid;
+                string finalPath = request.OverrideRef;
 
                 // Create temp chunk directory: {BasePath}/_chunks/{versionCuid}/
-                // Using versionCuid (globally unique) rather than versionId (per-module auto-increment)
-                // to avoid directory collisions across different modules.
                 var chunkDir = Path.Combine(ChunkRoot, versionCuid);
                 Directory.CreateDirectory(chunkDir);
+
+                // Derive total file length from the chunk geometry for rehydration.
+                long totalLength = chunkSizeMb * 1024 * 1024 * totalParts; // upper-bound estimate
+
+                // Write a metadata file into the chunk directory so sessions can be rehydrated
+                // after a process restart without any DB queries.
+                var meta = new ChunkSessionMeta {
+                    VersionId = versionId,
+                    VersionCuid = versionCuid,
+                    FinalPath = finalPath,
+                    ModuleCuid = null, // filled below
+                    ChunkSizeMb = chunkSizeMb,
+                    TotalParts = totalParts,
+                    TotalLength = totalLength
+                };
 
                 // Register chunk session in DB via indexer.
                 string moduleCuid = null;
                 if (Indexer != null && request.Scope?.Module != null) {
                     moduleCuid = request.Scope.Module.Cuid.ToString("N");
+                    meta.ModuleCuid = moduleCuid;
 
-                    var chunkResult = await Indexer.UpsertChunkInfo( moduleCuid, versionId, chunkSizeMb, totalParts, versionCuid, chunkDir, isCompleted: false, callId: request.CallID);
+                    var chunkResult = await Indexer.UpsertChunkInfo(moduleCuid, versionId, chunkSizeMb, totalParts, versionCuid, chunkDir, isCompleted: false, callId: request.CallID);
 
                     if (!chunkResult.Status) {
                         if (Indexer is MariaDBIndexing mdIdx) mdIdx.FinalizeTransaction(request.CallID, false);
@@ -88,7 +100,14 @@ namespace Haley.Services {
                     if (Indexer is MariaDBIndexing idx) idx.FinalizeTransaction(request.CallID, true);
                 }
 
-                _chunkSessions[versionId] = new ChunkSessionCache(finalPath, chunkDir, moduleCuid, versionCuid, totalParts);
+                // Persist metadata now that we have moduleCuid.
+                try {
+                    var metaJson = JsonSerializer.Serialize(meta);
+                    File.WriteAllText(Path.Combine(chunkDir, SessionMetaFile), metaJson);
+                } catch { /* best-effort */ }
+
+                _chunkSessions[versionId] = new ChunkSessionCache(finalPath, chunkDir, moduleCuid, versionCuid, totalParts, chunkSizeMb, totalLength);
+                _chunkSessionsByCuid[versionCuid] = versionId;
 
                 return fb.SetStatus(true).SetResult((versionId, versionCuid));
 
@@ -103,10 +122,6 @@ namespace Haley.Services {
         /// Writes a single chunk part to the temp directory as a zero-padded file (e.g. <c>000003</c>)
         /// and records it in the <c>chunked_files</c> DB table.
         /// </summary>
-        /// <param name="versionId">Session identifier returned by <see cref="InitiateChunkedUpload"/>.</param>
-        /// <param name="partNumber">1-based index of this part (must be between 1 and totalParts).</param>
-        /// <param name="chunkStream">Raw bytes for this part.</param>
-        /// <param name="hash">Optional SHA-256 hash of the part bytes for integrity checking.</param>
         public async Task<IFeedback> UploadChunkPart(long versionId, int partNumber, Stream chunkStream, string hash = null) {
             var fb = new Feedback();
             try {
@@ -117,7 +132,6 @@ namespace Haley.Services {
                 if (chunkStream == null || !chunkStream.CanRead)
                     return fb.SetMessage("Chunk stream is null or unreadable.");
 
-                // Part files are named as zero-padded integers: 000001, 000002, ...
                 var partFile = Path.Combine(session.TempDir, partNumber.ToString("D6"));
                 long sizeBytes = 0;
                 using (var fs = new FileStream(partFile, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 256)) {
@@ -143,12 +157,9 @@ namespace Haley.Services {
         // ── 3. Complete ───────────────────────────────────────────────────────
 
         /// <summary>
-        /// Validates all parts are present, assembles them sequentially into the final storage path,
-        /// updates <c>version_info</c> with flags=91 (ChunkedMode|ChunkArea|InStorage|ChunksDeleted|Completed),
-        /// marks <c>chunk_info</c> complete, and deletes the temp chunk directory.
+        /// Validates all parts are present, assembles them into the final storage path,
+        /// updates DB, and deletes the temp chunk directory.
         /// </summary>
-        /// <param name="versionId">Session identifier returned by <see cref="InitiateChunkedUpload"/>.</param>
-        /// <param name="finalHash">Optional SHA-256 of the fully assembled file.</param>
         public async Task<IFeedback> CompleteChunkedUpload(long versionId, string finalHash = null) {
             var fb = new Feedback();
             try {
@@ -156,14 +167,14 @@ namespace Haley.Services {
                 if (!_chunkSessions.TryGetValue(versionId, out var session))
                     return fb.SetMessage($"No active chunk session for versionId {versionId}.");
 
-                var partFiles = Directory.GetFiles(session.TempDir).OrderBy(f => Path.GetFileName(f)).ToList();
+                var partFiles = Directory.GetFiles(session.TempDir)
+                    .Where(f => !Path.GetFileName(f).StartsWith("_"))
+                    .OrderBy(f => Path.GetFileName(f))
+                    .ToList();
 
                 if (partFiles.Count < 1)
                     return fb.SetMessage("No chunk parts found in temp directory. Nothing to assemble.");
 
-                // ── Integrity: validate every expected part is present ────────────
-                // Parse filenames as integers (zero-padded, e.g. "000003" → 3).
-                // Report explicit gaps rather than silently assembling an incomplete file.
                 var received = new System.Collections.Generic.HashSet<int>();
                 foreach (var f in partFiles) {
                     if (int.TryParse(Path.GetFileName(f), out int pn))
@@ -185,12 +196,10 @@ namespace Haley.Services {
                         $"Cannot assemble: received {received.Count} parts but session expects {session.TotalParts}. " +
                         "Abort and re-initiate the session.");
 
-                // Ensure final destination directory exists.
                 var finalDir = Path.GetDirectoryName(session.FinalPath);
                 if (!string.IsNullOrWhiteSpace(finalDir))
                     Directory.CreateDirectory(finalDir);
 
-                // Assemble all parts sequentially into the final file.
                 long totalSize = 0;
                 using (var finalStream = new FileStream(session.FinalPath, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024)) {
                     foreach (var partFile in partFiles) {
@@ -200,15 +209,22 @@ namespace Haley.Services {
                     }
                 }
 
-                // Finalize DB: update version_info + mark chunk_info complete.
                 if (Indexer != null && !string.IsNullOrWhiteSpace(session.ModuleCuid)) {
                     var callId = Guid.NewGuid().ToString("N");
 
                     // Flags: ChunkedMode(1) | ChunkArea(2) | InStorage(8) | ChunksDeleted(16) | Completed(64) = 91
-                    var fileRoute = new StorageFileRoute { Id         = versionId, Cuid       = session.FileCuid, StorageRef = session.FinalPath, StorageName = Path.GetFileName(session.FinalPath), Size       = totalSize, Flags      = 1 | 2 | 8 | 16 | 64, Hash       = finalHash };
+                    var fileRoute = new StorageFileRoute {
+                        Id = versionId,
+                        Cuid = session.FileCuid,
+                        StorageRef = session.FinalPath,
+                        StorageName = Path.GetFileName(session.FinalPath),
+                        Size = totalSize,
+                        Flags = 1 | 2 | 8 | 16 | 64,
+                        Hash = finalHash
+                    };
 
                     var updateResult = await Indexer.UpdateDocVersionInfo(session.ModuleCuid, fileRoute, callId);
-                    var markResult   = await Indexer.MarkChunkCompleted(session.ModuleCuid, versionId, callId);
+                    var markResult = await Indexer.MarkChunkCompleted(session.ModuleCuid, versionId, callId);
 
                     bool allOk = updateResult.Status && markResult.Status;
                     if (Indexer is MariaDBIndexing idx) idx.FinalizeTransaction(callId, allOk);
@@ -217,10 +233,10 @@ namespace Haley.Services {
                         return fb.SetMessage($"Assembly succeeded but DB finalization failed — update: {updateResult.Message} / mark: {markResult.Message}");
                 }
 
-                // Clean up temp chunks (best-effort).
                 try { Directory.Delete(session.TempDir, true); } catch { }
 
                 _chunkSessions.TryRemove(versionId, out _);
+                _chunkSessionsByCuid.TryRemove(session.FileCuid, out _);
 
                 return fb.SetStatus(true).SetMessage($"Chunked upload complete. Final size: {totalSize} bytes.");
 
@@ -232,9 +248,8 @@ namespace Haley.Services {
         // ── 4. Abort ──────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Cancels an active chunk session: removes it from <c>_chunkSessions</c> and
-        /// deletes the temp chunk directory. DB <c>chunk_info</c> and <c>chunked_files</c>
-        /// records are left for offline cleanup. Idempotent — returns success when no session exists.
+        /// Cancels an active chunk session. Removes from caches and deletes the temp directory.
+        /// Idempotent — returns success when no session exists.
         /// </summary>
         public Task<IFeedback> AbortChunkedUpload(long versionId) {
             var fb = new Feedback();
@@ -242,12 +257,15 @@ namespace Haley.Services {
                 if (!_chunkSessions.TryRemove(versionId, out var session))
                     return Task.FromResult<IFeedback>(fb.SetStatus(true).SetMessage("No active session found; nothing to abort."));
 
+                _chunkSessionsByCuid.TryRemove(session.FileCuid, out _);
+
                 try {
                     if (Directory.Exists(session.TempDir))
                         Directory.Delete(session.TempDir, true);
                 } catch { /* best-effort */ }
 
-                return Task.FromResult<IFeedback>(fb.SetStatus(true) .SetMessage($"Chunk session {versionId} aborted and temp directory deleted."));
+                return Task.FromResult<IFeedback>(fb.SetStatus(true)
+                    .SetMessage($"Chunk session {versionId} aborted and temp directory deleted."));
             } catch (Exception ex) {
                 return Task.FromResult<IFeedback>(fb.SetMessage(ex.Message));
             }
@@ -256,17 +274,103 @@ namespace Haley.Services {
         // ── 5. Status ─────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Returns a JSON result with <c>TotalParts</c>, <c>ReceivedParts</c>, and <c>Pending</c>
-        /// for an active chunk session, or an error if the session is not found.
+        /// Returns TotalParts, ReceivedParts, and Pending for an active chunk session.
         /// </summary>
         public Task<IFeedback> GetChunkStatus(long versionId) {
             var fb = new Feedback();
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return Task.FromResult<IFeedback>(fb.SetMessage("No active session found. It may have already completed or never been initiated."));
 
-            int received = Directory.Exists(session.TempDir)? Directory.GetFiles(session.TempDir).Length : 0;
+            int received = Directory.Exists(session.TempDir)
+                ? Directory.GetFiles(session.TempDir).Count(f => !Path.GetFileName(f).StartsWith("_"))
+                : 0;
 
-            return Task.FromResult<IFeedback>(fb .SetStatus(true) .SetResult(new { TotalParts = session.TotalParts, ReceivedParts = received, Pending = session.TotalParts - received }.ToJson()));
+            return Task.FromResult<IFeedback>(fb
+                .SetStatus(true)
+                .SetResult(new { TotalParts = session.TotalParts, ReceivedParts = received, Pending = session.TotalParts - received }.ToJson()));
         }
+
+        // ── 6. Rehydration ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Attempts to rehydrate a chunk session from the <c>_session.json</c> file written
+        /// inside the chunk temp directory during <see cref="InitiateChunkedUpload"/>.
+        /// <para>
+        /// Called by the TUS controller when a HEAD/PATCH request arrives after a process restart
+        /// and the in-memory <c>_chunkSessions</c> cache is empty. Returns information needed
+        /// to reconstruct a <see cref="TusUploadSession"/> without any DB round-trip.
+        /// </para>
+        /// Returns a record indicating whether the session was found, with all fields needed
+        /// to reconstruct the TUS session. On success, also restores the entry in
+        /// <c>_chunkSessions</c> so subsequent coordinator calls (UploadChunkPart, etc.) work.
+        /// </summary>
+        public async Task<(bool found, long versionId, string versionCuid, long chunkSizeMb, int totalParts, int completedParts, long totalLength)>
+            TryRehydrateChunkSession(string versionCuid) {
+
+            var notFound = (false, 0L, string.Empty, 0L, 0, 0, 0L);
+            if (string.IsNullOrWhiteSpace(versionCuid)) return notFound;
+
+            // Fast path: already in memory (secondary index lookup).
+            if (_chunkSessionsByCuid.TryGetValue(versionCuid, out long existingId) &&
+                _chunkSessions.TryGetValue(existingId, out var existingSession)) {
+
+                int completedInMem = Directory.Exists(existingSession.TempDir)
+                    ? Directory.GetFiles(existingSession.TempDir).Count(f => !Path.GetFileName(f).StartsWith("_"))
+                    : 0;
+
+                return (true, existingId, versionCuid, existingSession.ChunkSizeMb, existingSession.TotalParts, completedInMem, existingSession.TotalLength);
+            }
+
+            // Slow path: read _session.json from disk.
+            var chunkDir = Path.Combine(ChunkRoot, versionCuid);
+            var metaPath = Path.Combine(chunkDir, SessionMetaFile);
+
+            if (!File.Exists(metaPath)) return notFound;
+
+            ChunkSessionMeta meta;
+            try {
+                var json = await File.ReadAllTextAsync(metaPath);
+                meta = JsonSerializer.Deserialize<ChunkSessionMeta>(json);
+                if (meta == null) return notFound;
+            } catch {
+                return notFound;
+            }
+
+            // Count how many parts are already on disk (exclude the metadata file).
+            int completed = Directory.GetFiles(chunkDir)
+                .Count(f => !Path.GetFileName(f).StartsWith("_"));
+
+            // Restore the in-memory cache so subsequent coordinator calls work.
+            var restored = new ChunkSessionCache(
+                meta.FinalPath,
+                chunkDir,
+                meta.ModuleCuid,
+                meta.VersionCuid,
+                meta.TotalParts,
+                meta.ChunkSizeMb,
+                meta.TotalLength);
+
+            _chunkSessions[meta.VersionId] = restored;
+            _chunkSessionsByCuid[meta.VersionCuid] = meta.VersionId;
+
+            return (true, meta.VersionId, meta.VersionCuid, meta.ChunkSizeMb, meta.TotalParts, completed, meta.TotalLength);
+        }
+
+        // ── Internal: chunk session metadata record ───────────────────────────
+
+        /// <summary>
+        /// JSON-serialisable payload written to <c>_session.json</c> inside each chunk directory.
+        /// Enables full session recovery after a process restart without any DB queries.
+        /// </summary>
+        private sealed class ChunkSessionMeta {
+            public long VersionId { get; set; }
+            public string VersionCuid { get; set; }
+            public string FinalPath { get; set; }
+            public string ModuleCuid { get; set; }
+            public long ChunkSizeMb { get; set; }
+            public int TotalParts { get; set; }
+            public long TotalLength { get; set; }
+        }
+
     }
 }

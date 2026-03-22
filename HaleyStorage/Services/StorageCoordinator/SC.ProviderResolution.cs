@@ -59,6 +59,9 @@ namespace Haley.Services {
         /// <inheritdoc/>
         public IStorageProvider GetPrimaryProvider(IVaultReadRequest request) => ResolveProvider(request);
 
+        /// <inheritdoc/>
+        public IStorageProvider GetStagingProvider(IVaultReadRequest request) => ResolveStagingProvider(request);
+
         // ── Staging provider ──────────────────────────────────────────────────
 
         /// <summary>
@@ -208,7 +211,7 @@ namespace Haley.Services {
         /// Returns the primary provider, staging provider, and profile mode for a specific
         /// <c>profile_info.id</c>. Falls back to the module-level configuration when the
         /// profile is not found or when <paramref name="profileInfoId"/> is 0.
-        /// Used internally by <see cref="StagingPromotionWorker"/>.
+        /// Used internally by background promotion services.
         /// </summary>
         internal (IStorageProvider primary, IStorageProvider staging, VaultProfileMode mode) GetProvidersForProfile(long profileInfoId, string moduleCuid) {
             if (profileInfoId > 0 && TryGetProfileInfoCached(profileInfoId, out var sk, out var stk, out var pMode)) {
