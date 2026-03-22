@@ -46,6 +46,7 @@ namespace Haley.Services {
             var idxResult = await Indexer.RegisterClient(clientInfo);
             result.Result = idxResult.Result;
 
+
             if (addDefaultModule) await RegisterModule(client_name: client.DisplayName);
 
             return result;

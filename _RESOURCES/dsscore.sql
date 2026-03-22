@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS `profile` (
   `display_name` varchar(120) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_profile` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='A named storage configuration group. Each profile can have multiple versioned profile_info rows to support side-by-side configurations during migrations.\nA profile defines WHAT to call a configuration; the actual settings (provider, mode, metadata) live in profile_info.\nExample: a profile named "prod-b2" might have version 1 pointing to Backblaze B2 us-west and version 2 pointing to B2 eu-central — useful when migrating buckets without downtime.';
+) ENGINE=InnoDB AUTO_INCREMENT=2655 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='A named storage configuration group. Each profile can have multiple versioned profile_info rows to support side-by-side configurations during migrations.\nA profile defines WHAT to call a configuration; the actual settings (provider, mode, metadata) live in profile_info.\nExample: a profile named "prod-b2" might have version 1 pointing to Backblaze B2 us-west and version 2 pointing to B2 eu-central — useful when migrating buckets without downtime.';
 
 -- Data exporting was unselected.
 
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS `profile_info` (
   CONSTRAINT `fk_profile_config_profile` FOREIGN KEY (`profile`) REFERENCES `profile` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_profile_info_provider` FOREIGN KEY (`storage_provider`) REFERENCES `provider` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_profile_info_provider_0` FOREIGN KEY (`staging_provider`) REFERENCES `provider` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='One versioned configuration for a storage profile — links a profile to a primary provider, an optional staging provider, an upload mode, and JSON connection metadata.\nAssigning a profile_info.id to a workspace.storage_profile (or module.storage_profile) activates that configuration for all uploads into that scope.\nExample: profile "prod-b2" version 1 — mode=StageAndMove, storage_provider=B2-us-west, staging_provider=local-fs, metadata={"bucket":"vault-prod",...}. When a file is uploaded to any workspace pointing at this profile_info, it first lands on local-fs, then a background job moves it to the B2 bucket.';
+) ENGINE=InnoDB AUTO_INCREMENT=3425 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='One versioned configuration for a storage profile — links a profile to a primary provider, an optional staging provider, an upload mode, and JSON connection metadata.\nAssigning a profile_info.id to a workspace.storage_profile (or module.storage_profile) activates that configuration for all uploads into that scope.\nExample: profile "prod-b2" version 1 — mode=StageAndMove, storage_provider=B2-us-west, staging_provider=local-fs, metadata={"bucket":"vault-prod",...}. When a file is uploaded to any workspace pointing at this profile_info, it first lands on local-fs, then a background job moves it to the B2 bucket.';
 
 -- Data exporting was unselected.
 
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS `provider` (
   `display_name` varchar(120) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_provider` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='A named storage backend — the HOW of file storage, not the WHERE.\nExamples: "hfs" = Haley FileSystem (default local disk provider), "b2" = Backblaze B2, "s3-east" = AWS S3 us-east-1, "azure-blob" = Azure Blob Storage.\nThe application registers provider implementations at startup: AddProvider("b2", new BackblazeProvider()). This table is the authoritative record of which backend names are known to the system.\nOne provider name can serve many workspaces and modules via different profile_info rows — the provider says HOW to talk to the storage service; the profile_info.metadata says WHERE (which bucket / region / path prefix).';
+) ENGINE=InnoDB AUTO_INCREMENT=2245 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='A named storage backend — the HOW of file storage, not the WHERE.\nExamples: "hfs" = Haley FileSystem (default local disk provider), "b2" = Backblaze B2, "s3-east" = AWS S3 us-east-1, "azure-blob" = Azure Blob Storage.\nThe application registers provider implementations at startup: AddProvider("b2", new BackblazeProvider()). This table is the authoritative record of which backend names are known to the system.\nOne provider name can serve many workspaces and modules via different profile_info rows — the provider says HOW to talk to the storage service; the profile_info.metadata says WHERE (which bucket / region / path prefix).';
 
 -- Data exporting was unselected.
 

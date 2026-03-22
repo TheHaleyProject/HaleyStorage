@@ -12,8 +12,6 @@ namespace Haley.Models {
     /// Bind from the <c>Seed:oss</c> configuration section via <see cref="StorageCoordinator.SetConfig"/>.
     /// </summary>
     internal class StorageRegistryConfig : IVaultRegistryConfig{
-        /// <summary>Suffix appended to workspace directory names (default <c>"w"</c>).</summary>
-        public string SuffixWorkSpace { get; set; } = "w";
         /// <summary>Suffix appended to file storage names (default <c>"f"</c>).</summary>
         public string SuffixFile { get; set; } = "f";
         /// <summary>Number of characters taken from the start of a numeric ID for each sharding level (default 2).</summary>

@@ -262,9 +262,7 @@ namespace Haley.Services {
             if (component != VaultObjectType.WorkSpace)
                 throw new InvalidOperationException($"GenerateBasePath does not support VaultObjectType.{component}. Clients and modules are DB-only and have no physical path.");
 
-            var suffixAddon = (input is VaultStorable pp && pp.ParseMode == VaultNameParseMode.Generate) ? "f" : "p";
-            var suffix = suffixAddon + Config.SuffixWorkSpace;
-            return StorageUtils.GenerateFileSystemSavePath(input, VaultNameParseMode.Generate, (n) => (1, 5), suffix: suffix, throwExceptions: false, caseSensitive: false);
+            return StorageUtils.GenerateFileSystemSavePath(input, VaultNameParseMode.Generate, (n) => (2, 5), throwExceptions: false);
         }
 
         /// <summary>
