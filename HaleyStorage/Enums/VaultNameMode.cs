@@ -1,6 +1,6 @@
 namespace Haley.Enums {
     public enum VaultNameMode {
-       Number = 1,
-       Guid = 2 
+       Number = 0,
+       Guid = 1 
     }
 }

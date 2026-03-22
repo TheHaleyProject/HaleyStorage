@@ -5,6 +5,7 @@ using Haley.Utils;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 using System.Xml;
+using static Haley.Internal.IndexingQueries;
 
 namespace Haley.Services {
     /// <summary>
@@ -14,12 +15,12 @@ namespace Haley.Services {
     /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
         /// <summary>Convenience overload — registers a client by name with an optional password.</summary>
-        public Task<IFeedback> RegisterClient(string client_name, string password = null, bool addDefaultModule = false, string providerKey = null, bool caseSensitive = false) {
-            return RegisterClient(new VaultObject(client_name), password, addDefaultModule, providerKey, caseSensitive);
+        public Task<IFeedback> RegisterClient(string client_name, string password = null, bool addDefaultModule = false) {
+            return RegisterClient(new VaultObject(client_name), password, addDefaultModule);
         }
         /// <summary>Convenience overload — registers a module by name under the given client.</summary>
-        public Task<IFeedback> RegisterModule(string module_name = null, string client_name = null, string providerKey = null, bool caseSensitive = false) {
-            return RegisterModule(new VaultObject(module_name), new VaultObject(client_name), providerKey, caseSensitive);
+        public Task<IFeedback> RegisterModule(string module_name = null, string client_name = null) {
+            return RegisterModule(new VaultObject(module_name), new VaultObject(client_name));
         }
         /// <summary>Convenience overload — registers a workspace by name under the given client and module.</summary>
         public Task<IFeedback> RegisterWorkSpace(string workspace_name = null, string client_name = null, string module_name = null, VaultNameMode content_control = VaultNameMode.Number, VaultNameParseMode content_pmode = VaultNameParseMode.Generate, bool? is_virtual = null, string providerKey = null, bool caseSensitive = false) {
@@ -31,7 +32,7 @@ namespace Haley.Services {
         /// Clients are purely a hierarchy node; all physical storage is owned by workspaces.
         /// </summary>
         /// <param name="password">Plaintext password; defaults to <c>"admin"</c> when null.</param>
-        public async Task<IFeedback> RegisterClient(IVaultObject client, string password = null, bool addDefaultModule = false, string providerKey = null, bool caseSensitive = false) {
+        public async Task<IFeedback> RegisterClient(IVaultObject client, string password = null, bool addDefaultModule = false) {
             if (client == null) return new Feedback(false, "Name cannot be empty");
             if (!client.TryValidate(out var msg)) return new Feedback(false, msg);
             if (string.IsNullOrWhiteSpace(password)) password = DEFAULTPWD;
@@ -46,7 +47,7 @@ namespace Haley.Services {
             var idxResult = await Indexer.RegisterClient(clientInfo);
             result.Result = idxResult.Result;
 
-            if (addDefaultModule) await RegisterModule(client_name: client.DisplayName, providerKey: providerKey, caseSensitive: caseSensitive);
+            if (addDefaultModule) await RegisterModule(client_name: client.DisplayName);
 
             return result;
         }
@@ -55,7 +56,7 @@ namespace Haley.Services {
         /// Registers a module under an existing client (DB-only — no physical directory is created).
         /// Also auto-registers a virtual default workspace under this module.
         /// </summary>
-        public async Task<IFeedback> RegisterModule(IVaultObject module, IVaultObject client, string providerKey = null, bool caseSensitive = false) {
+        public async Task<IFeedback> RegisterModule(IVaultObject module, IVaultObject client) {
             string msg = string.Empty;
             if (!module.TryValidate(out msg)) return new Feedback(false, msg);
             if (!client.TryValidate(out msg)) return new Feedback(false, msg);
@@ -66,7 +67,6 @@ namespace Haley.Services {
             var idxResult = await Indexer.RegisterModule(moduleInfo);
             result.Result = idxResult.Result;
 
-            await RegisterWorkSpace(new VaultObject(null), client, module, VaultNameMode.Guid, VaultNameParseMode.Generate, providerKey: providerKey, caseSensitive: caseSensitive);
             return result;
         }
 
@@ -154,18 +154,21 @@ namespace Haley.Services {
                     if (string.IsNullOrWhiteSpace(source.Client)) continue;
                     var cliKey = source.Client.ToDBName();
                     if (!clients.Contains(cliKey)) {
-                        if (!(await RegisterClient(source.Client, source.Password, providerKey: source.ProviderKey, caseSensitive: source.CaseSensitive)).Status) continue;
+                        if (!(await RegisterClient(source.Client, source.Password)).Status) continue;
                         clients.Add(cliKey);
                     }
 
                     if (string.IsNullOrWhiteSpace(source.Module)) continue;
                     var modKey = $"{cliKey}_{source.Module.ToDBName()}";
                     if (!modules.Contains(modKey)) {
-                        if (!(await RegisterModule(source.Module, source.Client, source.ProviderKey, source.CaseSensitive)).Status) continue;
+                        if (!(await RegisterModule(source.Module, source.Client)).Status) continue;
                         modules.Add(modKey);
                     }
 
-                    if (string.IsNullOrWhiteSpace(source.Workspace)) continue;
+                    if (string.IsNullOrWhiteSpace(source.Workspace)) {
+                       await RegisterWorkSpace(null, source.Client, source.Module, source.Control,source.Parse,providerKey:source.ProviderKey, caseSensitive: source.CaseSensitive);
+                        continue;
+                    }
                     var wsKey = $"{modKey}_{source.Workspace.ToDBName()}";
                     if (!wspaces.Contains(wsKey)) {
                         if (!(await RegisterWorkSpace(source.Workspace, source.Client, source.Module, source.Control, source.Parse, source.IsVirtual, source.ProviderKey, source.CaseSensitive)).Status) continue;
