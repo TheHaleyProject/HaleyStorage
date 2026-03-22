@@ -531,7 +531,9 @@ Example: a profile named "prod-b2" might have version 1 pointing to Backblaze B2
 			<index name="unq_profile" unique="UNIQUE_KEY" >
 				<column name="name" />
 			</index>
-			<options><![CDATA[engine=InnoDB]]></options>
+			<options><![CDATA[engine=InnoDB
+ AUTO_INCREMENT 2685  
+]]></options>
 		</table>
 		<table name="profile_info" prior="profile_config" >
 			<comment><![CDATA[One versioned configuration for a storage profile — links a profile to a primary provider, an optional staging provider, an upload mode, and JSON connection metadata.
@@ -597,7 +599,9 @@ The StorageCoordinator reads this JSON at startup when initialising the provider
 			<fk name="fk_profile_info_provider_0" to_schema="dss_core" to_table="provider" >
 				<fk_column name="staging_provider" pk="id" />
 			</fk>
-			<options><![CDATA[engine=InnoDB]]></options>
+			<options><![CDATA[engine=InnoDB
+ AUTO_INCREMENT 1949  
+]]></options>
 		</table>
 		<table name="provider" prior="providers" >
 			<comment><![CDATA[A named storage backend — the HOW of file storage, not the WHERE.
@@ -625,7 +629,9 @@ One provider name can serve many workspaces and modules via different profile_in
 			<index name="unq_provider" unique="UNIQUE_KEY" >
 				<column name="name" />
 			</index>
-			<options><![CDATA[engine=InnoDB]]></options>
+			<options><![CDATA[engine=InnoDB
+ AUTO_INCREMENT 3555  
+]]></options>
 		</table>
 		<table name="workspace" prior="workspa" >
 			<comment><![CDATA[A named storage container inside a module — like a dedicated folder for a specific purpose, tenant, or data set.

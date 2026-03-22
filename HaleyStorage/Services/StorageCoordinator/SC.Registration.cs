@@ -160,9 +160,9 @@ namespace Haley.Services {
                 // resolution is correct after a process restart.
                 if (Indexer != null) await Indexer.RehydrateWorkspaceProfilesAsync();
 
-                // Link any workspace that still has no profile to the default provider profile.
+                // Link any module that still has no profile to the default provider profile.
                 // Must run after RehydrateWorkspaceProfilesAsync so explicit profiles are not overwritten.
-                await EnsureWorkspacesHaveDefaultProfileAsync();
+                await EnsureModulesHaveDefaultProfileAsync();
 
                 return result.SetStatus(true).SetMessage("Successfully registered.");
             } catch (Exception ex) {

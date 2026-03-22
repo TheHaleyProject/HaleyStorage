@@ -96,16 +96,16 @@ namespace Haley.Services {
         }
 
         /// <summary>
-        /// Links every registered workspace that does not yet have a <c>ProfileInfoId</c> to
+        /// Links every registered module that does not yet have a <c>ProfileInfoId</c> to
         /// the default provider profile. Called after <c>RehydrateWorkspaceProfilesAsync</c>
-        /// so that workspaces with explicit DB profiles are not overwritten.
+        /// so that modules with explicit DB profiles are not overwritten.
         /// No-op when <see cref="_defaultProfileInfoId"/> is not set.
         /// </summary>
-        internal async Task EnsureWorkspacesHaveDefaultProfileAsync() {
+        internal async Task EnsureModulesHaveDefaultProfileAsync() {
             if (_defaultProfileInfoId < 1 || Indexer == null) return;
-            foreach (var ws in Indexer.GetAllComponents<VaultWorkSpace>()) {
-                if (ws.ProfileInfoId > 0) continue;
-                await Indexer.SetWorkspaceStorageProfile(ws.Cuid.ToString("N"), (int)_defaultProfileInfoId);
+            foreach (var mod in Indexer.GetAllComponents<VaultModule>()) {
+                if (mod.ProfileInfoId > 0) continue;
+                await Indexer.SetModuleStorageProfile(mod.Cuid.ToString("N"), (int)_defaultProfileInfoId);
             }
         }
 
