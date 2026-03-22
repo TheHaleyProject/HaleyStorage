@@ -27,8 +27,10 @@ namespace Haley.Models {
         [JsonPropertyName("parse")]
         public VaultNameParseMode Parse { get; set; }
         [JsonPropertyName("virtual")]
-        public bool IsVirtual { get; set; }
+        public bool? IsVirtual { get; set; }
         [JsonPropertyName("case-sensitive")]
-        public bool CaseSensitive { get; set; } 
+        public bool CaseSensitive { get; set; }
+        [JsonPropertyName("provider")]
+        public string ProviderKey { get; set; }
     }
 }

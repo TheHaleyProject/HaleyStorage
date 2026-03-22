@@ -20,8 +20,14 @@ namespace Haley.Models {
         public VaultNameMode NameMode { get; set; }
         /// <summary>Defines whether file identifiers are parsed from caller input or auto-generated. Fixed at creation.</summary>
         public VaultNameParseMode ParseMode { get; set; }
-        /// <summary>Base segment for this workspace's storage area (sharded directory for FS; key prefix for cloud).</summary>
+        /// <summary>Full relative path from BasePath including client and module directory segments.</summary>
         public string Base { get; set; }
+        /// <summary>
+        /// When true, the parent client and module directory names preserve original display-name casing.
+        /// When false, they are normalized via ToDBName(). The workspace segment itself is always
+        /// system-generated (SHA-256 hash with underscore prefix) and is never affected by this flag.
+        /// </summary>
+        public bool CaseSensitive { get; set; }
 
         public void Assert() {
             if (string.IsNullOrWhiteSpace(DisplayName)) throw new ArgumentNullException("Name cannot be empty");

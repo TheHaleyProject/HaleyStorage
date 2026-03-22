@@ -262,7 +262,8 @@ namespace Haley.Services {
             if (component != VaultObjectType.WorkSpace)
                 throw new InvalidOperationException($"GenerateBasePath does not support VaultObjectType.{component}. Clients and modules are DB-only and have no physical path.");
 
-            return StorageUtils.GenerateFileSystemSavePath(input, VaultNameParseMode.Generate, (n) => (2, 5), throwExceptions: false);
+            var result = StorageUtils.GenerateFileSystemSavePath(input, VaultNameParseMode.Generate, (n) => (2, 5), throwExceptions: false);
+            return (result.name, "_" + result.path);
         }
 
         /// <summary>
@@ -281,17 +282,17 @@ namespace Haley.Services {
                 if (!string.IsNullOrWhiteSpace(ws.StorageRef)) {
                     paths.Add(ws.StorageRef);
                 } else {
-                    var tuple = GenerateBasePath(input.Scope.Workspace, VaultObjectType.WorkSpace);
-                    if (!string.IsNullOrWhiteSpace(tuple.path)) paths.Add(tuple.path);
+                    var seg = BuildFallbackWorkspacePath(input);
+                    if (!string.IsNullOrWhiteSpace(seg)) paths.Add(seg);
                 }
             } else {
-                var tuple = GenerateBasePath(input.Scope.Workspace, VaultObjectType.WorkSpace);
-                paths.Add(tuple.path);
+                var seg = BuildFallbackWorkspacePath(input);
+                paths.Add(seg);
 
                 // .meta file warm-up is FileSystem-specific — cloud providers have no physical meta files.
                 if (provider is FileSystemStorageProvider) {
                     try {
-                        var metafile = Path.Combine(BasePath, tuple.path, WORKSPACEMETAFILE);
+                        var metafile = Path.Combine(BasePath, seg.Replace('/', Path.DirectorySeparatorChar), WORKSPACEMETAFILE);
                         if (File.Exists(metafile)) {
                             var mfileInfo = File.ReadAllText(metafile).FromJson<VaultWorkSpace>();
                             if (mfileInfo != null) Indexer?.TryAddInfo(mfileInfo);
@@ -307,6 +308,19 @@ namespace Haley.Services {
                 : string.Join("/", paths.Select(p => p.Trim('/', '\\')));
             _pathCache.TryAdd(wsCuid, string.Empty);
             _pathCache.TryUpdate(wsCuid, joinedPath, string.Empty);
+        }
+
+        /// <summary>
+        /// Builds the full relative workspace path (clientDir/moduleDir/_wsShardedPath) used when
+        /// the workspace is not yet cached in the indexer or its StorageRef is not set.
+        /// Always uses normalized (ToDBName) names for client and module segments.
+        /// </summary>
+        string BuildFallbackWorkspacePath(IVaultReadRequest input) {
+            var wsSegment = GenerateBasePath(input.Scope.Workspace, VaultObjectType.WorkSpace).path;
+            var clientDir = input.Scope.Client?.Name?.ToDBName() ?? string.Empty;
+            var moduleDir = input.Scope.Module?.Name?.ToDBName() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(clientDir)) return wsSegment;
+            return Path.Combine(clientDir, moduleDir, wsSegment);
         }
 
         /// <summary>
