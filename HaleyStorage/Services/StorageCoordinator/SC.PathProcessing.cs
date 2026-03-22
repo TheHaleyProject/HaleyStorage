@@ -256,7 +256,7 @@ namespace Haley.Services {
         /// Only <see cref="VaultObjectType.WorkSpace"/> is supported — clients and modules are
         /// DB-only hierarchy nodes with no physical directory.
         /// </summary>
-        public (string name, string path) GenerateBasePath(IVaultStorable input, VaultObjectType component) {
+        public (string name, string path) GenerateBasePath(IVaultObject input, VaultObjectType component) {
             if (component == VaultObjectType.File)
                 throw new InvalidOperationException("GenerateBasePath does not support VaultObjectType.File. Use StorageUtils.GenerateFileSystemSavePath instead.");
             if (component != VaultObjectType.WorkSpace)
@@ -283,11 +283,11 @@ namespace Haley.Services {
                 if (!string.IsNullOrWhiteSpace(ws.StorageRef)) {
                     paths.Add(ws.StorageRef);
                 } else {
-                    var tuple = GenerateBasePath(input.Scope.Workspace as IVaultStorable, VaultObjectType.WorkSpace);
+                    var tuple = GenerateBasePath(input.Scope.Workspace, VaultObjectType.WorkSpace);
                     if (!string.IsNullOrWhiteSpace(tuple.path)) paths.Add(tuple.path);
                 }
             } else {
-                var tuple = GenerateBasePath(input.Scope.Workspace as IVaultStorable, VaultObjectType.WorkSpace);
+                var tuple = GenerateBasePath(input.Scope.Workspace, VaultObjectType.WorkSpace);
                 paths.Add(tuple.path);
 
                 // .meta file warm-up is FileSystem-specific — cloud providers have no physical meta files.

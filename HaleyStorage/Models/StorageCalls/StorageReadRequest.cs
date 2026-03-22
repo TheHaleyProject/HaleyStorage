@@ -74,9 +74,9 @@ namespace Haley.Models {
             return this;
         }
 
-        /// <summary>Sets the workspace by name. Pass <paramref name="isVirtual"/> true for the DB-only default workspace.</summary>
+        /// <summary>Sets the workspace by name.</summary>
         public IVaultReadRequest SetWorkspace(string name, bool isVirtual = false) {
-            Workspace = new VaultStorable(name, isVirtual: isVirtual).UpdateCUID(Client?.DisplayName, Module?.DisplayName);
+            Workspace = new VaultObject(name).UpdateCUID(Client?.DisplayName, Module?.DisplayName);
             return this;
         }
 
@@ -91,9 +91,9 @@ namespace Haley.Models {
         public StorageReadRequest(string client_name,string module_name) :this(client_name, module_name, null) { }
 
         public  StorageReadRequest(string client_name, string module_name, string workspace_name) {
-            Client = new VaultStorable(client_name);
-            Module = new VaultStorable(module_name).UpdateCUID(Client.DisplayName,module_name);
-            Workspace = new VaultStorable(workspace_name).UpdateCUID(Client.DisplayName,Module.DisplayName);
+            Client = new VaultObject(client_name).UpdateCUID();
+            Module = new VaultObject(module_name).UpdateCUID(Client.DisplayName);
+            Workspace = new VaultObject(workspace_name).UpdateCUID(Client.DisplayName, Module.DisplayName);
         }
     }
 }

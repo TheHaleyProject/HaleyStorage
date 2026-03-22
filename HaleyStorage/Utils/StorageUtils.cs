@@ -45,8 +45,10 @@ namespace Haley.Utils
         }
 
         /// <summary>
-        /// Generates the storage name (logical ID) and sharded relative path for a <see cref="VaultStorable"/>.
-        /// For virtual profiles returns the raw name and an empty path.
+        /// Generates the storage name (logical ID) and sharded relative path for a vault object.
+        /// Only <see cref="VaultStorable"/> inputs produce a sharded path — any other <see cref="IVaultObject"/>
+        /// returns the raw name for both name and path (no sharding applies to clients or modules).
+        /// For virtual <see cref="VaultStorable"/> profiles returns the raw name and an empty path.
         /// Calls <paramref name="uidManager"/> to register/resolve the ID from the indexer, then
         /// invokes <see cref="PreparePath"/> to build the sharded directory path.
         /// </summary>
@@ -54,22 +56,23 @@ namespace Haley.Utils
         /// Optional delegate that registers the object in the DB and returns <c>(id, guid)</c>.
         /// Pass <c>null</c> for GUID-controlled paths (GUID is derived deterministically from the name).
         /// </param>
-        public static (string name, string path) GenerateFileSystemSavePath(this IVaultStorable nObj, VaultNameParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultStorable, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
+        public static (string name, string path) GenerateFileSystemSavePath(this IVaultObject nObj, VaultNameParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultStorable, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
-            // ControlMode, ParseMode, IsVirtual live on VaultStorable (not on IVaultStorable).
-            if (!(nObj is VaultStorable profile)) return (nObj.Name, nObj.Name); //See client , module should return here itself but return the name as is and path as is.
-            if (profile.IsVirtual) return (nObj.Name, "");
+            // Storage-path metadata (NameMode, ParseMode, IsVirtual) only exists on VaultStorable.
+            // Anything else (VaultObject scope carriers for client/module/workspace) has no physical path.
+            if (!(nObj is VaultStorable profile)) return (nObj.Name, nObj.Name);
+            if (profile.IsVirtual) return (profile.Name, "");
             IVaultObject uidInfo = null;
 
             //Partially or fully managed
-            if (nObj.DisplayName.TryPopulateControlledID(out uidInfo, profile.NameMode, parse_overwrite ?? profile.ParseMode, uidManager, nObj, throwExceptions)) {
-                nObj.StorageName = (profile.NameMode == VaultNameMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
+            if (profile.DisplayName.TryPopulateControlledID(out uidInfo, profile.NameMode, parse_overwrite ?? profile.ParseMode, uidManager, profile, throwExceptions)) {
+                profile.StorageName = (profile.NameMode == VaultNameMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
             }
 
-            var result = PreparePath(nObj.StorageName, splitProvider, profile.NameMode, suffix, Path.GetExtension(nObj.Name));
+            var result = PreparePath(profile.StorageName, splitProvider, profile.NameMode, suffix, Path.GetExtension(profile.Name));
 
             //We add suffix for all controlled paths.
-            return (nObj.StorageName, result);
+            return (profile.StorageName, result);
         }
 
         /// <summary>
