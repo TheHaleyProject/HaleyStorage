@@ -202,6 +202,9 @@ namespace Haley.Services {
         /// <summary>Replaces the registry configuration. Passing <c>null</c> resets to the default <see cref="StorageRegistryConfig"/>.</summary>
         public IStorageCoordinator SetConfig(IVaultRegistryConfig config) {
             Config = config ?? new StorageRegistryConfig();
+            // Propagate MaxRevisionCopies to the FileSystem provider so it prunes correctly.
+            if (_providers.TryGetValue(FileSystemStorageProvider.PROVIDER_KEY, out var p) && p is FileSystemStorageProvider fsp)
+                fsp.MaxRevisionCopies = Config.MaxRevisionCopies;
             return this;
         }
     }

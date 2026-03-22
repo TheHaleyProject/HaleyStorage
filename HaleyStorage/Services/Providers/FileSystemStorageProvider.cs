@@ -17,12 +17,19 @@ namespace Haley.Services {
     /// This class owns all FS-specific I/O details:
     ///   - Directory creation for the sharded target path
     ///   - Conflict resolution (Skip / ReturnError / Replace / Revise)
-    ///   - Versioned-file copy for Revise mode
+    ///   - Versioned-file copy for Revise mode with configurable max-copies pruning
     ///   - Extension-search fallback when no extension is provided
     /// </summary>
     public class FileSystemStorageProvider : IStorageProvider {
         public const string PROVIDER_KEY = "FileSystem";
         public string Key { get; set; } = PROVIDER_KEY;
+
+        /// <summary>
+        /// Maximum number of <c>##v&lt;n&gt;##</c> revision copies to retain beside the live file.
+        /// Older revisions beyond this limit are pruned after each Revise write.
+        /// Set to 0 to disable pruning. Default: 3.
+        /// </summary>
+        public int MaxRevisionCopies { get; set; } = 3;
 
         // ─── Write ────────────────────────────────────────────────────────────
 
@@ -52,8 +59,8 @@ namespace Haley.Services {
                 return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)? ProviderWriteResult.Ok(alreadyExisted: true, message: "Replaced.") : ProviderWriteResult.Fail("Failed to replace file.");
 
                 case ExistConflictResolveMode.Revise:
-                // Copy current file to a versioned name, then overwrite the main path.
-                if (DirectoryUtils.PopulateVersionedPath(targetDir, storagePath, out var versionPath)) {
+                // PopulateVersionedPath computes the next version name and prunes old revisions beyond MaxRevisionCopies.
+                if (DirectoryUtils.PopulateVersionedPath(targetDir, storagePath, out var versionPath, MaxRevisionCopies)) {
                     try {
                         if (await DirectoryUtils.TryCopyFileAsync(storagePath, versionPath)) {
                             return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)? ProviderWriteResult.Ok(alreadyExisted: true, message: "Revised.") : ProviderWriteResult.Fail("Failed to write revised file.");

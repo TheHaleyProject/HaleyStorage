@@ -81,13 +81,6 @@ namespace Haley.Services {
                     return result;
                 }
 
-                // ── Revision backup (FileSystem only) ─────────────────────────────
-                // When overwriting an existing file (CUID was supplied and a live copy already exists
-                // on disk), snapshot the current bytes before the new version lands.
-                // The current file becomes ##R<next>; older revisions beyond MaxRevisionCopies are pruned.
-                if (writeProvider is FileSystemStorageProvider && Config.MaxRevisionCopies > 0 && File.Exists(writePath))
-                    BackupRevision(writePath, Config.MaxRevisionCopies);
-
                 if (input.BufferSize < (1024 * 80)) input.BufferSize = (1024 * 80);
 
                 var writeResult = await writeProvider.WriteAsync(writePath, input.FileStream, input.BufferSize, input.WriteConflictMode);
@@ -317,37 +310,5 @@ namespace Haley.Services {
 
         // ─── Revision backup helper ───────────────────────────────────────────
 
-        /// <summary>
-        /// Snapshots the current live file at <paramref name="filePath"/> into a revision slot
-        /// (<c>&lt;filename&gt;.ext##R&lt;n&gt;</c>) before the caller overwrites it.
-        /// The revision number is always incremented from the current maximum — no files are renamed.
-        /// After copying, all revision files beyond <paramref name="maxCopies"/> are pruned,
-        /// keeping only the <paramref name="maxCopies"/> most recent (highest-numbered) revisions.
-        /// Failures are swallowed — a backup error must never block a write.
-        /// </summary>
-        static void BackupRevision(string filePath, int maxCopies) {
-            try {
-                var dir      = Path.GetDirectoryName(filePath) ?? string.Empty;
-                var fileName = Path.GetFileName(filePath);    // e.g. "abc123.pdf"
-                var prefix   = fileName + "##R";               // e.g. "abc123.pdf##R"
-
-                // Collect existing revision numbers.
-                var existing = Directory.GetFiles(dir, prefix + "*").Select(f => { var tail = Path.GetFileName(f)[prefix.Length..]; return int.TryParse(tail, out var n) ? (int?)n : null; }).Where(n => n.HasValue).Select(n => n!.Value).ToList();
-
-                int nextRev = existing.Count == 0 ? 1 : existing.Max() + 1;
-
-                // Snapshot the live file into the new revision slot.
-                File.Copy(filePath, Path.Combine(dir, $"{prefix}{nextRev}"), overwrite: true);
-
-                // Prune: keep only the maxCopies highest revision numbers, delete the rest.
-                var toDelete = existing.Append(nextRev).OrderByDescending(n => n).Skip(maxCopies);
-
-                foreach (var rev in toDelete) {
-                    try { File.Delete(Path.Combine(dir, $"{prefix}{rev}")); } catch { /* best-effort */ }
-                }
-            } catch {
-                // Revision backup is best-effort — never block the actual write.
-            }
-        }
     }
 }
