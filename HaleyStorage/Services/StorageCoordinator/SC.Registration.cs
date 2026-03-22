@@ -106,20 +106,21 @@ namespace Haley.Services {
                 if (!Directory.Exists(baseDir)) Directory.CreateDirectory(baseDir);
             }
 
+            string wsSegment = string.Empty;
             if (!isVirtual && hasRealName) {
                 var wsCarrier = new VaultStorable(wspace.DisplayName, VaultNameMode.Guid, VaultNameParseMode.Generate);
-                var wsSegment = GenerateBasePath(wsCarrier, VaultObjectType.WorkSpace).path;
-                wsPath = wsSegment; //We dont care about what is the base
+                wsSegment = GenerateBasePath(wsCarrier, VaultObjectType.WorkSpace).path;
+                wsPath = Path.Combine(clientDir, moduleDir, wsSegment); // full relative path stored in DB
                 if (isFs && WriteMode) {
-                    var wsFullPath = Path.GetFullPath(Path.Combine(baseDir, wsPath));
+                    var wsFullPath = Path.GetFullPath(Path.Combine(baseDir, wsSegment));
                     if (!Directory.Exists(wsFullPath)) Directory.CreateDirectory(wsFullPath);
                 }
             }
 
-            var wsInfo = wspace.MapProperties(new VaultWorkSpace(client.Name, module.Name, wspace.DisplayName, isVirtual) { Base = wsPath, NameMode = content_control, ParseMode = content_pmode, CaseSensitive = caseSensitive });
+            var wsInfo = wspace.MapProperties(new VaultWorkSpace(client.Name, module.Name, wspace.DisplayName, isVirtual) { StorageRef = wsPath, NameMode = content_control, ParseMode = content_pmode, CaseSensitive = caseSensitive });
 
             var result = new Feedback(true, $"Workspace {wspace.DisplayName} is registered");
-            if (!isVirtual && hasRealName && isFs && !Directory.Exists(Path.GetFullPath(Path.Combine(baseDir, wsPath))))
+            if (!isVirtual && hasRealName && isFs && !Directory.Exists(Path.GetFullPath(Path.Combine(baseDir, wsSegment))))
                 result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
 
             if (Indexer == null || !WriteMode || !result.Status) return result;

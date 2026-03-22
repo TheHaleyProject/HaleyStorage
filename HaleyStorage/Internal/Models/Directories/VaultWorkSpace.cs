@@ -14,14 +14,12 @@ namespace Haley.Models {
         public IVaultObject Client { get; set; }
         public IVaultObject Module { get; set; }
         public bool IsVirtual { get; set; }
-        /// <summary>Physical storage path for this workspace (satisfies IVaultRoute).</summary>
+        /// <summary>Full relative path from BasePath (clientDir/moduleDir/_wsShardedPath). Persisted to storage_ref in DB.</summary>
         public string StorageRef { get; set; }
         /// <summary>Defines whether stored files are identified by numeric IDs or compact-N GUIDs. Fixed at creation.</summary>
         public VaultNameMode NameMode { get; set; }
         /// <summary>Defines whether file identifiers are parsed from caller input or auto-generated. Fixed at creation.</summary>
         public VaultNameParseMode ParseMode { get; set; }
-        /// <summary>Full relative path from BasePath including client and module directory segments.</summary>
-        public string Base { get; set; }
         /// <summary>
         /// When true, the parent client and module directory names preserve original display-name casing.
         /// When false, they are normalized via ToDBName(). The workspace segment itself is always
@@ -31,7 +29,7 @@ namespace Haley.Models {
 
         public void Assert() {
             if (string.IsNullOrWhiteSpace(DisplayName)) throw new ArgumentNullException("Name cannot be empty");
-            if (!IsVirtual && string.IsNullOrEmpty(Base)) throw new ArgumentNullException("Base cannot be empty");
+            if (!IsVirtual && string.IsNullOrEmpty(StorageRef)) throw new ArgumentNullException("StorageRef cannot be empty");
             if (string.IsNullOrEmpty(Client?.Name) || string.IsNullOrWhiteSpace(Module?.Name)) throw new ArgumentNullException("Client & Module information cannot be empty");
         }
 

@@ -87,12 +87,12 @@ namespace Haley.Utils {
 
             var wsId = await _agw.ScalarAsync<long?>(_key, WORKSPACE.EXISTS_BY_CUID, default, (CUID, info.Cuid.ToString("N")));
             if (wsId.HasValue) {
-                await _agw.ExecAsync(_key, WORKSPACE.UPDATE, default, (DNAME, info.DisplayName), (STORAGE_REF, info.Base), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode), (ID, wsId.Value));
+                await _agw.ExecAsync(_key, WORKSPACE.UPDATE, default, (DNAME, info.DisplayName), (STORAGE_REF, info.StorageRef), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode), (ID, wsId.Value));
             } else {
                 var moduleCuid = StorageUtils.GenerateCuid(info.Client.Name, info.Module.Name);
                 var modId = await _agw.ScalarAsync<long?>(_key, MODULE.EXISTS_BY_CUID, default, (CUID, moduleCuid));
                 if (!modId.HasValue) throw new ArgumentException($@"Module {info.Module.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
-                await _agw.ExecAsync(_key, WORKSPACE.INSERT, default, (PARENT, modId.Value), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (STORAGE_REF, info.Base), (CUID, info.Cuid.ToString("N")), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode));
+                await _agw.ExecAsync(_key, WORKSPACE.INSERT, default, (PARENT, modId.Value), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (STORAGE_REF, info.StorageRef), (CUID, info.Cuid.ToString("N")), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode));
             }
             return await ValidateAndCache(WORKSPACE.EXISTS_BY_CUID, "Workspace", info, null, (CUID, info.Cuid.ToString("N")));
         }
