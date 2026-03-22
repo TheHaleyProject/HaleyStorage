@@ -10,11 +10,11 @@ namespace Haley.Models {
         public string? ModuleName { get; set; } 
         [FromQuery(Name = "w")]
         public string? WorkSpaceName { get; set; } 
-        [FromQuery(Name = "d")]
-        public string? DirectoryName { get; set; } 
-        [FromQuery(Name = "dp")]
+        [FromQuery(Name = "dn")]
+        public string? DirectoryName { get; set; }
+        [FromQuery(Name = "did")]
         public long? DirectoryParent { get; set; }
-        [FromQuery(Name = "pc")]
+        [FromQuery(Name = "duid")]
         public string? ParentCuid { get; set; }
         public VaultApiInput() {
         }
