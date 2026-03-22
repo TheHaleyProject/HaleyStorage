@@ -17,10 +17,6 @@ namespace Haley.Services {
 
         bool _isInitialized = false;
         ILogger _logger;
-        const string METAFILE = ".dss.meta";
-        const string CLIENTMETAFILE = ".client" + METAFILE;
-        const string MODULEMETAFILE = ".module" + METAFILE;
-        const string WORKSPACEMETAFILE = ".ws" + METAFILE;
         const string DEFAULTPWD = "admin";
         List<string> AllowedExtensions = new List<string>();
         List<string> RestrictedExtensions = new List<string>();

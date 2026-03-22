@@ -56,7 +56,7 @@ namespace Haley.Utils
         /// Optional delegate that registers the object in the DB and returns <c>(id, guid)</c>.
         /// Pass <c>null</c> for GUID-controlled paths (GUID is derived deterministically from the name).
         /// </param>
-        public static (string name, string path) GenerateFileSystemSavePath(this IVaultObject nObj, VaultNameParseMode? parse_overwrite = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultStorable, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false) {
+        public static (string name, string path) GenerateFileSystemSavePath(this IVaultObject nObj, VaultNameParseMode? parse_override = null, Func<bool, (int length, int depth)> splitProvider = null, string suffix = null, Func<IVaultStorable, (long id, Guid guid)> uidManager = null, bool throwExceptions = false, bool caseSensitive = false, VaultNameMode? namemode_override = null) {
             if (nObj == null || !nObj.TryValidate(out _)) return (string.Empty, string.Empty);
             // Storage-path metadata (NameMode, ParseMode, IsVirtual) only exists on VaultStorable.
             // Anything else (VaultObject scope carriers for client/module/workspace) has no physical path.
@@ -65,7 +65,7 @@ namespace Haley.Utils
             IVaultObject uidInfo = null;
 
             //Partially or fully managed
-            if (profile.DisplayName.TryPopulateControlledID(out uidInfo, profile.NameMode, parse_overwrite ?? profile.ParseMode, uidManager, profile, throwExceptions)) {
+            if (profile.DisplayName.TryPopulateControlledID(out uidInfo, namemode_override ?? profile.NameMode, parse_override ?? profile.ParseMode, uidManager, profile, throwExceptions)) {
                 profile.StorageName = (profile.NameMode == VaultNameMode.Number) ? uidInfo.Id.ToString() : uidInfo.Guid.ToString("N");
             }
 

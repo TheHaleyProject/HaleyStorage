@@ -261,16 +261,15 @@ namespace Haley.Services {
                 throw new InvalidOperationException("GenerateBasePath does not support VaultObjectType.File. Use StorageUtils.GenerateFileSystemSavePath instead.");
             if (component != VaultObjectType.WorkSpace)
                 throw new InvalidOperationException($"GenerateBasePath does not support VaultObjectType.{component}. Clients and modules are DB-only and have no physical path.");
-
-            var result = StorageUtils.GenerateFileSystemSavePath(input, VaultNameParseMode.Generate, (n) => (2, 5), throwExceptions: false);
+            //We expect the input to be a vaultstorable and also to carry, Generate Name and GUID name mode.
+            var result = StorageUtils.GenerateFileSystemSavePath(input, splitProvider: (n) => (2, 5), throwExceptions: false);
             return (result.name, "_" + result.path);
         }
 
         /// <summary>
         /// Resolves the workspace physical path segment and appends it to <paramref name="paths"/>.
         /// Uses the workspace's stored <see cref="VaultWorkSpace.StorageRef"/> when available;
-        /// falls back to sharded-path generation and reads the <c>.ws.dss.meta</c> file to warm
-        /// the indexer cache (FileSystem provider only).
+        /// falls back to sharded-path generation.
         /// Virtual workspaces contribute no path segment.
         /// </summary>
         void AddComponentPath(IVaultReadRequest input, List<string> paths, IStorageProvider provider) {
@@ -289,18 +288,6 @@ namespace Haley.Services {
                 var seg = BuildFallbackWorkspacePath(input);
                 paths.Add(seg);
 
-                // .meta file warm-up is FileSystem-specific — cloud providers have no physical meta files.
-                if (provider is FileSystemStorageProvider) {
-                    try {
-                        var metafile = Path.Combine(BasePath, seg.Replace('/', Path.DirectorySeparatorChar), WORKSPACEMETAFILE);
-                        if (File.Exists(metafile)) {
-                            var mfileInfo = File.ReadAllText(metafile).FromJson<VaultWorkSpace>();
-                            if (mfileInfo != null) Indexer?.TryAddInfo(mfileInfo);
-                        }
-                    } catch (Exception) {
-                        // .meta file is a convenience cache — failure is non-fatal.
-                    }
-                }
             }
 
             var joinedPath = provider is FileSystemStorageProvider
