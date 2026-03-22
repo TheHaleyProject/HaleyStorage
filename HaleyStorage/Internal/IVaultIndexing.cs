@@ -24,6 +24,7 @@ namespace Haley.Services {
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, string wsCuid, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long wsId, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);
         Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50);
+        Task<IFeedback<(long id, string cuid)>> RegisterDirectory(IVaultReadRequest request, string folderName);
         /// <summary>
         /// Searches for matching folders and files (latest version only) across the workspace.
         /// The term is matched against vault names (filename stems); extension is a separate filter.
@@ -33,6 +34,7 @@ namespace Haley.Services {
         Task Validate();
         bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
         bool TryAddInfo(IVaultObject dirInfo, bool replace = false);
+        IEnumerable<T> GetAllComponents<T>() where T : IVaultObject;
         Task<IFeedback<string>> GetParentName(IVaultFileReadRequest request);
         // Chunking
         Task<IFeedback> UpsertChunkInfo(string moduleCuid, long versionId, long chunkSizeMb, int totalParts, string chunkFolderName, string chunkFolderPath, bool isCompleted = false, string callId = null);

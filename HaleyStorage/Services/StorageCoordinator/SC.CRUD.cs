@@ -135,7 +135,7 @@ namespace Haley.Services {
             var path = ProcessAndBuildStoragePath(input, true).targetPath;
             if (string.IsNullOrWhiteSpace(path)) return result;
 
-            var comparison = _caseSensitivePairs.Any(p => p.client.Equals(input.Scope.Client.Name.ToDBName()))? StringComparison.InvariantCulture : StringComparison.OrdinalIgnoreCase;
+            var comparison = StringComparison.OrdinalIgnoreCase;
 
             // ── Staging-aware read ─────────────────────────────────────────────
             // If the file is still in staging (InStaging bit set, InStorage bit clear),
@@ -289,11 +289,22 @@ namespace Haley.Services {
         }
 
         /// <summary>
-        /// Creates a virtual directory entry in MariaDB. Currently a stub — not yet implemented.
+        /// Creates a virtual directory (folder) in MariaDB under the workspace identified by <paramref name="input"/>.
+        /// The parent folder is taken from <c>input.Scope.Folder</c> (Id=0 means root).
+        /// Folders are DB-only — no physical directory is created on disk.
+        /// Returns an error when no indexer is configured or the coordinator is in read-only mode.
         /// </summary>
-        public Task<IVaultResponse> CreateDirectory(IVaultReadRequest input, string rawname) {
-            // TODO: register virtual directory in MariaDB via Indexer.RegisterDirectory.
-            return Task.FromResult<IVaultResponse>(new VaultResponse() { Status = false, OriginalName = rawname, Message = "CreateDirectory requires indexer implementation (pending MariaDB phase)." });
+        public async Task<IVaultResponse> CreateDirectory(IVaultReadRequest input, string rawname) {
+            var result = new VaultResponse { Status = false, OriginalName = rawname };
+            if (Indexer == null) { result.Message = "No indexer is configured. Directory creation requires a DB indexer."; return result; }
+            if (!WriteMode) { result.Message = "Application is in Read-Only mode."; return result; }
+            if (string.IsNullOrWhiteSpace(rawname)) { result.Message = "Folder name cannot be empty."; return result; }
+
+            var fb = await Indexer.RegisterDirectory(input, rawname);
+            result.Status = fb.Status;
+            result.Message = fb.Status ? $"Folder '{rawname}' created (id={fb.Result.id})." : fb.Message;
+            if (fb.Status) result.SetResult(fb.Result.cuid);
+            return result;
         }
 
         /// <summary>

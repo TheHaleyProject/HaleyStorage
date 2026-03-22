@@ -26,6 +26,11 @@ namespace Haley.Utils {
                 return _cache.TryAdd(key, dirInfo);
             }
         }
+        /// <summary>Returns all cached objects of type <typeparamref name="T"/>.</summary>
+        public IEnumerable<T> GetAllComponents<T>() where T : IVaultObject {
+            return _cache.Values.OfType<T>();
+        }
+
         /// <summary>
         /// Retrieves a strongly-typed <see cref="IVaultObject"/> from the cache by CUID.
         /// Returns <c>false</c> when not found or when the cached object is not of type <typeparamref name="T"/>.

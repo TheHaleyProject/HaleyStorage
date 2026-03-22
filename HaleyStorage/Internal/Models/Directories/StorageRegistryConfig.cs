@@ -12,10 +12,6 @@ namespace Haley.Models {
     /// Bind from the <c>Seed:oss</c> configuration section via <see cref="StorageCoordinator.SetConfig"/>.
     /// </summary>
     internal class StorageRegistryConfig : IVaultRegistryConfig{
-        /// <summary>Suffix appended to client directory names (default <c>"c"</c>).</summary>
-        public string SuffixClient { get; set; } = "c";
-        /// <summary>Suffix appended to module directory names (default <c>"m"</c>).</summary>
-        public string SuffixModule { get; set; } = "m";
         /// <summary>Suffix appended to workspace directory names (default <c>"w"</c>).</summary>
         public string SuffixWorkSpace { get; set; } = "w";
         /// <summary>Suffix appended to file storage names (default <c>"f"</c>).</summary>

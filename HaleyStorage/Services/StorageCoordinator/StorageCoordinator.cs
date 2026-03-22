@@ -64,15 +64,49 @@ namespace Haley.Services {
 
             //If a client is not registered, do we need to register the default client?? and a default module??
         }
+        long _defaultProfileInfoId = 0;
+
         async Task Initialize(bool force = false) {
             if (_isInitialized && !force) return;
             // In ReadOnly mode, skip creating default structures.
             // Path resolution falls back to existing .meta files and the indexer.
             if (WriteMode) {
                 var defObj = new VaultStorable(VaultConstants.DEFAULT_NAME);
-                await RegisterClient(defObj); //Registers default client, module and workspace
+                await RegisterClient(defObj);
+                // Persist the default provider/profile/profile_info to DB (steps 1–3 only).
+                // Workspace linking (step 4) is deferred to RegisterFromSource, after
+                // all workspaces are registered and RehydrateWorkspaceProfilesAsync has run.
+                await EnsureDefaultProviderProfileAsync();
             }
             _isInitialized = true;
+        }
+
+        /// <summary>
+        /// Persists the default in-memory provider to the DB (<c>provider</c>, <c>profile</c>,
+        /// <c>profile_info</c> tables) and stores the resulting <c>profile_info_id</c> in
+        /// <see cref="_defaultProfileInfoId"/> for use by later workspace-linking calls.
+        /// No-op when no indexer is configured.
+        /// </summary>
+        async Task EnsureDefaultProviderProfileAsync() {
+            if (Indexer == null || _defaultProviderKey == null) return;
+            if (!_providers.TryGetValue(_defaultProviderKey, out var defaultProvider)) return;
+            var profileId = await Indexer.UpsertProfile(VaultConstants.DEFAULT_NAME);
+            await Indexer.UpsertProvider(defaultProvider.Key, $"Default provider: {defaultProvider.Key}");
+            _defaultProfileInfoId = await Indexer.UpsertProfileInfo((int)profileId, 1, (int)VaultProfileMode.DirectSave, defaultProvider.Key, null, "{}");
+        }
+
+        /// <summary>
+        /// Links every registered workspace that does not yet have a <c>ProfileInfoId</c> to
+        /// the default provider profile. Called after <c>RehydrateWorkspaceProfilesAsync</c>
+        /// so that workspaces with explicit DB profiles are not overwritten.
+        /// No-op when <see cref="_defaultProfileInfoId"/> is not set.
+        /// </summary>
+        internal async Task EnsureWorkspacesHaveDefaultProfileAsync() {
+            if (_defaultProfileInfoId < 1 || Indexer == null) return;
+            foreach (var ws in Indexer.GetAllComponents<VaultWorkSpace>()) {
+                if (ws.ProfileInfoId > 0) continue;
+                await Indexer.SetWorkspaceStorageProfile(ws.Cuid.ToString("N"), (int)_defaultProfileInfoId);
+            }
         }
 
         /// <summary>

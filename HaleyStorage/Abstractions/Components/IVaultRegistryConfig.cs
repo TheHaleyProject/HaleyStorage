@@ -5,10 +5,8 @@ using System.Text;
 
 namespace Haley.Abstractions {
     public interface IVaultRegistryConfig {
-        //All suffix are applicable only when dealing with controlled names.
-        string SuffixClient { get; set; }
-        string SuffixModule { get; set; } 
-        string SuffixWorkSpace { get; set; } 
+        //Suffix is applicable only to workspace and file names.
+        string SuffixWorkSpace { get; set; }
         string SuffixFile { get; set; } 
         int SplitLengthNumber { get; set; } 
         int DepthNumber { get; set; } 
