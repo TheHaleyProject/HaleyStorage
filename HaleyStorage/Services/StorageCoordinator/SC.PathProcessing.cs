@@ -29,7 +29,13 @@ namespace Haley.Services {
             var bpath = FetchWorkspaceBasePath(input, provider);   // 3. Resolve workspace base path (cached)
             if (input is IVaultFileReadRequest fileRead)
                 ProcessFileRoute(fileRead, provider).Wait();       // 4. Resolve file path (may query/register indexer)
-            var path = input?.BuildStoragePath(bpath, allowRootAccess, provider is FileSystemStorageProvider);
+
+            // 5. Provider joins base path + file ref using its own separator and validation rules.
+            var fileRef = (input is IVaultFileReadRequest fr && fr.File != null)
+                ? fr.File.StorageRef ?? string.Empty
+                : string.Empty;
+            var path = provider.BuildFullPath(bpath, fileRef);
+            if (input is StorageReadRequest req) req.SetOverrideRef(path);
             return (bpath, path);
         }
 
@@ -277,7 +283,11 @@ namespace Haley.Services {
             var wsCuid = input.Scope.Workspace.Cuid.ToString("N");
 
             if (Indexer.TryGetComponentInfo(wsCuid, out VaultWorkSpace ws)) {
-                if (ws.IsVirtual) return; // virtual — no physical path segment
+                if (ws.IsVirtual) {
+                    // Virtual workspaces have no workspace segment but still need client/module dirs for isolation.
+                    if (!string.IsNullOrWhiteSpace(ws.Base)) paths.Add(ws.Base);
+                    return;
+                }
                 if (!string.IsNullOrWhiteSpace(ws.StorageRef)) {
                     if (!string.IsNullOrWhiteSpace(ws.Base)) paths.Add(ws.Base);
                     paths.Add(ws.StorageRef);

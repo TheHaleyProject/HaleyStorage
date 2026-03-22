@@ -54,6 +54,21 @@ namespace Haley.Services {
         public string BuildStorageRef(string logicalId, string extension, Func<bool, (int length, int depth)> splitProvider, string suffix)
             => logicalId;
 
+        /// <summary>
+        /// Joins the key prefix with the session ID using forward slashes (cloud object key style).
+        /// An empty prefix is valid — staging sessions can be flat top-level keys.
+        /// Rejects keys containing ".." to prevent object-key injection.
+        /// </summary>
+        public string BuildFullPath(string basePath, string fileRef) {
+            if (string.IsNullOrEmpty(fileRef)) return basePath;
+            var result = string.IsNullOrEmpty(basePath)
+                ? fileRef
+                : basePath.TrimEnd('/') + "/" + fileRef.TrimStart('/');
+            if (result.Contains(".."))
+                throw new ArgumentOutOfRangeException(nameof(fileRef), "Key contains invalid traversal segments.");
+            return result;
+        }
+
         // ── Write ─────────────────────────────────────────────────────────────
 
         /// <summary>

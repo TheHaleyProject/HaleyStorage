@@ -59,6 +59,20 @@ namespace Haley.Abstractions {
         string BuildStorageRef(string logicalId, string extension, Func<bool, (int length, int depth)> splitProvider, string suffix);
 
         /// <summary>
+        /// Combines a workspace base path (or key prefix) with a file storage reference into
+        /// the fully-qualified path / object key passed directly to WriteAsync / ReadAsync / DeleteAsync.
+        ///
+        /// The provider owns:
+        ///   - Path separator (OS backslash for FileSystem, forward-slash for cloud)
+        ///   - Any provider-specific prefix or suffix conventions
+        ///   - Traversal-safety validation (rejects ".." segments)
+        ///
+        /// The coordinator owns building <paramref name="basePath"/> and <paramref name="fileRef"/> separately;
+        /// this method is the single join point between them.
+        /// </summary>
+        string BuildFullPath(string basePath, string fileRef);
+
+        /// <summary>
         /// Returns a time-limited access URL for the given storage reference, or <c>null</c>
         /// if this provider does not support URL-based access (e.g. local FileSystem).
         ///

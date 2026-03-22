@@ -122,6 +122,18 @@ namespace Haley.Services {
         }
 
         /// <summary>
+        /// Combines the workspace base path with a file storage reference using OS-native separators.
+        /// Rejects paths containing ".." to prevent directory traversal.
+        /// Override this in a subclass to inject a prefix/suffix or apply FS-specific constraints.
+        /// </summary>
+        public string BuildFullPath(string basePath, string fileRef) {
+            var result = string.IsNullOrEmpty(fileRef) ? basePath : Path.Combine(basePath, fileRef);
+            if (result.Contains(".."))
+                throw new ArgumentOutOfRangeException(nameof(fileRef), "Path contains invalid traversal segments.");
+            return result;
+        }
+
+        /// <summary>
         /// Local filesystem has no URL concept — returns null.
         /// Callers must fall back to streaming bytes through the server.
         /// </summary>
