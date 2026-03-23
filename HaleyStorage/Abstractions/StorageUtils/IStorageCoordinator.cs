@@ -1,4 +1,5 @@
 using Haley.Enums;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Haley.Models;
@@ -78,5 +79,21 @@ namespace Haley.Abstractions {
         /// <param name="size">File size in bytes, or null to auto-detect (FS only).</param>
         /// <param name="hash">Optional SHA-256 hash of the copied file.</param>
         Task<IFeedback> FinalizePlaceholder(IVaultReadRequest request, long versionId, bool toStaging = false, long? size = null, string hash = null);
+
+        // ── Filesystem revision backups ───────────────────────────────────────
+
+        /// <summary>
+        /// Lists all <c>##v{n}##</c> revision backup files that exist beside the live file
+        /// identified by <paramref name="request"/>. Ordered newest-first.
+        /// Only meaningful for <see cref="FileSystemStorageProvider"/>; returns an empty list
+        /// for all other providers. No DB query — all data comes from the filesystem.
+        /// </summary>
+        Task<IFeedback<List<VaultRevisionInfo>>> GetRevisions(IVaultFileReadRequest request);
+
+        /// <summary>
+        /// Streams the bytes of a specific <c>##v{n}##</c> revision backup.
+        /// <paramref name="version"/> must match a value returned by <see cref="GetRevisions"/>.
+        /// </summary>
+        Task<IVaultStreamResponse> DownloadRevision(IVaultFileReadRequest request, int version);
     }
 }

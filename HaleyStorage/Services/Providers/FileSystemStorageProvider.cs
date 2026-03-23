@@ -3,8 +3,10 @@ using Haley.Enums;
 using Haley.Models;
 using Haley.Utils;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Haley.Services {
@@ -142,5 +144,54 @@ namespace Haley.Services {
         /// </summary>
         public Task<string> GetAccessUrl(string storageRef, TimeSpan expiry)
             => Task.FromResult<string>(null);
+
+        // ─── Revision backups ─────────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns all <c>##v{n}##</c> revision backups that exist alongside <paramref name="storageRef"/>,
+        /// ordered newest-first (highest version number first).
+        /// Uses the same naming pattern as <see cref="DirectoryUtils.PopulateVersionedPath"/>:
+        /// <c>{basename}.##v{n}##.{ext}</c>.
+        /// Returns an empty list when the live file or its directory does not exist.
+        /// No DB query — all metadata comes from the filesystem.
+        /// </summary>
+        public List<VaultRevisionInfo> GetRevisions(string storageRef) {
+            if (string.IsNullOrWhiteSpace(storageRef) || !File.Exists(storageRef))
+                return new List<VaultRevisionInfo>();
+
+            var dir      = Path.GetDirectoryName(storageRef);
+            var basename = Path.GetFileName(storageRef);
+            var ext      = Path.GetExtension(basename)?.TrimStart('.') ?? string.Empty;
+
+            var pattern = $@"^{Regex.Escape(basename)}\.##v(\d+)##\.{Regex.Escape(ext)}$";
+            var regex   = new Regex(pattern, RegexOptions.IgnoreCase);
+
+            return Directory.GetFiles(dir, $"{basename}.*")
+                .Select(f => {
+                    var m = regex.Match(Path.GetFileName(f));
+                    if (!m.Success || !int.TryParse(m.Groups[1].Value, out var n)) return null;
+                    var fi = new FileInfo(f);
+                    return new VaultRevisionInfo {
+                        Version         = n,
+                        Size            = fi.Length,
+                        SizeHR          = fi.Length.ToFileSize(false),
+                        LastModifiedUtc = fi.LastWriteTimeUtc
+                    };
+                })
+                .Where(x => x != null)
+                .OrderByDescending(x => x.Version)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Derives the full path of a specific revision backup from the live file's storage ref
+        /// and version number. Does not check whether the file exists.
+        /// </summary>
+        public string GetRevisionPath(string storageRef, int version) {
+            var basename = Path.GetFileName(storageRef);
+            var ext      = Path.GetExtension(basename)?.TrimStart('.') ?? string.Empty;
+            var dir      = Path.GetDirectoryName(storageRef);
+            return Path.Combine(dir, $"{basename}.##v{version}##.{ext}");
+        }
     }
 }
