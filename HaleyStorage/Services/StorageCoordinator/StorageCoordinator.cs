@@ -120,7 +120,7 @@ namespace Haley.Services {
             var dirSection = cfgRoot[$@"Seed:{VaultConstants.CONFIG_INFO}:{dirPath}"];
             var responseMode = cfgRoot[$@"Seed:{VaultConstants.CONFIG_INFO}:{VaultConstants.CONFIG_DIR_RESPONSEPATHMODE}"];
             bool writemode = false;
-            bool.TryParse(ResourceUtils.FetchVariable($@"{VaultConstants.OSS_WRITEMODE}")?.Result?.ToString(), out writemode);
+            bool.TryParse(ResourceUtils.FetchVariable(VaultConstants.OSS_WRITEMODE)?.Result?.ToString(), out writemode);
             var dirInfo = dirSection?.ToDictionarySplit();
             string logPath = null; // dirSection?["log"]
             string storagePath = string.Empty;
