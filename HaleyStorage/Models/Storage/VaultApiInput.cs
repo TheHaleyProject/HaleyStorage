@@ -10,7 +10,7 @@ namespace Haley.Models {
         public string? ModuleName { get; set; } 
         [FromQuery(Name = "w")]
         public string? WorkSpaceName { get; set; } 
-        [FromQuery(Name = "dn")]
+        [FromQuery(Name = "d")]
         public string? DirectoryName { get; set; }
         [FromQuery(Name = "did")]
         public long? DirectoryParent { get; set; }
