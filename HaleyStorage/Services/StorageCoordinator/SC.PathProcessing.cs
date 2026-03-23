@@ -111,7 +111,7 @@ namespace Haley.Services {
         }
 
         async Task<bool> CreateNewDocumentVersion(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider = null) {
-            if (!forupload || inputW?.CreateNewVersion == true || string.IsNullOrWhiteSpace(input.File?.Cuid)) return false; 
+            if (!forupload || inputW?.CreateNewVersion != true || string.IsNullOrWhiteSpace(input.File?.Cuid)) return false;
 
             var (newVersionId, newVersionGuid) = await Indexer.RegisterNewDocVersion(input.Scope.Module.Cuid.ToString("N"), input.File.Cuid, input.CallID);
 
