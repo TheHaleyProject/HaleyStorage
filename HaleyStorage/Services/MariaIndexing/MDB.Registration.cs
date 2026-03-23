@@ -1,6 +1,7 @@
 using Haley.Abstractions;
 using Haley.Models;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using static Haley.Internal.IndexingConstant;
 using static Haley.Internal.IndexingQueries;
 
@@ -15,6 +16,68 @@ namespace Haley.Utils {
         /// <param name="holder">Receives the assigned DB ID and CUID after successful registration.</param>
         public async Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultStorable holder) {
             return await RegisterDocumentsInternal(request, holder);
+        }
+
+        /// <summary>
+        /// Creates a new <c>doc_version</c> row under the document that owns <paramref name="versionCuid"/>.
+        /// Navigates: versionCuid → doc_version.parent → document.id → insert new doc_version (max+1).
+        /// Filename and directory are irrelevant — only the CUID is used to locate the parent document.
+        /// Opens a transaction keyed by <paramref name="callId"/> so <c>UpdateDocVersionInfo</c>
+        /// can commit or rollback the whole unit in the coordinator's finally block.
+        /// </summary>
+        public async Task<(long id, Guid guid)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null) {
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid)) throw new ArgumentNullException(nameof(moduleCuid));
+                if (string.IsNullOrWhiteSpace(versionCuid)) throw new ArgumentNullException(nameof(versionCuid));
+                if (!_agw.ContainsKey(moduleCuid)) throw new ArgumentException($"No adapter found for module {moduleCuid}.");
+
+                var handlerKey = GetHandlerKey(callId, moduleCuid);
+                var handler = _agw.GetTransactionHandler(moduleCuid);
+                if (handler != null && !string.IsNullOrWhiteSpace(callId)) {
+                    if (_handlers.ContainsKey(handlerKey)) throw new Exception($"A transaction with key {handlerKey} already exists.");
+                    _handlers.TryAdd(handlerKey, (handler, DateTime.UtcNow));
+                    handler.Begin();
+                }
+
+                var load = new DbExecutionLoad(default, handler);
+
+                // 1. Resolve the parent document ID from the existing version CUID.
+                var docId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.GET_DOCUMENT_ID_BY_VERSION_CUID, load, (VALUE, ToDbCuid(versionCuid)));
+                if (!docId.HasValue || docId.Value < 1)
+                    throw new ArgumentException($"No document found for version CUID '{versionCuid}'.");
+
+                // 2. Determine next version number.
+                var currentMax = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_LATEST, load, (PARENT, docId.Value));
+                int nextVersion = (currentMax ?? 0) + 1;
+
+                // 3. Insert the new doc_version row.
+                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.INSERT, load, (PARENT, docId.Value), (VERSION, nextVersion));
+
+                // 4. Fetch back the new row to get its auto-generated id and cuid.
+                var dvRow = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.EXISTS, load, (PARENT, docId.Value), (VERSION, nextVersion));
+                if (dvRow == null || dvRow.Count < 1)
+                    throw new Exception($"Unable to retrieve new doc_version for document {docId.Value}, version {nextVersion}.");
+
+                long newId  = dvRow.GetLong("id");
+                string newUid = dvRow.GetString("uid");
+
+                if (newId < 1 || string.IsNullOrWhiteSpace(newUid))
+                    throw new Exception("New doc_version row has an invalid id or uid.");
+
+                if (!newUid.IsValidGuid(out Guid newGuid) && !newUid.IsCompactGuid(out newGuid))
+                    throw new Exception($"Unable to parse GUID from new doc_version uid '{newUid}'.");
+
+                return (newId, newGuid);
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                var handlerKey = GetHandlerKey(callId, moduleCuid);
+                if (!string.IsNullOrWhiteSpace(handlerKey) && _handlers.ContainsKey(handlerKey)) {
+                    _handlers[handlerKey].handler?.Rollback();
+                    _handlers.Remove(handlerKey, out _);
+                }
+                if (ThrowExceptions) throw;
+                return (0, Guid.Empty);
+            }
         }
         /// <summary>
         /// Upserts a client record in the core DB and updates its signing/encrypt/password keys.

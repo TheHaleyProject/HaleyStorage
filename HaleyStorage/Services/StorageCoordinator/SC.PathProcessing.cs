@@ -4,7 +4,9 @@ using Haley.Models;
 using Haley.Utils;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Data.Common;
 using System.Threading.Tasks;
+using static Haley.Internal.IndexingQueries;
 
 namespace Haley.Services {
     /// <summary>
@@ -108,61 +110,41 @@ namespace Haley.Services {
             return result;
         }
 
-        // ─────────────────────────────────────────────────────────────────────
-        // Step 3 — File route resolution
-        // ─────────────────────────────────────────────────────────────────────
+        async Task<bool> CreateNewDocumentVersion(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider = null) {
+            if (!forupload || inputW?.CreateNewVersion == true || string.IsNullOrWhiteSpace(input.File?.Cuid)) return false; 
 
-        /// <summary>
-        /// Resolves <see cref="IVaultFileReadRequest.File"/>.Path for the given request.
-        /// For FS reads where the logical ID is already known, uses a DB-free sharded-path reconstruction.
-        /// Otherwise queries the indexer by ID, CUID, or display name, calling
-        /// <see cref="PopulateFileFromDic"/> to fill the route. For uploads, also registers
-        /// the document with the indexer via <c>StorageUtils.GenerateFileSystemSavePath</c>.
-        /// </summary>
-        public async Task ProcessFileRoute(IVaultFileReadRequest input, IStorageProvider provider = null) {
-            provider ??= ResolveProvider(input);
-            if (input == null) return;
-            if (!string.IsNullOrWhiteSpace(input.OverrideRef)) return;
-            if (input.File != null && !string.IsNullOrWhiteSpace(input.File.StorageRef)) return;
+            var (newVersionId, newVersionGuid) = await Indexer.RegisterNewDocVersion(input.Scope.Module.Cuid.ToString("N"), input.File.Cuid, input.CallID);
+
+            if (newVersionId < 1) throw new ArgumentException($"Unable to create a new version for version CUID '{input.File.Cuid}'.");
+            var extension = Path.GetExtension(inputW.OriginalName ?? string.Empty);
+            var logicalId = wInfo?.NameMode == VaultNameMode.Number
+                ? newVersionId.ToString()
+                : newVersionGuid.ToString("N");
+
+            input.File.SetId(newVersionId);
+            input.File.SetCuid(newVersionGuid);
+            input.File.StorageName = logicalId;
+            input.File.StorageRef = provider.BuildStorageRef(logicalId, extension, SplitProvider, Config.SuffixFile);
+            if (inputW.FileStream != null) input.File.Size = inputW.FileStream.Length;
+
+            // Stamp the active profile_info_id (same pattern as the normal upload path).
+            if (input.File is StorageFileRoute sfrNew && sfrNew.ProfileInfoId == 0) {
+                long activeProfileInfoId = 0;
+                if (TryGetWorkspace(input, out VaultWorkSpace wsW) && wsW.ProfileInfoId > 0)
+                    activeProfileInfoId = wsW.ProfileInfoId;
+                else if (Indexer != null
+                    && Indexer.TryGetComponentInfo<VaultModule>(input.Scope.Module.Cuid.ToString("N"), out VaultModule mW)
+                    && mW.ProfileInfoId > 0)
+                    activeProfileInfoId = mW.ProfileInfoId;
+                if (activeProfileInfoId > 0) sfrNew.ProfileInfoId = activeProfileInfoId;
+            }
+            return true; // this is success.. so dont proceed.
+        }
+
+        string DetermineTargetName(IVaultFileReadRequest input,bool forupload) {
+            string targetFileName = string.Empty;
 
             IVaultFileWriteRequest inputW = input as IVaultFileWriteRequest;
-            bool forupload = inputW != null;
-
-            if (!Indexer.TryGetComponentInfo<VaultWorkSpace>(input.Scope.Workspace.Cuid.ToString("N"), out VaultWorkSpace wInfo) && forupload) {
-                throw new Exception($"Unable to find workspace info. Name: {input.Scope.Workspace.Name} — Cuid: {input.Scope.Workspace.Cuid}.");
-            }
-
-            // ── FS read-only fast path ─────────────────────────────────────
-            // When the file ID (Number mode) or CUID (Guid mode) is already known and the
-            // provider is local FileSystem, reconstruct the sharded path directly without
-            // any DB round-trip. This is the "DB-free read" the design intends for FS.
-            if (!forupload && provider is FileSystemStorageProvider && wInfo != null && input.File != null) {
-                string logicalId = null;
-                string ext = Path.GetExtension(input.File.StorageName ?? input.RequestedName ?? string.Empty);
-
-                if (wInfo.NameMode == VaultNameMode.Number && input.File.Id > 0)
-                    logicalId = input.File.Id.ToString();
-                else if (wInfo.NameMode == VaultNameMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
-                    // Storage names are always generated as compact-N (no dashes).
-                    // Normalize regardless of what form the caller provided (dashed, braced, compact).
-                    if (Guid.TryParse(input.File.Cuid, out var g))
-                        logicalId = g.ToString("N");
-                }
-
-                if (!string.IsNullOrWhiteSpace(logicalId)) {
-                    input.File.StorageRef = provider.BuildStorageRef(logicalId, ext, SplitProvider, Config.SuffixFile);
-                    return; // DB-free — no indexer query needed
-                }
-            }
-
-            // Attempt to resolve path without generating a new one (DB-backed).
-            if ((!forupload || !string.IsNullOrWhiteSpace(input.File?.Cuid)) && input.File != null) {
-                if (PopulateFromSavedPath(input, forupload, wInfo, provider)) return;
-                if (await GetPathFromIndexer(input, forupload, input.Scope.Workspace.Cuid.ToString("N"))) return;
-            }
-
-            // ── Determine the target filename ──────────────────────────────
-            string targetFileName = string.Empty;
 
             if (!string.IsNullOrWhiteSpace(input.RequestedName)) {
                 targetFileName = Path.GetFileName(input.RequestedName);
@@ -192,70 +174,139 @@ namespace Haley.Services {
 
             if (string.IsNullOrWhiteSpace(input.RequestedName) && !string.IsNullOrWhiteSpace(targetFileName))
                 input.SetRequestedName(targetFileName);
+            return targetFileName;
+        }
 
-            // ── Generate storage path and register with indexer ────────────
-            if (input.File == null || string.IsNullOrWhiteSpace(input.File.StorageRef)) {
-                if (string.IsNullOrWhiteSpace(targetFileName))
-                    throw new ArgumentNullException("No target file name specified for this request.");
+        async Task<bool> ResolvePathFast(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider = null) {
+            if (!forupload && provider is FileSystemStorageProvider && wInfo != null && input.File != null) {
+                string logicalId = null;
+                string ext = Path.GetExtension(input.File.StorageName ?? input.RequestedName ?? string.Empty);
 
-                var holder = new VaultStorable(targetFileName, wInfo.NameMode, wInfo.ParseMode, isVirtual: false);
+                if (wInfo.NameMode == VaultNameMode.Number && input.File.Id > 0)
+                    logicalId = input.File.Id.ToString();
+                else if (wInfo.NameMode == VaultNameMode.Guid && !string.IsNullOrWhiteSpace(input.File.Cuid)) {
+                    // Storage names are always generated as compact-N (no dashes).
+                    // Normalize regardless of what form the caller provided (dashed, braced, compact).
+                    if (Guid.TryParse(input.File.Cuid, out var g))
+                        logicalId = g.ToString("N");
+                }
 
-                // Step A: register with indexer and populate holder.Id / holder.Cuid / holder.StorageName.
-                // GenerateFileSystemSavePath is reused here only for the ID-registration side-effect;
-                // the path it returns is only used for FS providers.
-                var logicalResult = StorageUtils.GenerateFileSystemSavePath(
-                    holder,
-                    uidManager: (h) => {
-                        // Only register in indexer when uploading — reads never create DB entries.
-                        if (Indexer == null || !forupload) return (0, Guid.Empty);
-                        return Indexer.RegisterDocuments(input, h).GetAwaiter().GetResult();
-                    },
-                    splitProvider: SplitProvider,
-                    suffix: Config.SuffixFile,
-                    throwExceptions: true);
-
-                // Step B: build the actual storage reference via the resolved provider.
-                // FS: sharded path (same as before). Cloud: flat object key.
-                var targetFilePath = provider is FileSystemStorageProvider
-                    ? logicalResult.path
-                    : provider.BuildStorageRef(
-                        logicalResult.name,
-                        Path.GetExtension(targetFileName),
-                        SplitProvider,
-                        Config.SuffixFile);
-
-                if (input.File == null)
-                    input.SetFile(new StorageFileRoute(targetFileName, targetFilePath) {
-                        Id = holder.Id, Cuid = holder.Cuid.ToString("N"), Version = holder.Version, StorageName = holder.StorageName
-                    });
-
-                input.File.StorageRef = targetFilePath;
-                if (string.IsNullOrWhiteSpace(input.File.DisplayName)) input.File.SetDisplayName(input.RequestedName);
-                if (string.IsNullOrWhiteSpace(input.File.Cuid)) input.File.SetCuid(holder.Cuid);
-                if (string.IsNullOrWhiteSpace(input.File.StorageName)) input.File.StorageName = holder.StorageName;
-                if (input.File.Id < 1) input.File.SetId(holder.Id);
-                if (forupload) input.File.Size = inputW!.FileStream?.Length ?? 0;
-
-                // Stamp the effective profile_info_id so UpdateDocVersionInfo persists it to version_info.
-                // Priority: workspace (most specific) → module.
-                // This records exactly which profile was active when the file was stored,
-                // enabling future reads to reconstruct the original provider even after a profile change.
-                if (forupload && input.File is StorageFileRoute sfrWrite && sfrWrite.ProfileInfoId == 0) {
-                    long activeProfileInfoId = 0;
-                    if (TryGetWorkspace(input, out VaultWorkSpace wsW) && wsW.ProfileInfoId > 0)
-                        activeProfileInfoId = wsW.ProfileInfoId;
-                    else if (Indexer != null
-                        && Indexer.TryGetComponentInfo<VaultModule>(input.Scope.Module.Cuid.ToString("N"), out VaultModule mW)
-                        && mW.ProfileInfoId > 0)
-                        activeProfileInfoId = mW.ProfileInfoId;
-                    if (activeProfileInfoId > 0) sfrWrite.ProfileInfoId = activeProfileInfoId;
+                if (!string.IsNullOrWhiteSpace(logicalId)) {
+                    input.File.StorageRef = provider.BuildStorageRef(logicalId, ext, SplitProvider, Config.SuffixFile);
+                    return true; // DB-free — no indexer query needed
                 }
             }
+
+            // Attempt to resolve path without generating a new one (DB-backed).
+            if ((!forupload || !string.IsNullOrWhiteSpace(input.File?.Cuid)) && input.File != null) {
+                if (PopulateFromSavedPath(input, forupload, wInfo, provider)) return true;
+                if (await GetPathFromIndexer(input, forupload, input.Scope.Workspace.Cuid.ToString("N"))) return true;
+            }
+            return false;
+        }
+
+        async Task RegisterRequestAndBuildPath(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, string targetFileName,IStorageProvider provider = null) {
+
+            if (string.IsNullOrWhiteSpace(targetFileName)) throw new ArgumentNullException("No target file name specified for this request.");
+
+            var holder = new VaultStorable(targetFileName, wInfo.NameMode, wInfo.ParseMode, isVirtual: false);
+
+            // Step A: register with indexer and populate holder.Id / holder.Cuid / holder.StorageName.
+            // GenerateFileSystemSavePath is reused here only for the ID-registration side-effect;
+            // the path it returns is only used for FS providers.
+            var logicalResult = StorageUtils.GenerateFileSystemSavePath(
+                holder,
+                uidManager: (h) => {
+                    // Only register in indexer when uploading — reads never create DB entries.
+                    if (Indexer == null || !forupload) return (0, Guid.Empty);
+                    return Indexer.RegisterDocuments(input, h).GetAwaiter().GetResult();
+                },
+                splitProvider: SplitProvider,
+                suffix: Config.SuffixFile,
+                throwExceptions: true);
+
+            // Step B: build the actual storage reference via the resolved provider.
+            // FS: sharded path (same as before). Cloud: flat object key.
+            var targetFilePath = provider is FileSystemStorageProvider
+                ? logicalResult.path
+                : provider.BuildStorageRef(
+                    logicalResult.name,
+                    Path.GetExtension(targetFileName),
+                    SplitProvider,
+                    Config.SuffixFile);
+
+            if (input.File == null)
+                input.SetFile(new StorageFileRoute(targetFileName, targetFilePath) {
+                    Id = holder.Id, Cuid = holder.Cuid.ToString("N"), Version = holder.Version, StorageName = holder.StorageName
+                });
+
+            input.File.StorageRef = targetFilePath;
+
+            if (string.IsNullOrWhiteSpace(input.File.DisplayName)) input.File.SetDisplayName(input.RequestedName);
+            if (string.IsNullOrWhiteSpace(input.File.Cuid)) input.File.SetCuid(holder.Cuid);
+            if (string.IsNullOrWhiteSpace(input.File.StorageName)) input.File.StorageName = holder.StorageName;
+            if (input.File.Id < 1) input.File.SetId(holder.Id);
+            if (forupload) input.File.Size = inputW!.FileStream?.Length ?? 0;
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Helpers
+        // Step 3 — File route resolution
         // ─────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Resolves <see cref="IVaultFileReadRequest.File"/>.Path for the given request.
+        /// For FS reads where the logical ID is already known, uses a DB-free sharded-path reconstruction.
+        /// Otherwise queries the indexer by ID, CUID, or display name, calling
+        /// <see cref="PopulateFileFromDic"/> to fill the route. For uploads, also registers
+        /// the document with the indexer via <c>StorageUtils.GenerateFileSystemSavePath</c>.
+        /// </summary>
+        public async Task ProcessFileRoute(IVaultFileReadRequest input, IStorageProvider provider = null) {
+            provider ??= ResolveProvider(input);
+            if (input == null) return;
+            if (!string.IsNullOrWhiteSpace(input.OverrideRef)) return;
+            if (input.File != null && !string.IsNullOrWhiteSpace(input.File.StorageRef)) return;
+
+            IVaultFileWriteRequest inputW = input as IVaultFileWriteRequest;
+            bool forupload = inputW != null;
+
+            if (!Indexer.TryGetComponentInfo<VaultWorkSpace>(input.Scope.Workspace.Cuid.ToString("N"), out VaultWorkSpace wInfo) && forupload) {
+                throw new Exception($"Unable to find workspace info. Name: {input.Scope.Workspace.Name} — Cuid: {input.Scope.Workspace.Cuid}.");
+            }
+
+            // ── CreateNewVersion fast path ─────────────────────────────────
+            // replace=false at the controller sets CreateNewVersion=true on the write request.
+            // Navigate versionCuid → parent document → new doc_version (version+1).
+            // Filename and directory are irrelevant; the CUID is the sole identity signal.
+            if (await CreateNewDocumentVersion(input, inputW, forupload, wInfo, provider)) return;
+
+            // ── FS read-only fast path ─────────────────────────────────────
+            // When the file ID (Number mode) or CUID (Guid mode) is already known and the
+            // provider is local FileSystem, reconstruct the sharded path directly without
+            // any DB round-trip. This is the "DB-free read" the design intends for FS.
+            if (await ResolvePathFast(input, inputW, forupload, wInfo, provider)) return;
+
+            // ── Determine the target filename ──────────────────────────────
+            string targetFileName = DetermineTargetName(input, forupload) ?? string.Empty;
+
+            if (input.File != null && !string.IsNullOrWhiteSpace(input.File.StorageRef)) return; //We already have what we need.. no need to check further.
+                                                                                                 // ── Generate storage path and register with indexer ────────────
+            await RegisterRequestAndBuildPath(input, inputW, forupload, wInfo, targetFileName, provider);
+            
+            // Stamp the effective profile_info_id so UpdateDocVersionInfo persists it to version_info.
+            // Priority: workspace (most specific) → module.
+            // This records exactly which profile was active when the file was stored,
+            // enabling future reads to reconstruct the original provider even after a profile change.
+            if (forupload && input.File is StorageFileRoute sfrWrite && sfrWrite.ProfileInfoId == 0) {
+                long activeProfileInfoId = 0;
+                if (TryGetWorkspace(input, out VaultWorkSpace wsW) && wsW.ProfileInfoId > 0)
+                    activeProfileInfoId = wsW.ProfileInfoId;
+                else if (Indexer != null
+                    && Indexer.TryGetComponentInfo<VaultModule>(input.Scope.Module.Cuid.ToString("N"), out VaultModule mW)
+                    && mW.ProfileInfoId > 0)
+                    activeProfileInfoId = mW.ProfileInfoId;
+                if (activeProfileInfoId > 0) sfrWrite.ProfileInfoId = activeProfileInfoId;
+            }
+        }
 
         /// <summary>
         /// Generates the sharded directory path for a workspace.

@@ -56,21 +56,17 @@ namespace Haley.Services {
                 return ProviderWriteResult.ExistsError();
 
                 case ExistConflictResolveMode.Replace:
-                return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)? ProviderWriteResult.Ok(alreadyExisted: true, message: "Replaced.") : ProviderWriteResult.Fail("Failed to replace file.");
-
-                case ExistConflictResolveMode.Revise:
-                // PopulateVersionedPath computes the next version name and prunes old revisions beyond MaxRevisionCopies.
-                if (DirectoryUtils.PopulateVersionedPath(targetDir, storagePath, out var versionPath, MaxRevisionCopies)) {
-                    try {
-                        if (await DirectoryUtils.TryCopyFileAsync(storagePath, versionPath)) {
-                            return await dataStream.TryReplaceFileAsync(storagePath, bufferSize)? ProviderWriteResult.Ok(alreadyExisted: true, message: "Revised.") : ProviderWriteResult.Fail("Failed to write revised file.");
+                    // PopulateVersionedPath computes the next version name and prunes old revisions beyond MaxRevisionCopies.
+                    if (DirectoryUtils.PopulateVersionedPath(targetDir, storagePath, out var versionPath, MaxRevisionCopies)) {
+                        try {
+                            if (await DirectoryUtils.TryCopyFileAsync(storagePath, versionPath)) {
+                                return await dataStream.TryReplaceFileAsync(storagePath, bufferSize) ? ProviderWriteResult.Ok(alreadyExisted: true, message: "Revised.") : ProviderWriteResult.Fail("Failed to write revised file.");
+                            }
+                        } catch (Exception) {
+                            await versionPath.TryDeleteFile();
                         }
-                    } catch (Exception) {
-                        await versionPath.TryDeleteFile();
                     }
-                }
-                return ProviderWriteResult.Fail("Failed to create versioned copy.");
-
+                    return ProviderWriteResult.Fail("Failed to revise the file.");
                 default:
                 return ProviderWriteResult.Fail($"Unhandled conflict mode: {conflictMode}.");
             }

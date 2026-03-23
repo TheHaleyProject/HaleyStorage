@@ -17,6 +17,12 @@ namespace Haley.Services {
         Task<IFeedback> RegisterModule(IVaultModule info);
         Task<IFeedback> RegisterWorkspace(IVaultWorkSpace info);
         Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultStorable holder);
+        /// <summary>
+        /// Creates a new <c>doc_version</c> row (version = current max + 1) under the document that
+        /// owns <paramref name="versionCuid"/>. Skips filename/directory lookup entirely —
+        /// the CUID is the only identity signal required. Returns the new version's DB id and CUID.
+        /// </summary>
+        Task<(long id, Guid guid)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null);
         Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IVaultFileRoute file, string callId = null);
         Task<IFeedback> UpdateDocDisplayName(string moduleCuid, long versionId, string displayName);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id);
