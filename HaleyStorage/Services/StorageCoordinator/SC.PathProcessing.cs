@@ -110,6 +110,34 @@ namespace Haley.Services {
             return result;
         }
 
+        /// <summary>
+        /// Guards against uploading a file whose extension differs from the one already stored for
+        /// this document. Called before replace and create-new-version paths when a CUID is supplied.
+        /// Throws <see cref="ArgumentException"/> on mismatch; silently passes when the stored version
+        /// has no storage_ref yet (placeholder) or when either extension is absent.
+        /// </summary>
+        async Task CheckCuidExtensionConsistency(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload) {
+            if (!forupload || string.IsNullOrWhiteSpace(input.File?.Cuid)) return; //no need to check consistency if we are not dealing with uploads or revisions.
+
+            var incomingExt = Path.GetExtension(inputW?.OriginalName ?? string.Empty)?.ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(incomingExt)) return; // nothing to compare
+
+            var moduleCuid = input.Scope.Module.Cuid.ToString("N");
+            var existing = await Indexer.GetDocVersionInfo(moduleCuid, input.File.Cuid);
+            if (existing?.Status != true || existing.Result is not Dictionary<string, object> dic) return; // can't determine — let it through
+
+            var storagePath = dic.TryGetValue("path", out var p) ? p?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(storagePath)) return; // placeholder — no stored bytes yet
+
+            var storedExt = Path.GetExtension(storagePath)?.ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(storedExt)) return;
+
+            if (!string.Equals(incomingExt, storedExt, StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException(
+                    $"Extension mismatch: the document is stored as '{storedExt}' but the incoming file is '{incomingExt}'. " +
+                    $"Upload without a CUID to create a new document.");
+        }
+
         async Task<bool> CreateNewDocumentVersion(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider = null) {
             if (!forupload || inputW?.CreateNewVersion != true || string.IsNullOrWhiteSpace(input.File?.Cuid)) return false;
 
@@ -272,6 +300,15 @@ namespace Haley.Services {
             if (!Indexer.TryGetComponentInfo<VaultWorkSpace>(input.Scope.Workspace.Cuid.ToString("N"), out VaultWorkSpace wInfo) && forupload) {
                 throw new Exception($"Unable to find workspace info. Name: {input.Scope.Workspace.Name} — Cuid: {input.Scope.Workspace.Cuid}.");
             }
+
+            // ── Extension consistency check ────────────────────────────────
+            // When a CUID is provided for upload (replace or new version), the incoming
+            // file must share the same extension as the stored document. A document that
+            // was created as .pdf cannot later receive a .png version via CUID — the
+            // document name and type identity would be broken. Upload without a CUID to
+            // create a separate document.
+            await CheckCuidExtensionConsistency(input, inputW,forupload);
+
 
             // ── CreateNewVersion fast path ─────────────────────────────────
             // replace=false at the controller sets CreateNewVersion=true on the write request.
