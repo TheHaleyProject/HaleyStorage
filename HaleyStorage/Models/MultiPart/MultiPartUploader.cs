@@ -52,14 +52,15 @@ namespace Haley.Models {
         Func<MultipartDataInfo, Task<bool>> _dataHandler;
         Func<MultipartValidationInfo , Task<IFeedback<long?>>> _validationHandler;
         long _defaultMaxFileSizeinMb = 0;
-        bool _throwExceptions = false;
-        public MultiPartUploader(Func<MultipartFileInfo, Task<IVaultResponse>> fileSectionHandler, Func<MultipartDataInfo, Task<bool>> dataSectionHandler, Func<MultipartValidationInfo, Task<IFeedback<long?>>> validationHandler, int? max_size, bool throwExceptions) {
+        bool _abortOnRejection = false;
+        public MultiPartUploader(Func<MultipartFileInfo, Task<IVaultResponse>> fileSectionHandler, Func<MultipartDataInfo, Task<bool>> dataSectionHandler, Func<MultipartValidationInfo, Task<IFeedback<long?>>> validationHandler, int? max_size, bool abortOnValidationFailure) {
             _fileHandler = fileSectionHandler ?? throw new ArgumentNullException(nameof(fileSectionHandler));
             _dataHandler = dataSectionHandler; //Can be empty, we dont need them
             _validationHandler = validationHandler; //Can be empty.
             _defaultMaxFileSizeinMb = max_size ?? 0;
             if (_defaultMaxFileSizeinMb < 0) _defaultMaxFileSizeinMb = 0; //Zero stands for unlimited.
-            _throwExceptions = throwExceptions;
+            _abortOnRejection = abortOnValidationFailure; //if not turned on, then we fully drain the upload. For example, Assume user tries to uplaod a 10 gB file, but, it fails validation on format type or size limit, say 100MB only allowed. In this case, if abort is not turned on, system will still try to receive the entire 10 GB file and then show the error to the client.. not very efficient.. only advantage is clietn will know the error reason.. if abort is enabled, client will immediatley be disconnected but they will not know the reason.
+            //this is also mainly for HTTP/1 .. becasue in http/2, we dont have this issue.. its duplex.. if we throw exception, client will receive immediatley and they can read it.. in http/1 client will only know the connection disconnected error.
             //if (_defaultMaxFileSizeinMb > 10000) _defaultMaxFileSizeinMb = 10000; // 10 GB limit
         }
 
@@ -205,7 +206,7 @@ namespace Haley.Models {
                             validationFb = await _validationHandler.Invoke(new MultipartValidationInfo() { FileName = fileName, ContentType = sectionContentType });
                             if (!validationFb.Status) {
                                 var msg = $"File '{fileName}' rejected by validation handler. Reason {validationFb.Message}";
-                                if (_throwExceptions) throw new Exception(msg);
+                                if (_abortOnRejection) throw new Exception(msg);
                                 var failedResponse = new VaultResponse {
                                     OriginalName = fileName,
                                     Status = false,
@@ -241,7 +242,7 @@ namespace Haley.Models {
                                     //Delete file here itself.
                                     DeleteTemporaryFile(tempPath);
                                     var msg = $"File '{fileName}' exceeds default limit {maxAllowed / 1024 / 1024} MB.";
-                                    if (_throwExceptions) throw new Exception(msg);
+                                    if (_abortOnRejection) throw new Exception(msg); //abort.. stop upload.
 
                                     var failedResponse = new VaultResponse {
                                         OriginalName = fileName,
