@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `client` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_client` (`name`),
   UNIQUE KEY `unq_client_1` (`guid`)
-) ENGINE=InnoDB AUTO_INCREMENT=1975 DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci COMMENT='Top-level tenant / application that owns the entire storage hierarchy.\nExample: an application called "hr_portal" is registered as a client. Under it live modules such as "employee_docs" and "avatars".\nThe client name is hashed (SHA-256, compact-N GUID) at runtime to produce a CUID that drives all internal routing — no database round-trip is needed once the client is cached at startup.\nEvery file ultimately belongs to a client → module → workspace chain.';
+) ENGINE=InnoDB AUTO_INCREMENT=1975 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Top-level tenant / application that owns the entire storage hierarchy.\nExample: an application called "hr_portal" is registered as a client. Under it live modules such as "employee_docs" and "avatars".\nThe client name is hashed (SHA-256, compact-N GUID) at runtime to produce a CUID that drives all internal routing — no database round-trip is needed once the client is cached at startup.\nEvery file ultimately belongs to a client → module → workspace chain.';
 
 -- Data exporting was unselected.
 
