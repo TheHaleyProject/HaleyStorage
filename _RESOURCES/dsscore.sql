@@ -59,6 +59,11 @@ BEGIN
       AND SCHEMA_NAME NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys');
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
 
+  IF prefix IS NULL OR CHAR_LENGTH(TRIM(prefix)) < 3 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'prefix must be at least 3 characters — refusing to run without a specific prefix.';
+  END IF;
+
   OPEN cur;
 
   read_loop: LOOP
@@ -68,6 +73,49 @@ BEGIN
     END IF;
     SET @drop_stmt = CONCAT('DROP DATABASE `', db_name, '`');
     PREPARE stmt FROM @drop_stmt;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+  END LOOP;
+
+  CLOSE cur;
+END//
+DELIMITER ;
+
+-- Converts all tables in databases whose name starts with the given prefix
+-- to utf8mb4 / utf8mb4_unicode_ci.  prefix must be at least 3 characters.
+-- Usage examples:
+--   CALL FixCollationsWithPrefix('dssm_');
+--   CALL FixCollationsWithPrefix('msscore');
+DELIMITER //
+CREATE PROCEDURE `FixCollationsWithPrefix`(IN prefix VARCHAR(100))
+BEGIN
+  DECLARE done INT DEFAULT FALSE;
+  DECLARE v_schema VARCHAR(255);
+  DECLARE v_table  VARCHAR(255);
+  DECLARE cur CURSOR FOR
+    SELECT TABLE_SCHEMA, TABLE_NAME
+    FROM   INFORMATION_SCHEMA.TABLES
+    WHERE  TABLE_SCHEMA LIKE CONCAT(prefix, '%')
+      AND  TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')
+      AND  TABLE_COLLATION LIKE 'latin1%'
+      AND  TABLE_TYPE = 'BASE TABLE';
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+  IF prefix IS NULL OR CHAR_LENGTH(TRIM(prefix)) < 3 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'prefix must be at least 3 characters — refusing to run without a specific prefix.';
+  END IF;
+
+  OPEN cur;
+
+  fix_loop: LOOP
+    FETCH cur INTO v_schema, v_table;
+    IF done THEN LEAVE fix_loop; END IF;
+    SET @fix_stmt = CONCAT(
+      'ALTER TABLE `', v_schema, '`.`', v_table,
+      '` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+    );
+    PREPARE stmt FROM @fix_stmt;
     EXECUTE stmt;
     DEALLOCATE PREPARE stmt;
   END LOOP;

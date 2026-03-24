@@ -713,7 +713,7 @@ The storagename_mode and storagename_parse settings are fixed at registration ti
  AUTO_INCREMENT 1923  
 ]]></options>
 		</table>
-		<procedure name="DropDatabasesWithPrefix" id="44f5048d-bf31-4cd2-831b-47ca38844d2c" isSystem="false" params_known="y" >
+		<procedure name="DropDatabasesWithPrefix" id="803b6204-4ecc-47b3-bd57-ef29d36902b9" isSystem="false" params_known="y" >
 			<string><![CDATA[CREATE PROCEDURE ${nameWithSchemaName}(IN prefix VARCHAR(100))
 BEGIN
   DECLARE done INT DEFAULT FALSE;
@@ -724,6 +724,11 @@ BEGIN
     WHERE SCHEMA_NAME LIKE CONCAT(prefix, '%')
       AND SCHEMA_NAME NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys');
   DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+  IF prefix IS NULL OR CHAR_LENGTH(TRIM(prefix)) < 3 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'prefix must be at least 3 characters — refusing to run without a specific prefix.';
+  END IF;
 
   OPEN cur;
 
@@ -742,8 +747,46 @@ BEGIN
 END]]></string>
 			<input_param name="prefix" jt="12" type="varchar" inOut="1" />
 		</procedure>
+		<procedure name="FixCollationsWithPrefix" id="1dd33ea5-b53a-4702-9a5a-2cf5adef34fc" isSystem="false" params_known="y" >
+			<string><![CDATA[CREATE PROCEDURE ${nameWithSchemaName}(IN prefix VARCHAR(100))
+BEGIN
+  DECLARE done INT DEFAULT FALSE;
+  DECLARE v_schema VARCHAR(255);
+  DECLARE v_table  VARCHAR(255);
+  DECLARE cur CURSOR FOR
+    SELECT TABLE_SCHEMA, TABLE_NAME
+    FROM   INFORMATION_SCHEMA.TABLES
+    WHERE  TABLE_SCHEMA LIKE CONCAT(prefix, '%')
+      AND  TABLE_SCHEMA NOT IN ('mysql', 'information_schema', 'performance_schema', 'sys')
+      AND  TABLE_COLLATION LIKE 'latin1%'
+      AND  TABLE_TYPE = 'BASE TABLE';
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+  IF prefix IS NULL OR CHAR_LENGTH(TRIM(prefix)) < 3 THEN
+    SIGNAL SQLSTATE '45000'
+      SET MESSAGE_TEXT = 'prefix must be at least 3 characters — refusing to run without a specific prefix.';
+  END IF;
+
+  OPEN cur;
+
+  fix_loop: LOOP
+    FETCH cur INTO v_schema, v_table;
+    IF done THEN LEAVE fix_loop; END IF;
+    SET @fix_stmt = CONCAT(
+      'ALTER TABLE `', v_schema, '`.`', v_table,
+      '` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+    );
+    PREPARE stmt FROM @fix_stmt;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+  END LOOP;
+
+  CLOSE cur;
+END]]></string>
+			<input_param name="prefix" jt="12" type="varchar" inOut="1" />
+		</procedure>
 	</schema>
-	<diagram_group name="Default" id="0d69e858-9e61-4191-9591-02da19bd4988" >
+	<diagram_group name="Default" id="36918285-b3cc-45a3-9511-5892224d36dc" >
 		<diagram name="mssclient" id="3ffb53d2-b523-405c-b56e-4864481bd7c9" joined_routing="y" show_relation="cascade" >
 			<entity schema="dss_client" name="chunk_info" color="C1D8EE" x="95" y="209" />
 			<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="95" y="418" />
