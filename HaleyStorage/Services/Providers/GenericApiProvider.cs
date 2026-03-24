@@ -11,10 +11,10 @@ using System.Threading.Tasks;
 
 namespace Haley.Services {
     /// <summary>
-    /// <see cref="IStorageProvider"/> that stores bytes on a remote FuDog instance via its standard
-    /// vault API (<c>api/va/file</c>). Can be used as a staging provider (for StageAndMove /
+    /// <see cref="IStorageProvider"/> that stores bytes on a remote HaleyStorage instance via its
+    /// standard vault API (<c>api/va/file</c>). Can be used as a staging provider (for StageAndMove /
     /// StageAndRetainCopy workflows) or as a primary provider when all writes should go to a
-    /// centralised FuDog cloud.
+    /// centralised remote server.
     /// <para>
     /// <b>Storage reference model:</b> <see cref="BuildStorageRef"/> returns the logical GUID
     /// unchanged — no sharding. This flat ID is used as the <c>fn</c> filename on every remote
@@ -25,15 +25,15 @@ namespace Haley.Services {
     /// optionally enforce per-tenant authentication.
     /// </para>
     /// </summary>
-    public class FuDogApiProvider : IStorageProvider {
-        public const string PROVIDER_KEY = "FuDogApi";
+    public class GenericApiProvider : IStorageProvider {
+        public const string PROVIDER_KEY = "GenericApi";
         public string Key { get; set; } = PROVIDER_KEY;
 
         readonly HttpClient _http;
-        readonly FuDogApiProviderConfig _config;
+        readonly GenericApiProviderConfig _config;
         readonly ILogger _logger;
 
-        public FuDogApiProvider(HttpClient http, FuDogApiProviderConfig config, ILogger logger = null) {
+        public GenericApiProvider(HttpClient http, GenericApiProviderConfig config, ILogger logger = null) {
             _http   = http   ?? throw new ArgumentNullException(nameof(http));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger;
@@ -47,14 +47,14 @@ namespace Haley.Services {
 
         // ── Base URL access ───────────────────────────────────────────────────
 
-        /// <summary>Returns the configured base URL of the remote FuDog instance.</summary>
+        /// <summary>Returns the configured base URL of the remote instance.</summary>
         public string GetBaseUrl() => _config.BaseUrl;
 
         // ── Build storage reference ───────────────────────────────────────────
 
         /// <summary>
         /// Returns the logical ID as-is — no directory sharding.
-        /// The remote FuDog stores files in a flat namespace keyed by this ID as the display name.
+        /// The remote server stores files in a flat namespace keyed by this ID as the display name.
         /// Extension is omitted; the remote derives it from the multipart filename on upload.
         /// </summary>
         public string BuildStorageRef(string logicalId, string extension, Func<bool, (int length, int depth)> splitProvider, string suffix)
@@ -76,9 +76,9 @@ namespace Haley.Services {
         // ── Write ─────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Uploads <paramref name="dataStream"/> to the remote FuDog instance's standard file
-        /// endpoint (<c>POST api/va/file</c>). The <paramref name="storagePath"/> (local version
-        /// CUID) is used as the remote filename so the file can be retrieved by name later.
+        /// Uploads <paramref name="dataStream"/> to the remote instance's standard file endpoint
+        /// (<c>POST api/va/file</c>). The <paramref name="storagePath"/> (local version CUID) is
+        /// used as the remote filename so the file can be retrieved by name later.
         /// Re-uploading the same ID creates a new version on the remote (Revise mode is default).
         /// </summary>
         public async Task<ProviderWriteResult> WriteAsync(string storagePath, Stream dataStream, int bufferSize, ExistConflictResolveMode conflictMode) {
@@ -89,8 +89,6 @@ namespace Haley.Services {
                 var content = new MultipartFormDataContent();
                 var streamContent = new StreamContent(dataStream, bufferSize > 0 ? bufferSize : 81920);
                 streamContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                // Use storagePath as both the form field name and the filename.
-                // The remote VaultCoreControllerBase reads the Content-Disposition filename as the stored name.
                 content.Add(streamContent, "file", storagePath);
 
                 var resp = await SendWithRetryAsync(() => new HttpRequestMessage(HttpMethod.Post, url) { Content = content });
@@ -99,7 +97,7 @@ namespace Haley.Services {
 
                 return ProviderWriteResult.Ok();
             } catch (Exception ex) {
-                _logger?.LogError(ex, "FuDogApiProvider.WriteAsync failed for {Key}", storagePath);
+                _logger?.LogError(ex, "GenericApiProvider.WriteAsync failed for {Key}", storagePath);
                 return ProviderWriteResult.Fail(ex.Message);
             }
         }
@@ -107,7 +105,7 @@ namespace Haley.Services {
         // ── Read ──────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Downloads bytes from the remote FuDog instance (<c>GET api/va/file</c>).
+        /// Downloads bytes from the remote instance (<c>GET api/va/file</c>).
         /// Looks up the file by the <paramref name="storagePath"/> used as the display name (<c>fn</c>).
         /// Returns a network stream — the caller is responsible for disposing it.
         /// </summary>
@@ -121,7 +119,7 @@ namespace Haley.Services {
                 var stream = await resp.Content.ReadAsStreamAsync();
                 return ProviderReadResult.Ok(stream, extension: string.Empty);
             } catch (Exception ex) {
-                _logger?.LogError(ex, "FuDogApiProvider.ReadAsync failed for {Key}", storagePath);
+                _logger?.LogError(ex, "GenericApiProvider.ReadAsync failed for {Key}", storagePath);
                 return ProviderReadResult.Fail(ex.Message);
             }
         }
@@ -129,34 +127,28 @@ namespace Haley.Services {
         // ── Delete ────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Deletes the remote file. Currently the remote FuDog delete endpoint is not exposed;
+        /// Deletes the remote file. Currently the remote delete endpoint is not exposed;
         /// this is a no-op that logs and returns <c>true</c> to avoid blocking callers.
         /// </summary>
         public Task<bool> DeleteAsync(string storagePath) {
-            _logger?.LogWarning("FuDogApiProvider.DeleteAsync called for {Key} — remote delete is not yet implemented.", storagePath);
-            return Task.FromResult(true); // non-fatal: caller logs but continues
+            _logger?.LogWarning("GenericApiProvider.DeleteAsync called for {Key} — remote delete is not yet implemented.", storagePath);
+            return Task.FromResult(true);
         }
 
         // ── Exists / GetSize ──────────────────────────────────────────────────
 
-        /// <summary>
-        /// Returns true when the file exists on the remote instance.
-        /// Checks via the file-details endpoint using the display-name (<c>fn</c>) lookup.
-        /// </summary>
+        /// <summary>Returns true when the file exists on the remote instance.</summary>
         public bool Exists(string storagePath)
             => GetRemoteSize(storagePath).GetAwaiter().GetResult() >= 0;
 
-        /// <summary>
-        /// Returns the byte count of the remote file, or 0 if unknown / not found.
-        /// </summary>
+        /// <summary>Returns the byte count of the remote file, or 0 if unknown / not found.</summary>
         public long GetSize(string storagePath)
             => Math.Max(0, GetRemoteSize(storagePath).GetAwaiter().GetResult());
 
         // ── Access URL ────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Retrieves a temporary access URL from the remote FuDog instance's
-        /// <c>GET api/va/file/url</c> endpoint.
+        /// Retrieves a temporary access URL from the remote instance's <c>GET api/va/file/url</c> endpoint.
         /// Returns <c>null</c> when the remote returns no URL (e.g. FS-backed remote).
         /// </summary>
         public async Task<string> GetAccessUrl(string storageRef, TimeSpan expiry) {
@@ -178,10 +170,6 @@ namespace Haley.Services {
 
         // ── Helpers ───────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// Returns the remote file size via <c>GET api/va/file/details</c>.
-        /// Returns -1 when the file is not found; 0 when size is unknown.
-        /// </summary>
         async Task<long> GetRemoteSize(string storagePath) {
             try {
                 var scope = BuildScopeQuery();
@@ -191,7 +179,6 @@ namespace Haley.Services {
                 if (!resp.IsSuccessStatusCode) return -1;
                 var body  = await resp.Content.ReadAsStringAsync();
                 using var doc = JsonDocument.Parse(body);
-                // Response is VaultFileDetailsResponse. Size lives on the latest version entry.
                 if (doc.RootElement.TryGetProperty("versions", out var versions) && versions.ValueKind == JsonValueKind.Array) {
                     foreach (var v in versions.EnumerateArray()) {
                         if (v.TryGetProperty("size", out var sz) && sz.ValueKind == JsonValueKind.Number)
@@ -204,7 +191,6 @@ namespace Haley.Services {
             }
         }
 
-        /// <summary>Builds the shared scope query string from the configured client/module/workspace.</summary>
         string BuildScopeQuery() {
             var parts = new System.Collections.Generic.List<string>();
             if (!string.IsNullOrWhiteSpace(_config.Client))    parts.Add($"c={Uri.EscapeDataString(_config.Client)}");
@@ -213,11 +199,6 @@ namespace Haley.Services {
             return string.Join("&", parts);
         }
 
-        /// <summary>
-        /// Sends an HTTP request with simple linear retry on transient failures.
-        /// The message factory is called for each attempt because <see cref="HttpRequestMessage"/>
-        /// cannot be sent more than once.
-        /// </summary>
         async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> messageFactory) {
             int attempts = Math.Max(1, _config.MaxRetries + 1);
             HttpResponseMessage last = null;
@@ -226,9 +207,7 @@ namespace Haley.Services {
                     last = await _http.SendAsync(messageFactory(), HttpCompletionOption.ResponseHeadersRead);
                     if ((int)last.StatusCode < 500) return last;
                 } catch (TaskCanceledException) when (i < attempts - 1) {
-                    // timeout — retry
                 } catch (HttpRequestException) when (i < attempts - 1) {
-                    // transient — retry
                 }
                 if (i < attempts - 1)
                     await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, i)));
