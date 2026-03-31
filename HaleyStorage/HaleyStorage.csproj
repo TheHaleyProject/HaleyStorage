@@ -49,7 +49,7 @@
     <HaleyAbstractions Condition="'$(HaleyAbstractions)' == '' AND Exists('..\..\HaleyAbstractions\HaleyAbstractions\HaleyAbstractions.csproj')">..\..\HaleyAbstractions\HaleyAbstractions</HaleyAbstractions>
   </PropertyGroup>
 
-  <Choose>
+  <!--<Choose>
     <When Condition="Exists($(HaleyAbstractions))">
       <ItemGroup>
         <ProjectReference Include="$(HaleyAbstractions)\HaleyAbstractions.csproj">
@@ -62,7 +62,7 @@
         <PackageReference Include="Haley.Abstractions" Version="$(HaleyAbstractionsVersion)" />
       </ItemGroup>
     </Otherwise>
-  </Choose>
+  </Choose>-->
   <Choose>
     <When Condition="Exists($(HaleyHelpers))">
       <ItemGroup>

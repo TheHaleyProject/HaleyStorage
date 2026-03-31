@@ -16,9 +16,11 @@ namespace Haley.Models {
     /// and the current version number.
     /// </summary>
     internal class VaultStorable : VaultObject, IVaultStorable {
-        public string StorageName { get; set; } //Should be the controlled name or a name compatible for the database 
+        public string StorageName { get; set; } //Should be the controlled name or a name compatible for the database
         public bool IsVirtual { get; set; }
         public int Version { get; set; } = 0;
+        /// <summary>Document-level CUID (compact-N) — the stable ruid. Set by RegisterDocumentsInternal after document insert/lookup.</summary>
+        public string? DocumentCuid { get; set; }
         public VaultNameMode NameMode { get; set; } //Parsing or create mode is defined at application level?
         public VaultNameParseMode ParseMode { get; set; } //If false, we fall back to parsing.
         public override IVaultStorable UpdateCUID(params string[] parentNames) {

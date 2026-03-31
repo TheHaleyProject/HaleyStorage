@@ -11,6 +11,8 @@ namespace Haley.Models {
         public string? SanitizedName { get; set; } //pn is processed name.
         [FromQuery(Name = "uid")]
         public string? Cuid { get; set; }
+        [FromQuery(Name = "ruid")]
+        public string? RootCuid { get; set; }
         public VaultFileApiInput() {
         }
     }

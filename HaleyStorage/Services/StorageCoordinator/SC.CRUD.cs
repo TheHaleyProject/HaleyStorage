@@ -90,6 +90,10 @@ namespace Haley.Services {
                 result.Message = writeResult.Message;
 
                 if (input.File != null) result.SetResult(input.File);
+                if (input.File is StorageFileRoute sfrUp) {
+                    result.VersionCuid = sfrUp.Cuid;
+                    result.RootCuid = sfrUp.RootCuid;
+                }
                 if (result.Status && !writeResult.AlreadyExisted) {
                     result.Size = input.FileStream.Length;
                     result.SizeHR = result.Size.ToFileSize(false);

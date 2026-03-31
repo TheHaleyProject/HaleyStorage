@@ -274,6 +274,8 @@ namespace Haley.Services {
             if (string.IsNullOrWhiteSpace(input.File.Cuid)) input.File.SetCuid(holder.Cuid);
             if (string.IsNullOrWhiteSpace(input.File.StorageName)) input.File.StorageName = holder.StorageName;
             if (input.File.Id < 1) input.File.SetId(holder.Id);
+            if (input.File is StorageFileRoute sfrReg && string.IsNullOrWhiteSpace(sfrReg.RootCuid))
+                sfrReg.RootCuid = holder.DocumentCuid;
             if (forupload) input.File.Size = inputW!.FileStream?.Length ?? 0;
         }
 
@@ -422,6 +424,17 @@ namespace Haley.Services {
 
                 if (existing?.Status == true && existing.Result is Dictionary<string, object> dic && dic.Count > 0)
                     return PopulateFileFromDic(input, dic);
+
+            } else if (input.File is StorageFileRoute sfrRoot && !string.IsNullOrWhiteSpace(sfrRoot.RootCuid)) {
+                // ruid path — resolve document CUID to latest version before any other work.
+                var existing = await Indexer.GetDocVersionInfoByDocCuid(input.Scope.Module.Cuid.ToString("N"), sfrRoot.RootCuid);
+
+                if (existing?.Status == true && existing.Result is Dictionary<string, object> rdic && rdic.Count > 0) {
+                    if (string.IsNullOrWhiteSpace(input.File.Cuid))
+                        input.File.SetCuid(rdic["uid"]?.ToString());
+                    return PopulateFileFromDic(input, rdic);
+                }
+                if (!forupload) throw new ArgumentException("File not found for the given ruid.");
 
             } else if (!string.IsNullOrWhiteSpace(input.File?.DisplayName) || !string.IsNullOrWhiteSpace(input.RequestedName)) {
                 var searchName = input.File?.DisplayName ?? input.RequestedName;

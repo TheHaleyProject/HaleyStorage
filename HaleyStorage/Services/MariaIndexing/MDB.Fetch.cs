@@ -11,6 +11,29 @@ namespace Haley.Utils {
     /// or to the name-based workspace search path.
     /// </summary>
     internal partial class MariaDBIndexing {
+        /// <summary>
+        /// Resolves a document-level CUID (ruid) to the latest version's full info row.
+        /// Looks up the document by its own CUID, then delegates to <see cref="GetDocVersionInfo(string,long)"/>
+        /// which fetches the max version via <c>GET_LATEST_BY_PARENT</c>.
+        /// </summary>
+        public async Task<IFeedback> GetDocVersionInfoByDocCuid(string moduleCuid, string documentCuid) {
+            var fb = new Feedback();
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid) || string.IsNullOrWhiteSpace(documentCuid))
+                    return fb.SetMessage("Module CUID and document CUID are required.");
+                if (!_agw.ContainsKey(moduleCuid))
+                    return fb.SetMessage($"No adapter found for key {moduleCuid}");
+                var docCuid = ToDbCuid(documentCuid);
+                var docId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCUMENT.GET_BY_CUID, default, (CUID, docCuid));
+                if (docId == null || docId < 1)
+                    return fb.SetMessage($"Document not found for ruid {documentCuid}");
+                return await GetDocVersionInfo(moduleCuid, docId.Value);
+            } catch (Exception ex) {
+                _logger?.LogError(ex.StackTrace);
+                return fb.SetMessage(ex.StackTrace);
+            }
+        }
+
         /// <summary>Fetches the latest <c>version_info</c> row for a doc_version identified by its auto-increment ID.</summary>
         public Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id) {
             return GetDocVersionInfoInternal(moduleCuid, id, string.Empty);

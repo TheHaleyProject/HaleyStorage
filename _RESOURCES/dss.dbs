@@ -128,6 +128,9 @@
 			<column name="display_name" prior="name" type="VARCHAR" length="200" mandatory="y" >
 				<comment><![CDATA[Human-readable label for the document. Free-form text, may include spaces, punctuation, and Unicode. E.g. "Q1 2024 Invoice – ACME Corp" or "Employee Handbook v3 (Draft)". Written by the application; not auto-derived.]]></comment>
 			</column>
+			<column name="metadata" type="TEXT" >
+				<comment><![CDATA[to store document level metadata]]></comment>
+			</column>
 			<index name="pk_doc_info" unique="PRIMARY_KEY" >
 				<column name="file" />
 			</index>
@@ -786,19 +789,19 @@ END]]></string>
 			<input_param name="prefix" jt="12" type="varchar" inOut="1" />
 		</procedure>
 	</schema>
-	<diagram_group name="Default" id="36918285-b3cc-45a3-9511-5892224d36dc" >
+	<diagram_group name="Default" id="62e7826c-e510-4c43-9b97-66a35a0a86b8" >
 		<diagram name="mssclient" id="3ffb53d2-b523-405c-b56e-4864481bd7c9" joined_routing="y" show_relation="cascade" >
 			<entity schema="dss_client" name="chunk_info" color="C1D8EE" x="95" y="209" />
 			<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="95" y="418" />
-			<entity schema="dss_client" name="directory" color="C1D8EE" x="551" y="589" />
+			<entity schema="dss_client" name="directory" color="C1D8EE" x="551" y="646" />
 			<entity schema="dss_client" name="doc_info" color="C1D8EE" x="551" y="475" />
 			<entity schema="dss_client" name="doc_version" color="C1D8EE" x="323" y="304" />
 			<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="513" />
-			<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="741" />
-			<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="608" />
-			<entity schema="dss_client" name="vault" color="C1D8EE" x="171" y="741" />
+			<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="798" />
+			<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="665" />
+			<entity schema="dss_client" name="vault" color="C1D8EE" x="171" y="798" />
 			<entity schema="dss_client" name="version_info" color="C1D8EE" x="532" y="209" />
-			<entity schema="dss_client" name="workspace" color="C1D8EE" x="342" y="741" />
+			<entity schema="dss_client" name="workspace" color="C1D8EE" x="342" y="798" />
 			<shape x="114" y="57" style="Rectangle" color="FF0000" >
 				<comment><![CDATA[If the workspace is controlled, then the directories are LOGICAL or else 
 the directories are PHYSICAL]]></comment>

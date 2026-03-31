@@ -94,12 +94,11 @@ CREATE TABLE IF NOT EXISTS `document` (
 CREATE TABLE IF NOT EXISTS `doc_info` (
   `file` bigint(20) NOT NULL COMMENT 'PK and FK → document.id. One-to-one optional relationship — insert a row here to attach a custom display name to the document. Omit to use the raw filename derived from name_store.',
   `display_name` varchar(200) NOT NULL COMMENT 'Human-readable label for the document. Free-form text, may include spaces, punctuation, and Unicode. E.g. "Q1 2024 Invoice – ACME Corp" or "Employee Handbook v3 (Draft)". Written by the application; not auto-derived.',
+  `metadata` TEXT NULL DEFAULT NULL COMMENT 'Optional document-level metadata (JSON or plain text). Stable across all versions. Set independently via PUT /api/va/file/docmeta.',
   PRIMARY KEY (`file`),
   KEY `idx_doc_info` (`display_name`),
   CONSTRAINT `fk_file_info_file_index_0` FOREIGN KEY (`file`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Optional display name override for a document. When present, the application shows display_name instead of the raw filename derived from name_store. Inserted/updated by UpdateDocDisplayName(). Not every document has a row here.';
-
--- Data exporting was unselected.
 
 -- Dumping structure for table dss_client.doc_version
 CREATE TABLE IF NOT EXISTS `doc_version` (

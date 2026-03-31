@@ -15,6 +15,8 @@ namespace Haley.Models {
         public string DirectoryName { get; set; } = string.Empty;
         public long DirectoryParentId { get; set; }
         public int VersionCount { get; set; }
+        /// <summary>Document-level metadata (from doc_info.metadata). Empty string if not set.</summary>
+        public string DocumentMetadata { get; set; } = string.Empty;
         public List<VaultFileVersionInfo> Versions { get; set; } = new();
     }
 }

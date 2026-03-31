@@ -27,6 +27,8 @@ namespace Haley.Services {
         Task<IFeedback> UpdateDocDisplayName(string moduleCuid, long versionId, string displayName);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, string cuid);
+        /// <summary>Resolves a document CUID (ruid) to the latest version's full info row.</summary>
+        Task<IFeedback> GetDocVersionInfoByDocCuid(string moduleCuid, string documentCuid);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, string wsCuid, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long wsId, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);
         Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50);
@@ -42,6 +44,13 @@ namespace Haley.Services {
         bool TryAddInfo(IVaultObject dirInfo, bool replace = false);
         IEnumerable<T> GetAllComponents<T>() where T : IVaultObject;
         Task<IFeedback<string>> GetParentName(IVaultFileReadRequest request);
+        // ── Metadata ─────────────────────────────────────────────────────────
+        /// <summary>Returns true if the given version CUID is the latest version of its document.</summary>
+        Task<bool> IsLatestVersion(string moduleCuid, string versionCuid);
+        Task<IFeedback<string>> GetVersionMetadata(string moduleCuid, string versionCuid);
+        Task<IFeedback> SetVersionMetadata(string moduleCuid, string versionCuid, string metadata);
+        Task<IFeedback<string>> GetDocumentMetadata(string moduleCuid, string documentCuid);
+        Task<IFeedback> SetDocumentMetadata(string moduleCuid, string documentCuid, string metadata);
         // Chunking
         Task<IFeedback> UpsertChunkInfo(string moduleCuid, long versionId, long chunkSizeMb, int totalParts, string chunkFolderName, string chunkFolderPath, bool isCompleted = false, string callId = null);
         Task<IFeedback> UpsertChunkPart(string moduleCuid, long versionId, long partNumber, int sizeMb, string hash = null, string callId = null);

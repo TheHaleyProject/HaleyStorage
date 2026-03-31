@@ -29,6 +29,8 @@ namespace Haley.Models {
         /// Set to 0 to disable revision backups entirely. Default: 3.
         /// </summary>
         public int MaxRevisionCopies { get; set; } = 3;
+        /// <summary>When <c>true</c>, metadata can be set on any version — not just the latest. Default <c>false</c>.</summary>
+        public bool AllowMetadataOnOldVersions { get; set; } = false;
 
         public StorageRegistryConfig() { }
     }

@@ -179,12 +179,16 @@ namespace Haley.Internal {
                 public const string GET_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.deleted = 0;";
                 public const string COUNT_BY_DIRECTORY = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT} and doc.deleted = 0;";
                 public const string GET_DETAILS_BY_ID =
-                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name
+                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name, di.metadata as doc_metadata
                        from document as d
                        left join doc_info as di on di.file = d.id
                        inner join directory as dir on dir.id = d.parent and dir.deleted = 0
                        where d.id = {ID} and d.deleted = 0
                        limit 1;";
+                public const string GET_META_BY_CUID =
+                    $@"select di.metadata from doc_info as di inner join document as d on d.id = di.file where d.cuid = {CUID} and d.deleted = 0 limit 1;";
+                public const string UPSERT_META =
+                    $@"insert into doc_info (file, display_name, metadata) select d.id, coalesce(di.display_name, ''), {METADATA} from document as d left join doc_info as di on di.file = d.id where d.cuid = {CUID} and d.deleted = 0 limit 1 on duplicate key update metadata = VALUES(metadata);";
                 public const string GET_BY_NAME =
                     $@"select dv.id
                        from document as dv
@@ -211,6 +215,14 @@ namespace Haley.Internal {
                 public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT};";
                 public const string GET_DOCUMENT_ID_BY_VERSION_ID = $@"select dv.parent from doc_version as dv where dv.id = {VALUE} limit 1;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_CUID = $@"select dv.parent from doc_version as dv where dv.cuid = {VALUE} limit 1;";
+                /// <summary>Returns 1 if the given version CUID is the latest version of its document, 0 otherwise.</summary>
+                public const string IS_LATEST_BY_CUID =
+                    $@"select case when dv.ver = (select max(dvi.ver) from doc_version as dvi where dvi.parent = dv.parent) then 1 else 0 end as is_latest
+                       from doc_version as dv where dv.cuid = {VALUE} limit 1;";
+                public const string GET_META_BY_CUID =
+                    $@"select vi.metadata from version_info as vi inner join doc_version as dv on dv.id = vi.id where dv.cuid = {VALUE} limit 1;";
+                public const string UPDATE_META_BY_ID =
+                    $@"update version_info set metadata = {METADATA} where id = {ID};";
 
                 // Writes -> storage_name/storage_ref/size/hash/synced_at/profile_info_id
                 // hash, synced_at, and profile_info_id are nullable — pass DBNull.Value when not available.

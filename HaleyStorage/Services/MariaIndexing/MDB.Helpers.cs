@@ -256,6 +256,7 @@ namespace Haley.Utils {
                     holder.SetCuid(result.guid);
                     holder.Id = result.id;   // IIdentityBase.Id has public setter
                     holder.Version = version;
+                    if (holder is VaultStorable vs) vs.DocumentCuid = docInfo.uid;
                 }
 
                 return result;

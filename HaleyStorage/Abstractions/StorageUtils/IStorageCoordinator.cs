@@ -95,5 +95,33 @@ namespace Haley.Abstractions {
         /// <paramref name="version"/> must match a value returned by <see cref="GetRevisions"/>.
         /// </summary>
         Task<IVaultStreamResponse> DownloadRevision(IVaultFileReadRequest request, int version);
+
+        // ── Metadata ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Gets the metadata string stored on a specific version (uid).
+        /// <paramref name="request"/> provides the module scope; <paramref name="versionCuid"/> is the uid.
+        /// </summary>
+        Task<IFeedback<string>> GetVersionMetadata(IVaultReadRequest request, string versionCuid);
+
+        /// <summary>
+        /// Sets or clears metadata on a version (uid).
+        /// When <see cref="IVaultRegistryConfig.AllowMetadataOnOldVersions"/> is <c>false</c> (default),
+        /// returns an error if the supplied version is not the latest for its document.
+        /// Pass <c>null</c> or an empty string to clear the metadata.
+        /// </summary>
+        Task<IFeedback> SetVersionMetadata(IVaultReadRequest request, string versionCuid, string metadata);
+
+        /// <summary>
+        /// Gets the metadata string stored at the document level (ruid).
+        /// <paramref name="request"/> provides the module scope; <paramref name="documentCuid"/> is the ruid.
+        /// </summary>
+        Task<IFeedback<string>> GetDocumentMetadata(IVaultReadRequest request, string documentCuid);
+
+        /// <summary>
+        /// Sets or clears document-level metadata (ruid). Pass <c>null</c> or empty to clear.
+        /// <paramref name="request"/> provides the module scope; <paramref name="documentCuid"/> is the ruid.
+        /// </summary>
+        Task<IFeedback> SetDocumentMetadata(IVaultReadRequest request, string documentCuid, string metadata);
     }
 }

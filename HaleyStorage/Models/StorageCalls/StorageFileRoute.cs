@@ -27,6 +27,11 @@ namespace Haley.Models {
         /// 0 means unknown (legacy version written before profile tracking was added).
         /// </summary>
         public long ProfileInfoId { get; set; } = 0;
+        /// <summary>
+        /// Document-level CUID (compact-N). When set, the coordinator resolves this to the
+        /// latest version's uid before any other processing — enabling stable permanent links.
+        /// </summary>
+        public string? RootCuid { get; set; }
 
         public IVaultFileRoute SetId(long id) { Id = id; return this; }
         public IVaultFileRoute SetDisplayName(string name) { DisplayName = name; return this; }

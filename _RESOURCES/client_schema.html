@@ -143,7 +143,7 @@
 <a name='layout1' style='position:sticky; top:0;'></a><h4>mssclient</h4>
 <input type='text' placeholder='Highlight in Diagram' oninput='searchSVG(this.value)' class='text-start my-2'/>
 <div class='svgContainer'>
-<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'   width='741' height='1003' viewBox='0 0 741 1003' >
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'   width='741' height='1060' viewBox='0 0 741 1060' >
   <script type='text/ecmascript'>
   <![CDATA[
   function hghl(el) { for ( var i in el ){ var elem = document.getElementById(el[i]); if ( elem != null ) elem.setAttribute('class','highlight');  }  }
@@ -397,7 +397,7 @@
     <stop offset='100%' stop-color='#F1C6C6' />
   </radialGradient>
 <!-- == Desktop == -->
-<rect x='0' y='0' width='741' height='1003' rx='10' ry='10' style='fill:url(#layoutBgA); stroke:#ccc; stroke-width:.7px; cursor:move;' />
+<rect x='0' y='0' width='741' height='1060' rx='10' ry='10' style='fill:url(#layoutBgA); stroke:#ccc; stroke-width:.7px; cursor:move;' />
 
 <!-- == Legend == -->
 <g transform='translate(10,10)'>
@@ -406,100 +406,10 @@
 Zoom with CTRL+whell mouse button, pan by dragging the diagram with the right-mouse button</title><use x='349' y='28' href='#bulb' width='24' height='24'/></g>
   <g><title>DbSchema Database Designer</title><use x='20' y='40' href='#logo'/></g>  <text x='20' y='30' class='legendTitle' >mssclient</text> 
   <text x='57' y='47' class='legendSubTitle'><tspan>Read schema comments as mouse-over tooltips</tspan></text>
-  <a href='https://dbschema.com'><text x='57' y='61' class='legendSubTitle'><tspan>DbSchema.com © 2026-03-22 Wise Coders<title>DbSchema.com © 2026-03-22 Wise Coders</title></tspan></text></a> 
+  <a href='https://dbschema.com'><text x='57' y='61' class='legendSubTitle'><tspan>DbSchema.com © 2026-03-31 Wise Coders<title>DbSchema.com © 2026-03-31 Wise Coders</title></tspan></text></a> 
 </g>
 
 <g transform='translate(0,110)'>
-<!-- == Fk 'doc_info_fk_file_info_file_index_0' == -->
-<path id='doc_info_fk_file_info_file_index_0'  onmouseover="hghl(['doc_info_fk_file_info_file_index_0','dss_client.doc_info.file','dss_client.document.id'])" onmouseout="uhghl(['doc_info_fk_file_info_file_index_0','dss_client.doc_info.file','dss_client.document.id'])" transform='translate(10,0)' class='unhighlight' d='M 532,513L 485,513Q 475,513 475,523L 475,542Q 475,551 466,551L 456,551' >
-	<title>&#x1F517;  Foreign Key fk_file_info_file_index_0
-doc_info &#10132; document ( file -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#One)' marker-end='url(#One)'    d='M 532,513L 485,513Q 475,513 475,523L 475,542Q 475,551 466,551L 456,551' ><title>&#x1F517;  Foreign Key fk_file_info_file_index_0
-doc_info &#10132; document ( file -&gt; id )
-</title></path>
-<text x='541' y='507' transform='rotate(0 541,507)' class='relName'></text>
-<!-- == Fk 'document_fk_document_workspace' == -->
-<path id='document_fk_document_workspace'  onmouseover="hghl(['document_fk_document_workspace','dss_client.document.workspace','dss_client.workspace.id'])" onmouseout="uhghl(['document_fk_document_workspace','dss_client.document.workspace','dss_client.workspace.id'])" transform='translate(10,0)' class='unhighlight' d='M 456,684L 466,684Q 475,684 475,694L 475,770Q 475,779 466,779L 456,779' >
-	<title>&#x1F517;  Foreign Key fk_document_workspace
-document &#10132; workspace ( workspace -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)'     d='M 456,684L 466,684Q 475,684 475,694L 475,770Q 475,779 466,779L 456,779' ><title>&#x1F517;  Foreign Key fk_document_workspace
-document &#10132; workspace ( workspace -&gt; id )
-</title></path>
-<text x='465' y='678' transform='rotate(0 465,678)' class='relName'></text>
-<!-- == Fk 'document_fk_document_directory' == -->
-<path id='document_fk_document_directory'  onmouseover="hghl(['document_fk_document_directory','dss_client.document.parent','dss_client.directory.id'])" onmouseout="uhghl(['document_fk_document_directory','dss_client.document.parent','dss_client.directory.id'])" transform='translate(10,0)' class='unhighlight' d='M 456,627L 532,627' >
-	<title>&#x1F517;  Foreign Key fk_document_directory
-document &#10132; directory ( parent -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 456,627L 532,627' ><title>&#x1F517;  Foreign Key fk_document_directory
-document &#10132; directory ( parent -&gt; id )
-</title></path>
-<text x='465' y='621' transform='rotate(0 465,621)' class='relName'></text>
-<!-- == Fk 'document_fk_document_name_store' == -->
-<path id='document_fk_document_name_store'  onmouseover="hghl(['document_fk_document_name_store','dss_client.document.name','dss_client.name_store.id'])" onmouseout="uhghl(['document_fk_document_name_store','dss_client.document.name','dss_client.name_store.id'])" transform='translate(10,0)' class='unhighlight' d='M 304,646L 209,646' >
-	<title>&#x1F517;  Foreign Key fk_document_name_store
-document &#10132; name_store ( name -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 304,646L 209,646' ><title>&#x1F517;  Foreign Key fk_document_name_store
-document &#10132; name_store ( name -&gt; id )
-</title></path>
-<text x='313' y='640' transform='rotate(0 313,640)' class='relName'></text>
-<!-- == Fk 'name_store_fk_name_store_extension' == -->
-<path id='name_store_fk_name_store_extension'  onmouseover="hghl(['name_store_fk_name_store_extension','dss_client.name_store.extension','dss_client.extension.id'])" onmouseout="uhghl(['name_store_fk_name_store_extension','dss_client.name_store.extension','dss_client.extension.id'])" transform='translate(10,0)' class='unhighlight' d='M 76,665L 29,665Q 19,665 19,675L 19,770Q 19,779 29,779L 38,779' >
-	<title>&#x1F517;  Foreign Key fk_name_store_extension
-name_store &#10132; extension ( extension -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 76,665L 29,665Q 19,665 19,675L 19,770Q 19,779 29,779L 38,779' ><title>&#x1F517;  Foreign Key fk_name_store_extension
-name_store &#10132; extension ( extension -&gt; id )
-</title></path>
-<text x='85' y='659' transform='rotate(0 85,659)' class='relName'></text>
-<!-- == Fk 'name_store_fk_name_store_name_vault' == -->
-<path id='name_store_fk_name_store_name_vault'  onmouseover="hghl(['name_store_fk_name_store_name_vault','dss_client.name_store.name','dss_client.vault.id'])" onmouseout="uhghl(['name_store_fk_name_store_name_vault','dss_client.name_store.name','dss_client.vault.id'])" transform='translate(10,0)' class='unhighlight' d='M 209,684L 276,684Q 285,684 285,694L 285,770Q 285,779 276,779L 266,779' >
-	<title>&#x1F517;  Foreign Key fk_name_store_name_vault
-name_store &#10132; vault ( name -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 209,684L 276,684Q 285,684 285,694L 285,770Q 285,779 276,779L 266,779' ><title>&#x1F517;  Foreign Key fk_name_store_name_vault
-name_store &#10132; vault ( name -&gt; id )
-</title></path>
-<text x='218' y='678' transform='rotate(0 218,678)' class='relName'></text>
-<!-- == Fk 'version_info_fk_version_info_doc_version' == -->
-<path id='version_info_fk_version_info_doc_version'  onmouseover="hghl(['version_info_fk_version_info_doc_version','dss_client.version_info.id','dss_client.doc_version.id'])" onmouseout="uhghl(['version_info_fk_version_info_doc_version','dss_client.version_info.id','dss_client.doc_version.id'])" transform='translate(10,0)' class='unhighlight' d='M 513,247L 295,247Q 285,247 285,257L 285,266' >
-	<title>&#x1F517;  Foreign Key fk_version_info_doc_version
-version_info &#10132; doc_version ( id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#One)'     d='M 513,247L 295,247Q 285,247 285,257L 285,266' ><title>&#x1F517;  Foreign Key fk_version_info_doc_version
-version_info &#10132; doc_version ( id )
-</title></path>
-<text x='522' y='241' transform='rotate(0 522,241)' class='relName'></text>
-<!-- == Fk 'chunked_files_fk_chunked_files_doc_version' == -->
-<path id='chunked_files_fk_chunked_files_doc_version'  onmouseover="hghl(['chunked_files_fk_chunked_files_doc_version','dss_client.chunked_files.id','dss_client.doc_version.id'])" onmouseout="uhghl(['chunked_files_fk_chunked_files_doc_version','dss_client.chunked_files.id','dss_client.doc_version.id'])" transform='translate(10,0)' class='unhighlight' d='M 209,456L 276,456Q 285,456 285,447L 285,352Q 285,342 295,342L 304,342' >
-	<title>&#x1F517;  Foreign Key fk_chunked_files_doc_version
-chunked_files &#10132; doc_version ( id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)'     d='M 209,456L 276,456Q 285,456 285,447L 285,352Q 285,342 295,342L 304,342' ><title>&#x1F517;  Foreign Key fk_chunked_files_doc_version
-chunked_files &#10132; doc_version ( id )
-</title></path>
-<text x='218' y='450' transform='rotate(0 218,450)' class='relName'></text>
-<!-- == Fk 'directory_fk_directory_workspace' == -->
-<path id='directory_fk_directory_workspace'  onmouseover="hghl(['directory_fk_directory_workspace','dss_client.directory.workspace','dss_client.workspace.id'])" onmouseout="uhghl(['directory_fk_directory_workspace','dss_client.directory.workspace','dss_client.workspace.id'])" transform='translate(10,0)' class='unhighlight' d='M 532,779L 437,779' >
-	<title>&#x1F517;  Foreign Key fk_directory_workspace
-directory &#10132; workspace ( workspace -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 532,779L 437,779' ><title>&#x1F517;  Foreign Key fk_directory_workspace
-directory &#10132; workspace ( workspace -&gt; id )
-</title></path>
-<text x='541' y='773' transform='rotate(0 541,773)' class='relName'></text>
 <!-- == Fk 'chunk_info_fk_chunk_info_doc_version' == -->
 <path id='chunk_info_fk_chunk_info_doc_version'  onmouseover="hghl(['chunk_info_fk_chunk_info_doc_version','dss_client.chunk_info.id','dss_client.doc_version.id'])" onmouseout="uhghl(['chunk_info_fk_chunk_info_doc_version','dss_client.chunk_info.id','dss_client.doc_version.id'])" transform='translate(10,0)' class='unhighlight' d='M 228,247L 276,247Q 285,247 285,257L 285,333Q 285,342 295,342L 304,342' >
 	<title>&#x1F517;  Foreign Key fk_chunk_info_doc_version
@@ -510,6 +420,16 @@ chunk_info &#10132; doc_version ( id )
 chunk_info &#10132; doc_version ( id )
 </title></path>
 <text x='237' y='241' transform='rotate(0 237,241)' class='relName'></text>
+<!-- == Fk 'chunked_files_fk_chunked_files_doc_version' == -->
+<path id='chunked_files_fk_chunked_files_doc_version'  onmouseover="hghl(['chunked_files_fk_chunked_files_doc_version','dss_client.chunked_files.id','dss_client.doc_version.id'])" onmouseout="uhghl(['chunked_files_fk_chunked_files_doc_version','dss_client.chunked_files.id','dss_client.doc_version.id'])" transform='translate(10,0)' class='unhighlight' d='M 209,456L 276,456Q 285,456 285,447L 285,352Q 285,342 295,342L 304,342' >
+	<title>&#x1F517;  Foreign Key fk_chunked_files_doc_version
+chunked_files &#10132; doc_version ( id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#OneMore)'     d='M 209,456L 276,456Q 285,456 285,447L 285,352Q 285,342 295,342L 304,342' ><title>&#x1F517;  Foreign Key fk_chunked_files_doc_version
+chunked_files &#10132; doc_version ( id )
+</title></path>
+<text x='218' y='450' transform='rotate(0 218,450)' class='relName'></text>
 <!-- == Fk 'doc_version_fk_doc_version_document' == -->
 <path id='doc_version_fk_doc_version_document'  onmouseover="hghl(['doc_version_fk_doc_version_document','dss_client.doc_version.parent','dss_client.document.id'])" onmouseout="uhghl(['doc_version_fk_doc_version_document','dss_client.doc_version.parent','dss_client.document.id'])" transform='translate(10,0)' class='unhighlight' d='M 437,418L 466,418Q 475,418 475,428L 475,532' >
 	<title>&#x1F517;  Foreign Key fk_doc_version_document
@@ -520,152 +440,248 @@ doc_version &#10132; document ( parent -&gt; id )
 doc_version &#10132; document ( parent -&gt; id )
 </title></path>
 <text x='446' y='412' transform='rotate(0 446,412)' class='relName'></text>
-<!-- == Table 'extension' == -->
-<rect id='depict_dss&#95;client&#46;extension' class='entity' style='stroke:#F9FAFC' x='57' y='732' width='95' height='95' rx='4' ry='4' />
-<rect x='57' y='732' width='95' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='57' y='736' width='95' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.extension'><g><title>Table dss_client.extension
+<!-- == Fk 'name_store_fk_name_store_extension' == -->
+<path id='name_store_fk_name_store_extension'  onmouseover="hghl(['name_store_fk_name_store_extension','dss_client.name_store.extension','dss_client.extension.id'])" onmouseout="uhghl(['name_store_fk_name_store_extension','dss_client.name_store.extension','dss_client.extension.id'])" transform='translate(10,0)' class='unhighlight' d='M 76,722L 29,722Q 19,722 19,732L 19,827Q 19,836 29,836L 38,836' >
+	<title>&#x1F517;  Foreign Key fk_name_store_extension
+name_store &#10132; extension ( extension -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 76,722L 29,722Q 19,722 19,732L 19,827Q 19,836 29,836L 38,836' ><title>&#x1F517;  Foreign Key fk_name_store_extension
+name_store &#10132; extension ( extension -&gt; id )
+</title></path>
+<text x='85' y='716' transform='rotate(0 85,716)' class='relName'></text>
+<!-- == Fk 'name_store_fk_name_store_name_vault' == -->
+<path id='name_store_fk_name_store_name_vault'  onmouseover="hghl(['name_store_fk_name_store_name_vault','dss_client.name_store.name','dss_client.vault.id'])" onmouseout="uhghl(['name_store_fk_name_store_name_vault','dss_client.name_store.name','dss_client.vault.id'])" transform='translate(10,0)' class='unhighlight' d='M 209,741L 276,741Q 285,741 285,751L 285,827Q 285,836 276,836L 266,836' >
+	<title>&#x1F517;  Foreign Key fk_name_store_name_vault
+name_store &#10132; vault ( name -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 209,741L 276,741Q 285,741 285,751L 285,827Q 285,836 276,836L 266,836' ><title>&#x1F517;  Foreign Key fk_name_store_name_vault
+name_store &#10132; vault ( name -&gt; id )
+</title></path>
+<text x='218' y='735' transform='rotate(0 218,735)' class='relName'></text>
+<!-- == Fk 'version_info_fk_version_info_doc_version' == -->
+<path id='version_info_fk_version_info_doc_version'  onmouseover="hghl(['version_info_fk_version_info_doc_version','dss_client.version_info.id','dss_client.doc_version.id'])" onmouseout="uhghl(['version_info_fk_version_info_doc_version','dss_client.version_info.id','dss_client.doc_version.id'])" transform='translate(10,0)' class='unhighlight' d='M 513,247L 295,247Q 285,247 285,257L 285,266' >
+	<title>&#x1F517;  Foreign Key fk_version_info_doc_version
+version_info &#10132; doc_version ( id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#One)'     d='M 513,247L 295,247Q 285,247 285,257L 285,266' ><title>&#x1F517;  Foreign Key fk_version_info_doc_version
+version_info &#10132; doc_version ( id )
+</title></path>
+<text x='522' y='241' transform='rotate(0 522,241)' class='relName'></text>
+<!-- == Fk 'doc_info_fk_file_info_file_index_0' == -->
+<path id='doc_info_fk_file_info_file_index_0'  onmouseover="hghl(['doc_info_fk_file_info_file_index_0','dss_client.doc_info.file','dss_client.document.id'])" onmouseout="uhghl(['doc_info_fk_file_info_file_index_0','dss_client.doc_info.file','dss_client.document.id'])" transform='translate(10,0)' class='unhighlight' d='M 532,513L 485,513Q 475,513 475,523L 475,542Q 475,551 466,551L 456,551' >
+	<title>&#x1F517;  Foreign Key fk_file_info_file_index_0
+doc_info &#10132; document ( file -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#One)' marker-end='url(#One)'    d='M 532,513L 485,513Q 475,513 475,523L 475,542Q 475,551 466,551L 456,551' ><title>&#x1F517;  Foreign Key fk_file_info_file_index_0
+doc_info &#10132; document ( file -&gt; id )
+</title></path>
+<text x='541' y='507' transform='rotate(0 541,507)' class='relName'></text>
+<!-- == Fk 'directory_fk_directory_workspace' == -->
+<path id='directory_fk_directory_workspace'  onmouseover="hghl(['directory_fk_directory_workspace','dss_client.directory.workspace','dss_client.workspace.id'])" onmouseout="uhghl(['directory_fk_directory_workspace','dss_client.directory.workspace','dss_client.workspace.id'])" transform='translate(10,0)' class='unhighlight' d='M 532,836L 437,836' >
+	<title>&#x1F517;  Foreign Key fk_directory_workspace
+directory &#10132; workspace ( workspace -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 532,836L 437,836' ><title>&#x1F517;  Foreign Key fk_directory_workspace
+directory &#10132; workspace ( workspace -&gt; id )
+</title></path>
+<text x='541' y='830' transform='rotate(0 541,830)' class='relName'></text>
+<!-- == Fk 'document_fk_document_workspace' == -->
+<path id='document_fk_document_workspace'  onmouseover="hghl(['document_fk_document_workspace','dss_client.document.workspace','dss_client.workspace.id'])" onmouseout="uhghl(['document_fk_document_workspace','dss_client.document.workspace','dss_client.workspace.id'])" transform='translate(10,0)' class='unhighlight' d='M 456,684L 466,684Q 475,684 475,694L 475,827Q 475,836 466,836L 456,836' >
+	<title>&#x1F517;  Foreign Key fk_document_workspace
+document &#10132; workspace ( workspace -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#OneMore)'     d='M 456,684L 466,684Q 475,684 475,694L 475,827Q 475,836 466,836L 456,836' ><title>&#x1F517;  Foreign Key fk_document_workspace
+document &#10132; workspace ( workspace -&gt; id )
+</title></path>
+<text x='465' y='678' transform='rotate(0 465,678)' class='relName'></text>
+<!-- == Fk 'document_fk_document_directory' == -->
+<path id='document_fk_document_directory'  onmouseover="hghl(['document_fk_document_directory','dss_client.document.parent','dss_client.directory.id'])" onmouseout="uhghl(['document_fk_document_directory','dss_client.document.parent','dss_client.directory.id'])" transform='translate(10,0)' class='unhighlight' d='M 456,627L 504,627Q 513,627 513,637L 513,675Q 513,684 523,684L 532,684' >
+	<title>&#x1F517;  Foreign Key fk_document_directory
+document &#10132; directory ( parent -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 456,627L 504,627Q 513,627 513,637L 513,675Q 513,684 523,684L 532,684' ><title>&#x1F517;  Foreign Key fk_document_directory
+document &#10132; directory ( parent -&gt; id )
+</title></path>
+<text x='465' y='621' transform='rotate(0 465,621)' class='relName'></text>
+<!-- == Fk 'document_fk_document_name_store' == -->
+<path id='document_fk_document_name_store'  onmouseover="hghl(['document_fk_document_name_store','dss_client.document.name','dss_client.name_store.id'])" onmouseout="uhghl(['document_fk_document_name_store','dss_client.document.name','dss_client.name_store.id'])" transform='translate(10,0)' class='unhighlight' d='M 304,646L 238,646Q 228,646 228,656L 228,694Q 228,703 219,703L 209,703' >
+	<title>&#x1F517;  Foreign Key fk_document_name_store
+document &#10132; name_store ( name -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 304,646L 238,646Q 228,646 228,656L 228,694Q 228,703 219,703L 209,703' ><title>&#x1F517;  Foreign Key fk_document_name_store
+document &#10132; name_store ( name -&gt; id )
+</title></path>
+<text x='313' y='640' transform='rotate(0 313,640)' class='relName'></text>
+<!-- == Table 'chunk_info' == -->
+<rect id='depict_dss&#95;client&#46;chunk&#95;info' class='entity' style='stroke:#F9FAFC' x='95' y='200' width='133' height='171' rx='4' ry='4' />
+<rect x='95' y='200' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='95' y='204' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.chunk_info'><g><title>Table dss_client.chunk_info
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Deduplicated registry of file extensions (lowercase, no dot). Paired with vault via name_store to form a full logical filename. Allows efficient type-based queries without scanning varchar filename columns.</title><text id='depict&#45;dss&#95;client&#46;extension' x='71' y='754' class='tableHeader' style='fill:#414448;'>extension</text></g></a>
-  <use x='58' y='775' href='#nn'/><g><title>&#x1F511;  Pk pk_extension ( id ) </title><use x='59' y='774' href='#pk'/></g><a href='#dss_client.extension.id'><g><title>&#10697;  id
-     * int
- &#8601; name_store( extension )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Surrogate PK. Referenced by name_store.extension.</title><text id='dss&#95;client&#46;extension&#46;id' x='80' y='788' onmouseover="hghl(['name_store_fk_name_store_extension','dss_client.name_store.extension'])" onmouseout="uhghl(['name_store_fk_name_store_extension','dss_client.name_store.extension'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.extension.id'><g><title>&#x1F517;  Referred by name_store ( extension -&gt; id ) </title><use x='138' y='774' href='#ref'/></g></a>
-  <use x='58' y='794' href='#nn'/><g><title>&#x1F50D;  idx_extension ( name ) </title><use x='59' y='793' href='#idx'/></g><a href='#dss_client.extension.name'><g><title>&#10697;  name
-     * varchar(100)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      File extension without the leading dot, always lowercase. E.g. &quot;pdf&quot;, &quot;mp4&quot;, &quot;docx&quot;, &quot;jpg&quot;. Normalised by the application before insert.</title><text id='dss&#95;client&#46;extension&#46;name' x='80' y='807'>name</text></g></a>
-<text x='148' y='803' text-anchor='end' class='colType'>t</text>
-<!-- == Table 'vault' == -->
-<rect id='depict_dss&#95;client&#46;vault' class='entity' style='stroke:#F9FAFC' x='171' y='732' width='95' height='95' rx='4' ry='4' />
-<rect x='171' y='732' width='95' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='171' y='736' width='95' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.vault'><g><title>Table dss_client.vault
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Deduplicated table of bare filename stems (no extension). Combined with the extension table via name_store to form a complete logical filename. Avoids repeating long filename strings across millions of document rows.</title><text id='depict&#45;dss&#95;client&#46;vault' x='199' y='754' class='tableHeader' style='fill:#414448;'>vault</text></g></a>
-  <use x='172' y='775' href='#nn'/><g><title>&#x1F511;  Pk pk_vault ( id ) </title><use x='173' y='774' href='#pk'/></g><a href='#dss_client.vault.id'><g><title>&#10697;  id
+      Header record for a chunked-upload session. One row per doc_version that uses multi-part uploading. Tracks the expected chunk size, total part count, the staging directory name/path, and whether all parts have been merged. Paired with chunked_files which holds one row per received chunk part.</title><text id='depict&#45;dss&#95;client&#46;chunk&#95;info' x='124' y='222' class='tableHeader' style='fill:#414448;'>chunk&#95;info</text></g></a>
+  <use x='96' y='243' href='#nn'/><g><title>&#x1F511;  Pk pk_chunk_info ( id ) </title><use x='97' y='242' href='#pk'/></g><a href='#dss_client.chunk_info.id'><g><title>&#10697;  id
      * bigint
- &#8601; name_store( name )
+ &#8599; doc_version( id )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Surrogate PK. Referenced by name_store.name.</title><text id='dss&#95;client&#46;vault&#46;id' x='194' y='788' onmouseover="hghl(['name_store_fk_name_store_name_vault','dss_client.name_store.name'])" onmouseout="uhghl(['name_store_fk_name_store_name_vault','dss_client.name_store.name'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.vault.id'><g><title>&#x1F517;  Referred by name_store ( name -&gt; id ) </title><use x='252' y='774' href='#ref'/></g></a>
-  <use x='172' y='794' href='#nn'/><g><title>&#x1F50D;  idx_name_store ( name ) </title><use x='173' y='793' href='#idx'/></g><a href='#dss_client.vault.name'><g><title>&#10697;  name
+      PK and FK → doc_version.id. One-to-one: only chunked doc_versions have a chunk_info row. Created at the start of a chunked upload session.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;id' x='118' y='256' onmouseover="hghl(['chunk_info_fk_chunk_info_doc_version','dss_client.doc_version.id'])" onmouseout="uhghl(['chunk_info_fk_chunk_info_doc_version','dss_client.doc_version.id'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.chunk_info.id'><g><title>&#x1F517;  References doc_version ( id ) </title><use x='214' y='242' href='#fk'/></g></a>
+  <use x='96' y='262' href='#nn'/><a href='#dss_client.chunk_info.size'><g><title>&#10697;  size
+     * bigint default 1
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Expected size of each individual chunk in MEGABYTES. All chunks except possibly the last one will be exactly this size. Example: size=10 means each chunk is ~10 MB. Minimum 1 (enforced by CHECK constraint).</title><text id='dss&#95;client&#46;chunk&#95;info&#46;size' x='118' y='275'>size</text></g></a>
+<text x='224' y='271' text-anchor='end' class='colType'>&#35;</text>  <use x='96' y='281' href='#nn'/><a href='#dss_client.chunk_info.parts'><g><title>&#10697;  parts
+     * int default 2
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Total number of chunk parts expected for this upload. E.g. a 95 MB file with size=10 MB → parts=10 (9 full chunks + 1 partial). Minimum 1 (enforced by CHECK constraint). When len(chunked_files rows) = parts, the upload is considered complete.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;parts' x='118' y='294'>parts</text></g></a>
+<text x='224' y='290' text-anchor='end' class='colType'>&#35;</text>  <use x='96' y='300' href='#nn'/><a href='#dss_client.chunk_info.name'><g><title>&#10697;  name
+     * varchar(64)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Name of the temporary staging directory that holds the chunk files. Named after the upload session, e.g. &quot;chunks_abc123def456&quot;. Inside this directory files are named sequentially: file.mp4.001, file.mp4.002, etc.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;name' x='118' y='313'>name</text></g></a>
+<text x='224' y='309' text-anchor='end' class='colType'>t</text>  <use x='96' y='319' href='#nn'/><a href='#dss_client.chunk_info.is_completed'><g><title>&#10697;  is_completed
+     * bit default 0
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Completion flag. 0=upload in progress (not all parts received or not yet merged). 1=all parts received AND the application has successfully merged them into the final file. Set by MarkChunkCompleted() in MariaDBIndexing.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;is&#95;completed' x='118' y='332'>is&#95;completed</text></g></a>
+<text x='224' y='328' text-anchor='end' class='colType'>b</text>  <use x='96' y='338' href='#nn'/><a href='#dss_client.chunk_info.path'><g><title>&#10697;  path
      * varchar(200)
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Bare filename stem without extension, e.g. &quot;invoice_jan_2024&quot; or &quot;profile_photo&quot;. Normalised by the application before insert (trimmed, lowercased where appropriate).</title><text id='dss&#95;client&#46;vault&#46;name' x='194' y='807'>name</text></g></a>
-<text x='262' y='803' text-anchor='end' class='colType'>t</text>
-<!-- == Table 'workspace' == -->
-<rect id='depict_dss&#95;client&#46;workspace' class='entity' style='stroke:#F9FAFC' x='342' y='732' width='95' height='76' rx='4' ry='4' />
-<rect x='342' y='732' width='95' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='342' y='736' width='95' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.workspace'><g><title>Table dss_client.workspace
+      Full path to the temporary chunk staging directory on the staging storage provider. E.g. &quot;/staging/acme/hr/chunks_abc123/&quot;. The application streams individual chunks into files under this directory, then reads them back in order during merge.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;path' x='118' y='351'>path</text></g></a>
+<text x='224' y='347' text-anchor='end' class='colType'>t</text>
+<!-- == Table 'chunked_files' == -->
+<rect id='depict_dss&#95;client&#46;chunked&#95;files' class='entity' style='stroke:#F9FAFC' x='95' y='409' width='114' height='152' rx='4' ry='4' />
+<rect x='95' y='409' width='114' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='95' y='413' width='114' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.chunked_files'><g><title>Table dss_client.chunked_files
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Anchor table: one row per registered workspace in this module. Mirrors dsscore.workspace.id so directories and documents can reference a workspace via FK without cross-database joins.</title><text id='depict&#45;dss&#95;client&#46;workspace' x='353' y='754' class='tableHeader' style='fill:#414448;'>workspace</text></g></a>
-  <use x='343' y='775' href='#nn'/><g><title>&#x1F511;  Pk pk_workspace ( id ) </title><use x='344' y='774' href='#pk'/></g><a href='#dss_client.workspace.id'><g><title>&#10697;  id
+      Per-chunk tracking table for multi-part uploads. One row per received chunk part. Used to track upload progress, support resume (identify which parts are missing), verify per-chunk hashes, and confirm completion (row count = chunk_info.parts). Rows are cleaned up after the merge is complete and version_info.flags bit 16 (Chunked Files Deleted) is set.</title><text id='depict&#45;dss&#95;client&#46;chunked&#95;files' x='107' y='431' class='tableHeader' style='fill:#414448;'>chunked&#95;files</text></g></a>
+  <use x='96' y='452' href='#nn'/><g><title>&#x1F511;  Pk pk_chunked_files ( id, part ) </title><use x='97' y='451' href='#pk'/></g><a href='#dss_client.chunked_files.id'><g><title>&#10697;  id
      * bigint
- &#8601; directory( workspace )
- &#8601; document( workspace )
+ &#8599; doc_version( id )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Primary key &#8212 mirrors dsscore.workspace.id exactly. Set by the application at registration time; never AUTO_INCREMENT.</title><text id='dss&#95;client&#46;workspace&#46;id' x='365' y='788' onmouseover="hghl(['directory_fk_directory_workspace','dss_client.directory.workspace','document_fk_document_workspace','dss_client.document.workspace'])" onmouseout="uhghl(['directory_fk_directory_workspace','dss_client.directory.workspace','document_fk_document_workspace','dss_client.document.workspace'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.workspace.id'><g><title>&#x1F517;  Referred by directory ( workspace -&gt; id ) 
-Referred by document ( workspace -&gt; id ) </title><use x='423' y='774' href='#ref'/></g></a>
-
-<!-- == Table 'doc_info' == -->
-<rect id='depict_dss&#95;client&#46;doc&#95;info' class='entity' style='stroke:#F9FAFC' x='551' y='466' width='133' height='95' rx='4' ry='4' />
-<rect x='551' y='466' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='551' y='470' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.doc_info'><g><title>Table dss_client.doc_info
+      FK → doc_version.id. Identifies which upload session this chunk belongs to. Part of the composite PK.</title><text id='dss&#95;client&#46;chunked&#95;files&#46;id' x='118' y='465' onmouseover="hghl(['chunked_files_fk_chunked_files_doc_version','dss_client.doc_version.id'])" onmouseout="uhghl(['chunked_files_fk_chunked_files_doc_version','dss_client.doc_version.id'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.chunked_files.id'><g><title>&#x1F517;  References doc_version ( id ) </title><use x='195' y='451' href='#fk'/></g></a>
+  <use x='96' y='471' href='#nn'/><g><title>&#x1F511;  Pk pk_chunked_files ( id, part ) </title><use x='97' y='470' href='#pk'/></g><a href='#dss_client.chunked_files.part'><g><title>&#10697;  part
+     * bigint
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Optional display name override for a document. When present, the application shows display_name instead of the raw filename derived from name_store. Inserted/updated by UpdateDocDisplayName(). Not every document has a row here.</title><text id='depict&#45;dss&#95;client&#46;doc&#95;info' x='587' y='488' class='tableHeader' style='fill:#414448;'>doc&#95;info</text></g></a>
-  <use x='552' y='509' href='#nn'/><g><title>&#x1F511;  Pk pk_doc_info ( file ) </title><use x='553' y='508' href='#pk'/></g><a href='#dss_client.doc_info.file'><g><title>&#10697;  file
+      1-based sequential chunk number within this upload session. Part 1 is the first chunk, part N is the last. Combined with id to form the composite PK, ensuring each part number is recorded exactly once per session.</title><text id='dss&#95;client&#46;chunked&#95;files&#46;part' x='118' y='484' class='colPk'>part</text></g></a>
+<text x='205' y='480' text-anchor='end' class='colType'>&#35;</text>  <use x='96' y='490' href='#nn'/><a href='#dss_client.chunked_files.size'><g><title>&#10697;  size
+     * int default 0
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Size of this individual chunk in MEGABYTES. All parts except the last are expected to match chunk_info.size. The final part may be smaller. Used for integrity checking during merge.</title><text id='dss&#95;client&#46;chunked&#95;files&#46;size' x='118' y='503'>size</text></g></a>
+<text x='205' y='499' text-anchor='end' class='colType'>&#35;</text>  <use x='96' y='509' href='#nn'/><a href='#dss_client.chunked_files.uploaded'><g><title>&#10697;  uploaded
+     * datetime default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Timestamp when this specific chunk was received and written to the staging directory. Useful for diagnosing stalled uploads (e.g. if part 2 arrived but part 3 has not for 24 hours).</title><text id='dss&#95;client&#46;chunked&#95;files&#46;uploaded' x='118' y='522'>uploaded</text></g></a>
+<text x='205' y='518' text-anchor='end' class='colType'>t</text>  <a href='#dss_client.chunked_files.hash'><g><title>&#10697;  hash
+     varchar(128)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      SHA-256 hex digest of this individual chunk, supplied by the caller at upload time. Allows per-chunk integrity verification before merge. NULL if the caller did not supply a hash for this part. Example: &quot;9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08&quot;.</title><text id='dss&#95;client&#46;chunked&#95;files&#46;hash' x='118' y='541'>hash</text></g></a>
+<text x='205' y='537' text-anchor='end' class='colType'>t</text>
+<!-- == Table 'doc_version' == -->
+<rect id='depict_dss&#95;client&#46;doc&#95;version' class='entity' style='stroke:#F9FAFC' x='323' y='295' width='114' height='152' rx='4' ry='4' />
+<rect x='323' y='295' width='114' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='323' y='299' width='114' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.doc_version'><g><title>Table dss_client.doc_version
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      One row per file upload event. A document accumulates version rows over time (ver=1, 2, 3...). The version row is the FK anchor for all physical storage metadata (version_info) and chunking state (chunk_info, chunked_files).</title><text id='depict&#45;dss&#95;client&#46;doc&#95;version' x='340' y='317' class='tableHeader' style='fill:#414448;'>doc&#95;version</text></g></a>
+  <use x='324' y='338' href='#nn'/><g><title>&#x1F511;  Pk pk_doc_version ( id ) </title><use x='325' y='337' href='#pk'/></g><a href='#dss_client.doc_version.id'><g><title>&#10697;  id
+     * bigint
+ &#8601; chunk_info( id )
+ &#8601; chunked_files( id )
+ &#8601; version_info( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Surrogate PK. Used as the FK anchor for version_info, chunk_info, and chunked_files. Also returned to callers as the &quot;versionId&quot; in upload responses.</title><text id='dss&#95;client&#46;doc&#95;version&#46;id' x='346' y='351' onmouseover="hghl(['chunk_info_fk_chunk_info_doc_version','dss_client.chunk_info.id','chunked_files_fk_chunked_files_doc_version','dss_client.chunked_files.id','version_info_fk_version_info_doc_version','dss_client.version_info.id'])" onmouseout="uhghl(['chunk_info_fk_chunk_info_doc_version','dss_client.chunk_info.id','chunked_files_fk_chunked_files_doc_version','dss_client.chunked_files.id','version_info_fk_version_info_doc_version','dss_client.version_info.id'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.doc_version.id'><g><title>&#x1F517;  Referred by chunk_info ( id ) 
+Referred by chunked_files ( id ) 
+Referred by version_info ( id ) </title><use x='423' y='337' href='#ref'/></g></a>
+  <use x='324' y='357' href='#nn'/><g><title>&#x1F50D;  Unq unq_doc_version ( cuid ) </title><use x='325' y='356' href='#unq'/></g><a href='#dss_client.doc_version.cuid'><g><title>&#10697;  cuid
+     * varchar(48) default uuid()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Collision-resistant unique identifier for this specific version. Stable and safe for external API exposure. Distinct from the parent document CUID. Example: &quot;f3a8b2c1d9e4a7b0c6d5e3f2a8b1c4d7&quot;.</title><text id='dss&#95;client&#46;doc&#95;version&#46;cuid' x='346' y='370'>cuid</text></g></a>
+<text x='433' y='366' text-anchor='end' class='colType'>t</text>  <use x='324' y='376' href='#nn'/><g><title>&#x1F50D;  idx_file_version_0 ( created ) </title><use x='325' y='375' href='#idx'/></g><a href='#dss_client.doc_version.created'><g><title>&#10697;  created
+     * timestamp default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Timestamp when this version record was created, i.e. when the upload began. For placeholder uploads this marks when the DB record was reserved, not when the file bytes arrived.</title><text id='dss&#95;client&#46;doc&#95;version&#46;created' x='346' y='389'>created</text></g></a>
+<text x='433' y='385' text-anchor='end' class='colType'>t</text>  <use x='324' y='395' href='#nn'/><g><title>&#x1F50D;  Unq unq_file_version ( parent, ver ) </title><use x='325' y='394' href='#unq'/></g><a href='#dss_client.doc_version.ver'><g><title>&#10697;  ver
+     * int default 1
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Monotonically increasing version number within the parent document. Starts at 1 for the first upload. The (parent, ver) unique constraint prevents gaps or duplicates. The latest version is MAX(ver) for a given parent.</title><text id='dss&#95;client&#46;doc&#95;version&#46;ver' x='346' y='408'>ver</text></g></a>
+<text x='433' y='404' text-anchor='end' class='colType'>&#35;</text>  <use x='324' y='414' href='#nn'/><g><title>&#x1F50D;  Unq unq_file_version ( parent, ver ) </title><use x='325' y='413' href='#unq'/></g><a href='#dss_client.doc_version.parent'><g><title>&#10697;  parent
      * bigint
  &#8599; document( id )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      PK and FK → document.id. One-to-one optional relationship &#8212 insert a row here to attach a custom display name to the document. Omit to use the raw filename derived from name_store.</title><text id='dss&#95;client&#46;doc&#95;info&#46;file' x='574' y='522' onmouseover="hghl(['doc_info_fk_file_info_file_index_0','dss_client.document.id'])" onmouseout="uhghl(['doc_info_fk_file_info_file_index_0','dss_client.document.id'])" class='colPk'>file</text></g></a>
-<a href='#dss_client.doc_info.file'><g><title>&#x1F517;  References document ( file -&gt; id ) </title><use x='670' y='508' href='#fk'/></g></a>
-  <use x='552' y='528' href='#nn'/><g><title>&#x1F50D;  idx_doc_info ( display_name ) </title><use x='553' y='527' href='#idx'/></g><a href='#dss_client.doc_info.display_name'><g><title>&#10697;  display_name
-     * varchar(200)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Human-readable label for the document. Free-form text, may include spaces, punctuation, and Unicode. E.g. &quot;Q1 2024 Invoice – ACME Corp&quot; or &quot;Employee Handbook v3 (Draft)&quot;. Written by the application; not auto-derived.</title><text id='dss&#95;client&#46;doc&#95;info&#46;display&#95;name' x='574' y='541'>display&#95;name</text></g></a>
-<text x='680' y='537' text-anchor='end' class='colType'>t</text>
-<!-- == Table 'document' == -->
-<rect id='depict_dss&#95;client&#46;document' class='entity' style='stroke:#F9FAFC' x='323' y='504' width='133' height='209' rx='4' ry='4' />
-<rect x='323' y='504' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='323' y='508' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.document'><g><title>Table dss_client.document
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Logical file identity. One row per unique filename within a directory/workspace combination. Does not store the filename string directly &#8212 uses name_store FK for normalised filename lookup. Multiple uploads of the same file create new doc_version rows, not new document rows.</title><text id='depict&#45;dss&#95;client&#46;document' x='354' y='526' class='tableHeader' style='fill:#414448;'>document</text></g></a>
-  <use x='324' y='547' href='#nn'/><g><title>&#x1F511;  Pk pk_document ( id ) </title><use x='325' y='546' href='#pk'/></g><a href='#dss_client.document.id'><g><title>&#10697;  id
-     * bigint
- &#8601; doc_info( file )
- &#8601; doc_version( parent )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Surrogate PK. Referenced by doc_version.parent, doc_info.file, and other version-level tables.</title><text id='dss&#95;client&#46;document&#46;id' x='346' y='560' onmouseover="hghl(['doc_info_fk_file_info_file_index_0','dss_client.doc_info.file','doc_version_fk_doc_version_document','dss_client.doc_version.parent'])" onmouseout="uhghl(['doc_info_fk_file_info_file_index_0','dss_client.doc_info.file','doc_version_fk_doc_version_document','dss_client.doc_version.parent'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.document.id'><g><title>&#x1F517;  Referred by doc_info ( file -&gt; id ) 
-Referred by doc_version ( parent -&gt; id ) </title><use x='442' y='546' href='#ref'/></g></a>
-  <use x='324' y='566' href='#nn'/><g><title>&#x1F50D;  Unq unq_file_index ( cuid ) </title><use x='325' y='565' href='#unq'/></g><a href='#dss_client.document.cuid'><g><title>&#10697;  cuid
-     * varchar(48) default &apos;uuid()&apos;
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Collision-resistant unique identifier for this document. Stable across version uploads and renames. Safe to expose in external APIs. Example: &quot;2b3a8f1c9e4d7a0b6c5e2f3d8a1b4c7e&quot;.</title><text id='dss&#95;client&#46;document&#46;cuid' x='346' y='579'>cuid</text></g></a>
-<text x='452' y='575' text-anchor='end' class='colType'>t</text>  <use x='324' y='585' href='#nn'/><a href='#dss_client.document.created'><g><title>&#10697;  created
-     * timestamp default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Timestamp when the document record was first created (i.e. when the first version was uploaded).</title><text id='dss&#95;client&#46;document&#46;created' x='346' y='598'>created</text></g></a>
-<text x='452' y='594' text-anchor='end' class='colType'>t</text>  <use x='324' y='604' href='#nn'/><a href='#dss_client.document.modified'><g><title>&#10697;  modified
-     * timestamp default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Automatically updated whenever any column in this row changes (e.g. when the document is moved or soft-deleted).</title><text id='dss&#95;client&#46;document&#46;modified' x='346' y='617'>modified</text></g></a>
-<text x='452' y='613' text-anchor='end' class='colType'>t</text>  <use x='324' y='623' href='#nn'/><g><title>&#x1F50D;  fk_document_directory ( parent ) &#x1F50D;  Unq unq_document ( parent, name ) </title><use x='325' y='622' href='#unq'/></g><a href='#dss_client.document.parent'><g><title>&#10697;  parent
-     * bigint
- &#8599; directory( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → directory.id. The virtual folder this document lives in. Changing this value moves the document to a different folder.</title><text id='dss&#95;client&#46;document&#46;parent' x='346' y='636' onmouseover="hghl(['document_fk_document_directory','dss_client.directory.id'])" onmouseout="uhghl(['document_fk_document_directory','dss_client.directory.id'])">parent</text></g></a>
-<a href='#dss_client.document.parent'><g><title>&#x1F517;  References directory ( parent -&gt; id ) </title><use x='442' y='622' href='#fk'/></g></a>
-  <use x='324' y='642' href='#nn'/><g><title>&#x1F50D;  Unq unq_document ( parent, name ) &#x1F50D;  fk_document_name_store ( name ) </title><use x='325' y='641' href='#unq'/></g><a href='#dss_client.document.name'><g><title>&#10697;  name
-     * bigint
- &#8599; name_store( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → name_store.id. Represents the logical filename (stem + extension). E.g. name_store id=7 maps to &quot;invoice_jan_2024.pdf&quot;. Do not confuse with a varchar name &#8212 this is a numeric FK.</title><text id='dss&#95;client&#46;document&#46;name' x='346' y='655' onmouseover="hghl(['document_fk_document_name_store','dss_client.name_store.id'])" onmouseout="uhghl(['document_fk_document_name_store','dss_client.name_store.id'])">name</text></g></a>
-<a href='#dss_client.document.name'><g><title>&#x1F517;  References name_store ( name -&gt; id ) </title><use x='442' y='641' href='#fk'/></g></a>
-  <use x='324' y='661' href='#nn'/><a href='#dss_client.document.deleted'><g><title>&#10697;  deleted
-     * bit default 0
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Soft-delete flag. 0=active, 1=deleted. Deleted documents are excluded from browse/search results but their version history is preserved for audit purposes.</title><text id='dss&#95;client&#46;document&#46;deleted' x='346' y='674'>deleted</text></g></a>
-<text x='452' y='670' text-anchor='end' class='colType'>b</text>  <use x='324' y='680' href='#nn'/><g><title>&#x1F50D;  fk_file_index_parent ( workspace ) </title><use x='325' y='679' href='#idx'/></g><a href='#dss_client.document.workspace'><g><title>&#10697;  workspace
-     * bigint
- &#8599; workspace( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → workspace.id. Redundantly stored here (parent directory already implies a workspace) for fast workspace-scoped queries without joining through directory.</title><text id='dss&#95;client&#46;document&#46;workspace' x='346' y='693' onmouseover="hghl(['document_fk_document_workspace','dss_client.workspace.id'])" onmouseout="uhghl(['document_fk_document_workspace','dss_client.workspace.id'])">workspace</text></g></a>
-<a href='#dss_client.document.workspace'><g><title>&#x1F517;  References workspace ( workspace -&gt; id ) </title><use x='442' y='679' href='#fk'/></g></a>
+      FK → document.id. Links this version to its parent logical document.</title><text id='dss&#95;client&#46;doc&#95;version&#46;parent' x='346' y='427' onmouseover="hghl(['doc_version_fk_doc_version_document','dss_client.document.id'])" onmouseout="uhghl(['doc_version_fk_doc_version_document','dss_client.document.id'])">parent</text></g></a>
+<a href='#dss_client.doc_version.parent'><g><title>&#x1F517;  References document ( parent -&gt; id ) </title><use x='423' y='413' href='#fk'/></g></a>
 
+<!-- == Table 'extension' == -->
+<rect id='depict_dss&#95;client&#46;extension' class='entity' style='stroke:#F9FAFC' x='57' y='789' width='95' height='95' rx='4' ry='4' />
+<rect x='57' y='789' width='95' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='57' y='793' width='95' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.extension'><g><title>Table dss_client.extension
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Deduplicated registry of file extensions (lowercase, no dot). Paired with vault via name_store to form a full logical filename. Allows efficient type-based queries without scanning varchar filename columns.</title><text id='depict&#45;dss&#95;client&#46;extension' x='71' y='811' class='tableHeader' style='fill:#414448;'>extension</text></g></a>
+  <use x='58' y='832' href='#nn'/><g><title>&#x1F511;  Pk pk_extension ( id ) </title><use x='59' y='831' href='#pk'/></g><a href='#dss_client.extension.id'><g><title>&#10697;  id
+     * int
+ &#8601; name_store( extension )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Surrogate PK. Referenced by name_store.extension.</title><text id='dss&#95;client&#46;extension&#46;id' x='80' y='845' onmouseover="hghl(['name_store_fk_name_store_extension','dss_client.name_store.extension'])" onmouseout="uhghl(['name_store_fk_name_store_extension','dss_client.name_store.extension'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.extension.id'><g><title>&#x1F517;  Referred by name_store ( extension -&gt; id ) </title><use x='138' y='831' href='#ref'/></g></a>
+  <use x='58' y='851' href='#nn'/><g><title>&#x1F50D;  idx_extension ( name ) </title><use x='59' y='850' href='#idx'/></g><a href='#dss_client.extension.name'><g><title>&#10697;  name
+     * varchar(100)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      File extension without the leading dot, always lowercase. E.g. &quot;pdf&quot;, &quot;mp4&quot;, &quot;docx&quot;, &quot;jpg&quot;. Normalised by the application before insert.</title><text id='dss&#95;client&#46;extension&#46;name' x='80' y='864'>name</text></g></a>
+<text x='148' y='860' text-anchor='end' class='colType'>t</text>
 <!-- == Table 'name_store' == -->
-<rect id='depict_dss&#95;client&#46;name&#95;store' class='entity' style='stroke:#F9FAFC' x='95' y='599' width='114' height='114' rx='4' ry='4' />
-<rect x='95' y='599' width='114' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='95' y='603' width='114' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<rect id='depict_dss&#95;client&#46;name&#95;store' class='entity' style='stroke:#F9FAFC' x='95' y='656' width='114' height='114' rx='4' ry='4' />
+<rect x='95' y='656' width='114' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='95' y='660' width='114' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
 <a href='#dss_client.name_store'><g><title>Table dss_client.name_store
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Normalised filename registry. Each row represents one unique (stem, extension) pair, e.g. (&quot;invoice_jan_2024&quot;, &quot;pdf&quot;). document.name is a FK to this table, keeping the full filename string out of the document row.</title><text id='depict&#45;dss&#95;client&#46;name&#95;store' x='113' y='621' class='tableHeader' style='fill:#414448;'>name&#95;store</text></g></a>
-  <use x='96' y='642' href='#nn'/><g><title>&#x1F511;  Pk pk_name_store ( id ) </title><use x='97' y='641' href='#pk'/></g><a href='#dss_client.name_store.id'><g><title>&#10697;  id
+      Normalised filename registry. Each row represents one unique (stem, extension) pair, e.g. (&quot;invoice_jan_2024&quot;, &quot;pdf&quot;). document.name is a FK to this table, keeping the full filename string out of the document row.</title><text id='depict&#45;dss&#95;client&#46;name&#95;store' x='113' y='678' class='tableHeader' style='fill:#414448;'>name&#95;store</text></g></a>
+  <use x='96' y='699' href='#nn'/><g><title>&#x1F511;  Pk pk_name_store ( id ) </title><use x='97' y='698' href='#pk'/></g><a href='#dss_client.name_store.id'><g><title>&#10697;  id
      * bigint
  &#8601; document( name )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Surrogate PK. Referenced by document.name.</title><text id='dss&#95;client&#46;name&#95;store&#46;id' x='118' y='655' onmouseover="hghl(['document_fk_document_name_store','dss_client.document.name'])" onmouseout="uhghl(['document_fk_document_name_store','dss_client.document.name'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.name_store.id'><g><title>&#x1F517;  Referred by document ( name -&gt; id ) </title><use x='195' y='641' href='#ref'/></g></a>
-  <use x='96' y='661' href='#nn'/><g><title>&#x1F50D;  Unq unq_name_store ( name, extension ) &#x1F50D;  idx_name_store_0 ( extension, name ) </title><use x='97' y='660' href='#unq'/></g><a href='#dss_client.name_store.extension'><g><title>&#10697;  extension
+      Surrogate PK. Referenced by document.name.</title><text id='dss&#95;client&#46;name&#95;store&#46;id' x='118' y='712' onmouseover="hghl(['document_fk_document_name_store','dss_client.document.name'])" onmouseout="uhghl(['document_fk_document_name_store','dss_client.document.name'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.name_store.id'><g><title>&#x1F517;  Referred by document ( name -&gt; id ) </title><use x='195' y='698' href='#ref'/></g></a>
+  <use x='96' y='718' href='#nn'/><g><title>&#x1F50D;  Unq unq_name_store ( name, extension ) &#x1F50D;  idx_name_store_0 ( extension, name ) </title><use x='97' y='717' href='#unq'/></g><a href='#dss_client.name_store.extension'><g><title>&#10697;  extension
      * int
  &#8599; extension( id )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → extension.id. Identifies the file type half of the logical filename (e.g. &quot;pdf&quot;).</title><text id='dss&#95;client&#46;name&#95;store&#46;extension' x='118' y='674' onmouseover="hghl(['name_store_fk_name_store_extension','dss_client.extension.id'])" onmouseout="uhghl(['name_store_fk_name_store_extension','dss_client.extension.id'])">extension</text></g></a>
-<a href='#dss_client.name_store.extension'><g><title>&#x1F517;  References extension ( extension -&gt; id ) </title><use x='195' y='660' href='#fk'/></g></a>
-  <use x='96' y='680' href='#nn'/><g><title>&#x1F50D;  Unq unq_name_store ( name, extension ) &#x1F50D;  idx_name_store_0 ( extension, name ) </title><use x='97' y='679' href='#unq'/></g><a href='#dss_client.name_store.name'><g><title>&#10697;  name
+      FK → extension.id. Identifies the file type half of the logical filename (e.g. &quot;pdf&quot;).</title><text id='dss&#95;client&#46;name&#95;store&#46;extension' x='118' y='731' onmouseover="hghl(['name_store_fk_name_store_extension','dss_client.extension.id'])" onmouseout="uhghl(['name_store_fk_name_store_extension','dss_client.extension.id'])">extension</text></g></a>
+<a href='#dss_client.name_store.extension'><g><title>&#x1F517;  References extension ( extension -&gt; id ) </title><use x='195' y='717' href='#fk'/></g></a>
+  <use x='96' y='737' href='#nn'/><g><title>&#x1F50D;  Unq unq_name_store ( name, extension ) &#x1F50D;  idx_name_store_0 ( extension, name ) </title><use x='97' y='736' href='#unq'/></g><a href='#dss_client.name_store.name'><g><title>&#10697;  name
      * bigint
  &#8599; vault( id )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → vault.id. Identifies the stem half of the logical filename (e.g. &quot;invoice_jan_2024&quot;).</title><text id='dss&#95;client&#46;name&#95;store&#46;name' x='118' y='693' onmouseover="hghl(['name_store_fk_name_store_name_vault','dss_client.vault.id'])" onmouseout="uhghl(['name_store_fk_name_store_name_vault','dss_client.vault.id'])">name</text></g></a>
-<a href='#dss_client.name_store.name'><g><title>&#x1F517;  References vault ( name -&gt; id ) </title><use x='195' y='679' href='#fk'/></g></a>
+      FK → vault.id. Identifies the stem half of the logical filename (e.g. &quot;invoice_jan_2024&quot;).</title><text id='dss&#95;client&#46;name&#95;store&#46;name' x='118' y='750' onmouseover="hghl(['name_store_fk_name_store_name_vault','dss_client.vault.id'])" onmouseout="uhghl(['name_store_fk_name_store_name_vault','dss_client.vault.id'])">name</text></g></a>
+<a href='#dss_client.name_store.name'><g><title>&#x1F517;  References vault ( name -&gt; id ) </title><use x='195' y='736' href='#fk'/></g></a>
 
+<!-- == Table 'vault' == -->
+<rect id='depict_dss&#95;client&#46;vault' class='entity' style='stroke:#F9FAFC' x='171' y='789' width='95' height='95' rx='4' ry='4' />
+<rect x='171' y='789' width='95' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='171' y='793' width='95' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.vault'><g><title>Table dss_client.vault
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Deduplicated table of bare filename stems (no extension). Combined with the extension table via name_store to form a complete logical filename. Avoids repeating long filename strings across millions of document rows.</title><text id='depict&#45;dss&#95;client&#46;vault' x='199' y='811' class='tableHeader' style='fill:#414448;'>vault</text></g></a>
+  <use x='172' y='832' href='#nn'/><g><title>&#x1F511;  Pk pk_vault ( id ) </title><use x='173' y='831' href='#pk'/></g><a href='#dss_client.vault.id'><g><title>&#10697;  id
+     * bigint
+ &#8601; name_store( name )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Surrogate PK. Referenced by name_store.name.</title><text id='dss&#95;client&#46;vault&#46;id' x='194' y='845' onmouseover="hghl(['name_store_fk_name_store_name_vault','dss_client.name_store.name'])" onmouseout="uhghl(['name_store_fk_name_store_name_vault','dss_client.name_store.name'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.vault.id'><g><title>&#x1F517;  Referred by name_store ( name -&gt; id ) </title><use x='252' y='831' href='#ref'/></g></a>
+  <use x='172' y='851' href='#nn'/><g><title>&#x1F50D;  idx_name_store ( name ) </title><use x='173' y='850' href='#idx'/></g><a href='#dss_client.vault.name'><g><title>&#10697;  name
+     * varchar(200)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Bare filename stem without extension, e.g. &quot;invoice_jan_2024&quot; or &quot;profile_photo&quot;. Normalised by the application before insert (trimmed, lowercased where appropriate).</title><text id='dss&#95;client&#46;vault&#46;name' x='194' y='864'>name</text></g></a>
+<text x='262' y='860' text-anchor='end' class='colType'>t</text>
 <!-- == Table 'version_info' == -->
 <rect id='depict_dss&#95;client&#46;version&#95;info' class='entity' style='stroke:#F9FAFC' x='532' y='200' width='152' height='247' rx='4' ry='4' />
 <rect x='532' y='200' width='152' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
@@ -726,153 +742,141 @@ Referred by doc_version ( parent -&gt; id ) </title><use x='442' y='546' href='#
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
       if null, then we fall back to using the module&apos;s default current profile.. However, current profile could not be the correct one, may be the current profile got modified or changed .. May be we didn&apos;t use the module&apos;s profile, we used the workspace&apos;s profile.. or a workspace profile was addedin between.. so, having the profile_info_id  here is the best option to properly resolve the correct storage path.</title><text id='dss&#95;client&#46;version&#95;info&#46;profile&#95;info&#95;id' x='555' y='427'>profile&#95;info&#95;id</text></g></a>
 <text x='680' y='423' text-anchor='end' class='colType'>&#35;</text>
-<!-- == Table 'chunked_files' == -->
-<rect id='depict_dss&#95;client&#46;chunked&#95;files' class='entity' style='stroke:#F9FAFC' x='95' y='409' width='114' height='152' rx='4' ry='4' />
-<rect x='95' y='409' width='114' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='95' y='413' width='114' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.chunked_files'><g><title>Table dss_client.chunked_files
+<!-- == Table 'workspace' == -->
+<rect id='depict_dss&#95;client&#46;workspace' class='entity' style='stroke:#F9FAFC' x='342' y='789' width='95' height='76' rx='4' ry='4' />
+<rect x='342' y='789' width='95' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='342' y='793' width='95' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.workspace'><g><title>Table dss_client.workspace
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Per-chunk tracking table for multi-part uploads. One row per received chunk part. Used to track upload progress, support resume (identify which parts are missing), verify per-chunk hashes, and confirm completion (row count = chunk_info.parts). Rows are cleaned up after the merge is complete and version_info.flags bit 16 (Chunked Files Deleted) is set.</title><text id='depict&#45;dss&#95;client&#46;chunked&#95;files' x='107' y='431' class='tableHeader' style='fill:#414448;'>chunked&#95;files</text></g></a>
-  <use x='96' y='452' href='#nn'/><g><title>&#x1F511;  Pk pk_chunked_files ( id, part ) </title><use x='97' y='451' href='#pk'/></g><a href='#dss_client.chunked_files.id'><g><title>&#10697;  id
+      Anchor table: one row per registered workspace in this module. Mirrors dsscore.workspace.id so directories and documents can reference a workspace via FK without cross-database joins.</title><text id='depict&#45;dss&#95;client&#46;workspace' x='353' y='811' class='tableHeader' style='fill:#414448;'>workspace</text></g></a>
+  <use x='343' y='832' href='#nn'/><g><title>&#x1F511;  Pk pk_workspace ( id ) </title><use x='344' y='831' href='#pk'/></g><a href='#dss_client.workspace.id'><g><title>&#10697;  id
      * bigint
- &#8599; doc_version( id )
+ &#8601; directory( workspace )
+ &#8601; document( workspace )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → doc_version.id. Identifies which upload session this chunk belongs to. Part of the composite PK.</title><text id='dss&#95;client&#46;chunked&#95;files&#46;id' x='118' y='465' onmouseover="hghl(['chunked_files_fk_chunked_files_doc_version','dss_client.doc_version.id'])" onmouseout="uhghl(['chunked_files_fk_chunked_files_doc_version','dss_client.doc_version.id'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.chunked_files.id'><g><title>&#x1F517;  References doc_version ( id ) </title><use x='195' y='451' href='#fk'/></g></a>
-  <use x='96' y='471' href='#nn'/><g><title>&#x1F511;  Pk pk_chunked_files ( id, part ) </title><use x='97' y='470' href='#pk'/></g><a href='#dss_client.chunked_files.part'><g><title>&#10697;  part
-     * bigint
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      1-based sequential chunk number within this upload session. Part 1 is the first chunk, part N is the last. Combined with id to form the composite PK, ensuring each part number is recorded exactly once per session.</title><text id='dss&#95;client&#46;chunked&#95;files&#46;part' x='118' y='484' class='colPk'>part</text></g></a>
-<text x='205' y='480' text-anchor='end' class='colType'>&#35;</text>  <use x='96' y='490' href='#nn'/><a href='#dss_client.chunked_files.size'><g><title>&#10697;  size
-     * int default 0
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Size of this individual chunk in MEGABYTES. All parts except the last are expected to match chunk_info.size. The final part may be smaller. Used for integrity checking during merge.</title><text id='dss&#95;client&#46;chunked&#95;files&#46;size' x='118' y='503'>size</text></g></a>
-<text x='205' y='499' text-anchor='end' class='colType'>&#35;</text>  <use x='96' y='509' href='#nn'/><a href='#dss_client.chunked_files.uploaded'><g><title>&#10697;  uploaded
-     * datetime default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Timestamp when this specific chunk was received and written to the staging directory. Useful for diagnosing stalled uploads (e.g. if part 2 arrived but part 3 has not for 24 hours).</title><text id='dss&#95;client&#46;chunked&#95;files&#46;uploaded' x='118' y='522'>uploaded</text></g></a>
-<text x='205' y='518' text-anchor='end' class='colType'>t</text>  <a href='#dss_client.chunked_files.hash'><g><title>&#10697;  hash
-     varchar(128)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      SHA-256 hex digest of this individual chunk, supplied by the caller at upload time. Allows per-chunk integrity verification before merge. NULL if the caller did not supply a hash for this part. Example: &quot;9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08&quot;.</title><text id='dss&#95;client&#46;chunked&#95;files&#46;hash' x='118' y='541'>hash</text></g></a>
-<text x='205' y='537' text-anchor='end' class='colType'>t</text>
-<!-- == Table 'directory' == -->
-<rect id='depict_dss&#95;client&#46;directory' class='entity' style='stroke:#F9FAFC' x='551' y='580' width='133' height='228' rx='4' ry='4' />
-<rect x='551' y='580' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='551' y='584' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.directory'><g><title>Table dss_client.directory
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Virtual folder hierarchy within a workspace. Directories are logical &#8212 they exist in the DB only and do not map to physical filesystem folders. Supports soft-delete, parent-child nesting (parent=0 for root), and CUID-based external referencing.</title><text id='depict&#45;dss&#95;client&#46;directory' x='586' y='602' class='tableHeader' style='fill:#414448;'>directory</text></g></a>
-  <use x='552' y='623' href='#nn'/><g><title>&#x1F511;  Pk pk_directory ( id ) </title><use x='553' y='622' href='#pk'/></g><a href='#dss_client.directory.id'><g><title>&#10697;  id
-     * bigint
- &#8601; document( parent )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Surrogate PK. Referenced by document.parent and by child directories via the parent column.</title><text id='dss&#95;client&#46;directory&#46;id' x='574' y='636' onmouseover="hghl(['document_fk_document_directory','dss_client.document.parent'])" onmouseout="uhghl(['document_fk_document_directory','dss_client.document.parent'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.directory.id'><g><title>&#x1F517;  Referred by document ( parent -&gt; id ) </title><use x='670' y='622' href='#ref'/></g></a>
-  <use x='552' y='642' href='#nn'/><a href='#dss_client.directory.display_name'><g><title>&#10697;  display_name
-     * varchar(120)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Human-readable folder label displayed in the UI. May contain spaces and mixed case, e.g. &quot;Project Documents&quot; or &quot;Year 2024 Invoices&quot;.</title><text id='dss&#95;client&#46;directory&#46;display&#95;name' x='574' y='655'>display&#95;name</text></g></a>
-<text x='680' y='651' text-anchor='end' class='colType'>t</text>  <use x='552' y='661' href='#nn'/><a href='#dss_client.directory.created'><g><title>&#10697;  created
-     * timestamp default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Timestamp when the directory record was first created.</title><text id='dss&#95;client&#46;directory&#46;created' x='574' y='674'>created</text></g></a>
-<text x='680' y='670' text-anchor='end' class='colType'>t</text>  <use x='552' y='680' href='#nn'/><a href='#dss_client.directory.modified'><g><title>&#10697;  modified
-     * timestamp default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Automatically updated whenever any column in this row changes.</title><text id='dss&#95;client&#46;directory&#46;modified' x='574' y='693'>modified</text></g></a>
-<text x='680' y='689' text-anchor='end' class='colType'>t</text>  <use x='552' y='699' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory_0 ( cuid ) </title><use x='553' y='698' href='#unq'/></g><a href='#dss_client.directory.cuid'><g><title>&#10697;  cuid
-     * varchar(48) default &apos;uuid()&apos;
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Collision-resistant unique identifier for this directory. Stable across renames. Used by the application layer as an external-safe reference (avoids exposing numeric auto-increment IDs in APIs).</title><text id='dss&#95;client&#46;directory&#46;cuid' x='574' y='712'>cuid</text></g></a>
-<text x='680' y='708' text-anchor='end' class='colType'>t</text>  <use x='552' y='718' href='#nn'/><a href='#dss_client.directory.deleted'><g><title>&#10697;  deleted
-     * bit default 0
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Soft-delete flag. 0=active, 1=deleted. Deleted directories are hidden from browse results but retained in the database for audit and foreign-key integrity.</title><text id='dss&#95;client&#46;directory&#46;deleted' x='574' y='731'>deleted</text></g></a>
-<text x='680' y='727' text-anchor='end' class='colType'>b</text>  <use x='552' y='737' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory ( workspace, parent, name ) </title><use x='553' y='736' href='#unq'/></g><a href='#dss_client.directory.name'><g><title>&#10697;  name
-     * varchar(120)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Normalised folder slug used in uniqueness checks and path construction, e.g. &quot;project_docs&quot; or &quot;invoices&quot;. Should be lowercase and URL-safe. Different from display_name which may have spaces.</title><text id='dss&#95;client&#46;directory&#46;name' x='574' y='750'>name</text></g></a>
-<text x='680' y='746' text-anchor='end' class='colType'>t</text>  <use x='552' y='756' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory ( workspace, parent, name ) </title><use x='553' y='755' href='#unq'/></g><a href='#dss_client.directory.parent'><g><title>&#10697;  parent
-     * bigint default 0
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → directory.id of the parent folder. Set to 0 for top-level (root) directories in the workspace &#8212 the application treats 0 as the sentinel for &quot;no parent&quot;. Checked against (workspace, parent, name) unique constraint.</title><text id='dss&#95;client&#46;directory&#46;parent' x='574' y='769'>parent</text></g></a>
-<text x='680' y='765' text-anchor='end' class='colType'>&#35;</text>  <use x='552' y='775' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory ( workspace, parent, name ) </title><use x='553' y='774' href='#unq'/></g><a href='#dss_client.directory.workspace'><g><title>&#10697;  workspace
-     * bigint
- &#8599; workspace( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → workspace.id. Every directory belongs to exactly one workspace. A directory created under workspace=12 cannot contain documents from workspace=15.</title><text id='dss&#95;client&#46;directory&#46;workspace' x='574' y='788' onmouseover="hghl(['directory_fk_directory_workspace','dss_client.workspace.id'])" onmouseout="uhghl(['directory_fk_directory_workspace','dss_client.workspace.id'])">workspace</text></g></a>
-<a href='#dss_client.directory.workspace'><g><title>&#x1F517;  References workspace ( workspace -&gt; id ) </title><use x='670' y='774' href='#fk'/></g></a>
+      Primary key &#8212 mirrors dsscore.workspace.id exactly. Set by the application at registration time; never AUTO_INCREMENT.</title><text id='dss&#95;client&#46;workspace&#46;id' x='365' y='845' onmouseover="hghl(['directory_fk_directory_workspace','dss_client.directory.workspace','document_fk_document_workspace','dss_client.document.workspace'])" onmouseout="uhghl(['directory_fk_directory_workspace','dss_client.directory.workspace','document_fk_document_workspace','dss_client.document.workspace'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.workspace.id'><g><title>&#x1F517;  Referred by directory ( workspace -&gt; id ) 
+Referred by document ( workspace -&gt; id ) </title><use x='423' y='831' href='#ref'/></g></a>
 
-<!-- == Table 'chunk_info' == -->
-<rect id='depict_dss&#95;client&#46;chunk&#95;info' class='entity' style='stroke:#F9FAFC' x='95' y='200' width='133' height='171' rx='4' ry='4' />
-<rect x='95' y='200' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='95' y='204' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.chunk_info'><g><title>Table dss_client.chunk_info
+<!-- == Table 'doc_info' == -->
+<rect id='depict_dss&#95;client&#46;doc&#95;info' class='entity' style='stroke:#F9FAFC' x='551' y='466' width='133' height='114' rx='4' ry='4' />
+<rect x='551' y='466' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='551' y='470' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.doc_info'><g><title>Table dss_client.doc_info
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Header record for a chunked-upload session. One row per doc_version that uses multi-part uploading. Tracks the expected chunk size, total part count, the staging directory name/path, and whether all parts have been merged. Paired with chunked_files which holds one row per received chunk part.</title><text id='depict&#45;dss&#95;client&#46;chunk&#95;info' x='124' y='222' class='tableHeader' style='fill:#414448;'>chunk&#95;info</text></g></a>
-  <use x='96' y='243' href='#nn'/><g><title>&#x1F511;  Pk pk_chunk_info ( id ) </title><use x='97' y='242' href='#pk'/></g><a href='#dss_client.chunk_info.id'><g><title>&#10697;  id
-     * bigint
- &#8599; doc_version( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      PK and FK → doc_version.id. One-to-one: only chunked doc_versions have a chunk_info row. Created at the start of a chunked upload session.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;id' x='118' y='256' onmouseover="hghl(['chunk_info_fk_chunk_info_doc_version','dss_client.doc_version.id'])" onmouseout="uhghl(['chunk_info_fk_chunk_info_doc_version','dss_client.doc_version.id'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.chunk_info.id'><g><title>&#x1F517;  References doc_version ( id ) </title><use x='214' y='242' href='#fk'/></g></a>
-  <use x='96' y='262' href='#nn'/><a href='#dss_client.chunk_info.size'><g><title>&#10697;  size
-     * bigint default 1
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Expected size of each individual chunk in MEGABYTES. All chunks except possibly the last one will be exactly this size. Example: size=10 means each chunk is ~10 MB. Minimum 1 (enforced by CHECK constraint).</title><text id='dss&#95;client&#46;chunk&#95;info&#46;size' x='118' y='275'>size</text></g></a>
-<text x='224' y='271' text-anchor='end' class='colType'>&#35;</text>  <use x='96' y='281' href='#nn'/><a href='#dss_client.chunk_info.parts'><g><title>&#10697;  parts
-     * int default 2
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Total number of chunk parts expected for this upload. E.g. a 95 MB file with size=10 MB → parts=10 (9 full chunks + 1 partial). Minimum 1 (enforced by CHECK constraint). When len(chunked_files rows) = parts, the upload is considered complete.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;parts' x='118' y='294'>parts</text></g></a>
-<text x='224' y='290' text-anchor='end' class='colType'>&#35;</text>  <use x='96' y='300' href='#nn'/><a href='#dss_client.chunk_info.name'><g><title>&#10697;  name
-     * varchar(64)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Name of the temporary staging directory that holds the chunk files. Named after the upload session, e.g. &quot;chunks_abc123def456&quot;. Inside this directory files are named sequentially: file.mp4.001, file.mp4.002, etc.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;name' x='118' y='313'>name</text></g></a>
-<text x='224' y='309' text-anchor='end' class='colType'>t</text>  <use x='96' y='319' href='#nn'/><a href='#dss_client.chunk_info.is_completed'><g><title>&#10697;  is_completed
-     * bit default 0
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Completion flag. 0=upload in progress (not all parts received or not yet merged). 1=all parts received AND the application has successfully merged them into the final file. Set by MarkChunkCompleted() in MariaDBIndexing.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;is&#95;completed' x='118' y='332'>is&#95;completed</text></g></a>
-<text x='224' y='328' text-anchor='end' class='colType'>b</text>  <use x='96' y='338' href='#nn'/><a href='#dss_client.chunk_info.path'><g><title>&#10697;  path
-     * varchar(200)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Full path to the temporary chunk staging directory on the staging storage provider. E.g. &quot;/staging/acme/hr/chunks_abc123/&quot;. The application streams individual chunks into files under this directory, then reads them back in order during merge.</title><text id='dss&#95;client&#46;chunk&#95;info&#46;path' x='118' y='351'>path</text></g></a>
-<text x='224' y='347' text-anchor='end' class='colType'>t</text>
-<!-- == Table 'doc_version' == -->
-<rect id='depict_dss&#95;client&#46;doc&#95;version' class='entity' style='stroke:#F9FAFC' x='323' y='295' width='114' height='152' rx='4' ry='4' />
-<rect x='323' y='295' width='114' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='323' y='299' width='114' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_client.doc_version'><g><title>Table dss_client.doc_version
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      One row per file upload event. A document accumulates version rows over time (ver=1, 2, 3...). The version row is the FK anchor for all physical storage metadata (version_info) and chunking state (chunk_info, chunked_files).</title><text id='depict&#45;dss&#95;client&#46;doc&#95;version' x='340' y='317' class='tableHeader' style='fill:#414448;'>doc&#95;version</text></g></a>
-  <use x='324' y='338' href='#nn'/><g><title>&#x1F511;  Pk pk_doc_version ( id ) </title><use x='325' y='337' href='#pk'/></g><a href='#dss_client.doc_version.id'><g><title>&#10697;  id
-     * bigint
- &#8601; chunk_info( id )
- &#8601; chunked_files( id )
- &#8601; version_info( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Surrogate PK. Used as the FK anchor for version_info, chunk_info, and chunked_files. Also returned to callers as the &quot;versionId&quot; in upload responses.</title><text id='dss&#95;client&#46;doc&#95;version&#46;id' x='346' y='351' onmouseover="hghl(['chunk_info_fk_chunk_info_doc_version','dss_client.chunk_info.id','chunked_files_fk_chunked_files_doc_version','dss_client.chunked_files.id','version_info_fk_version_info_doc_version','dss_client.version_info.id'])" onmouseout="uhghl(['chunk_info_fk_chunk_info_doc_version','dss_client.chunk_info.id','chunked_files_fk_chunked_files_doc_version','dss_client.chunked_files.id','version_info_fk_version_info_doc_version','dss_client.version_info.id'])" class='colPk'>id</text></g></a>
-<a href='#dss_client.doc_version.id'><g><title>&#x1F517;  Referred by chunk_info ( id ) 
-Referred by chunked_files ( id ) 
-Referred by version_info ( id ) </title><use x='423' y='337' href='#ref'/></g></a>
-  <use x='324' y='357' href='#nn'/><g><title>&#x1F50D;  Unq unq_doc_version ( cuid ) </title><use x='325' y='356' href='#unq'/></g><a href='#dss_client.doc_version.cuid'><g><title>&#10697;  cuid
-     * varchar(48) default &apos;uuid()&apos;
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Collision-resistant unique identifier for this specific version. Stable and safe for external API exposure. Distinct from the parent document CUID. Example: &quot;f3a8b2c1d9e4a7b0c6d5e3f2a8b1c4d7&quot;.</title><text id='dss&#95;client&#46;doc&#95;version&#46;cuid' x='346' y='370'>cuid</text></g></a>
-<text x='433' y='366' text-anchor='end' class='colType'>t</text>  <use x='324' y='376' href='#nn'/><g><title>&#x1F50D;  idx_file_version_0 ( created ) </title><use x='325' y='375' href='#idx'/></g><a href='#dss_client.doc_version.created'><g><title>&#10697;  created
-     * timestamp default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Timestamp when this version record was created, i.e. when the upload began. For placeholder uploads this marks when the DB record was reserved, not when the file bytes arrived.</title><text id='dss&#95;client&#46;doc&#95;version&#46;created' x='346' y='389'>created</text></g></a>
-<text x='433' y='385' text-anchor='end' class='colType'>t</text>  <use x='324' y='395' href='#nn'/><g><title>&#x1F50D;  Unq unq_file_version ( parent, ver ) </title><use x='325' y='394' href='#unq'/></g><a href='#dss_client.doc_version.ver'><g><title>&#10697;  ver
-     * int default 1
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Monotonically increasing version number within the parent document. Starts at 1 for the first upload. The (parent, ver) unique constraint prevents gaps or duplicates. The latest version is MAX(ver) for a given parent.</title><text id='dss&#95;client&#46;doc&#95;version&#46;ver' x='346' y='408'>ver</text></g></a>
-<text x='433' y='404' text-anchor='end' class='colType'>&#35;</text>  <use x='324' y='414' href='#nn'/><g><title>&#x1F50D;  Unq unq_file_version ( parent, ver ) </title><use x='325' y='413' href='#unq'/></g><a href='#dss_client.doc_version.parent'><g><title>&#10697;  parent
+      Optional display name override for a document. When present, the application shows display_name instead of the raw filename derived from name_store. Inserted/updated by UpdateDocDisplayName(). Not every document has a row here.</title><text id='depict&#45;dss&#95;client&#46;doc&#95;info' x='587' y='488' class='tableHeader' style='fill:#414448;'>doc&#95;info</text></g></a>
+  <use x='552' y='509' href='#nn'/><g><title>&#x1F511;  Pk pk_doc_info ( file ) </title><use x='553' y='508' href='#pk'/></g><a href='#dss_client.doc_info.file'><g><title>&#10697;  file
      * bigint
  &#8599; document( id )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK → document.id. Links this version to its parent logical document.</title><text id='dss&#95;client&#46;doc&#95;version&#46;parent' x='346' y='427' onmouseover="hghl(['doc_version_fk_doc_version_document','dss_client.document.id'])" onmouseout="uhghl(['doc_version_fk_doc_version_document','dss_client.document.id'])">parent</text></g></a>
-<a href='#dss_client.doc_version.parent'><g><title>&#x1F517;  References document ( parent -&gt; id ) </title><use x='423' y='413' href='#fk'/></g></a>
+      PK and FK → document.id. One-to-one optional relationship &#8212 insert a row here to attach a custom display name to the document. Omit to use the raw filename derived from name_store.</title><text id='dss&#95;client&#46;doc&#95;info&#46;file' x='574' y='522' onmouseover="hghl(['doc_info_fk_file_info_file_index_0','dss_client.document.id'])" onmouseout="uhghl(['doc_info_fk_file_info_file_index_0','dss_client.document.id'])" class='colPk'>file</text></g></a>
+<a href='#dss_client.doc_info.file'><g><title>&#x1F517;  References document ( file -&gt; id ) </title><use x='670' y='508' href='#fk'/></g></a>
+  <use x='552' y='528' href='#nn'/><g><title>&#x1F50D;  idx_doc_info ( display_name ) </title><use x='553' y='527' href='#idx'/></g><a href='#dss_client.doc_info.display_name'><g><title>&#10697;  display_name
+     * varchar(200)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Human-readable label for the document. Free-form text, may include spaces, punctuation, and Unicode. E.g. &quot;Q1 2024 Invoice – ACME Corp&quot; or &quot;Employee Handbook v3 (Draft)&quot;. Written by the application; not auto-derived.</title><text id='dss&#95;client&#46;doc&#95;info&#46;display&#95;name' x='574' y='541'>display&#95;name</text></g></a>
+<text x='680' y='537' text-anchor='end' class='colType'>t</text>  <a href='#dss_client.doc_info.metadata'><g><title>&#10697;  metadata
+     text
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      to store document level metadata</title><text id='dss&#95;client&#46;doc&#95;info&#46;metadata' x='574' y='560'>metadata</text></g></a>
+<text x='680' y='556' text-anchor='end' class='colType'>t</text>
+<!-- == Table 'directory' == -->
+<rect id='depict_dss&#95;client&#46;directory' class='entity' style='stroke:#F9FAFC' x='551' y='637' width='133' height='228' rx='4' ry='4' />
+<rect x='551' y='637' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='551' y='641' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.directory'><g><title>Table dss_client.directory
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Virtual folder hierarchy within a workspace. Directories are logical &#8212 they exist in the DB only and do not map to physical filesystem folders. Supports soft-delete, parent-child nesting (parent=0 for root), and CUID-based external referencing.</title><text id='depict&#45;dss&#95;client&#46;directory' x='586' y='659' class='tableHeader' style='fill:#414448;'>directory</text></g></a>
+  <use x='552' y='680' href='#nn'/><g><title>&#x1F511;  Pk pk_directory ( id ) </title><use x='553' y='679' href='#pk'/></g><a href='#dss_client.directory.id'><g><title>&#10697;  id
+     * bigint
+ &#8601; document( parent )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Surrogate PK. Referenced by document.parent and by child directories via the parent column.</title><text id='dss&#95;client&#46;directory&#46;id' x='574' y='693' onmouseover="hghl(['document_fk_document_directory','dss_client.document.parent'])" onmouseout="uhghl(['document_fk_document_directory','dss_client.document.parent'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.directory.id'><g><title>&#x1F517;  Referred by document ( parent -&gt; id ) </title><use x='670' y='679' href='#ref'/></g></a>
+  <use x='552' y='699' href='#nn'/><a href='#dss_client.directory.display_name'><g><title>&#10697;  display_name
+     * varchar(120)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Human-readable folder label displayed in the UI. May contain spaces and mixed case, e.g. &quot;Project Documents&quot; or &quot;Year 2024 Invoices&quot;.</title><text id='dss&#95;client&#46;directory&#46;display&#95;name' x='574' y='712'>display&#95;name</text></g></a>
+<text x='680' y='708' text-anchor='end' class='colType'>t</text>  <use x='552' y='718' href='#nn'/><a href='#dss_client.directory.created'><g><title>&#10697;  created
+     * timestamp default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Timestamp when the directory record was first created.</title><text id='dss&#95;client&#46;directory&#46;created' x='574' y='731'>created</text></g></a>
+<text x='680' y='727' text-anchor='end' class='colType'>t</text>  <use x='552' y='737' href='#nn'/><a href='#dss_client.directory.modified'><g><title>&#10697;  modified
+     * timestamp default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Automatically updated whenever any column in this row changes.</title><text id='dss&#95;client&#46;directory&#46;modified' x='574' y='750'>modified</text></g></a>
+<text x='680' y='746' text-anchor='end' class='colType'>t</text>  <use x='552' y='756' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory_0 ( cuid ) </title><use x='553' y='755' href='#unq'/></g><a href='#dss_client.directory.cuid'><g><title>&#10697;  cuid
+     * varchar(48) default uuid()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Collision-resistant unique identifier for this directory. Stable across renames. Used by the application layer as an external-safe reference (avoids exposing numeric auto-increment IDs in APIs).</title><text id='dss&#95;client&#46;directory&#46;cuid' x='574' y='769'>cuid</text></g></a>
+<text x='680' y='765' text-anchor='end' class='colType'>t</text>  <use x='552' y='775' href='#nn'/><a href='#dss_client.directory.deleted'><g><title>&#10697;  deleted
+     * bit default 0
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Soft-delete flag. 0=active, 1=deleted. Deleted directories are hidden from browse results but retained in the database for audit and foreign-key integrity.</title><text id='dss&#95;client&#46;directory&#46;deleted' x='574' y='788'>deleted</text></g></a>
+<text x='680' y='784' text-anchor='end' class='colType'>b</text>  <use x='552' y='794' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory ( workspace, parent, name ) </title><use x='553' y='793' href='#unq'/></g><a href='#dss_client.directory.name'><g><title>&#10697;  name
+     * varchar(120)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Normalised folder slug used in uniqueness checks and path construction, e.g. &quot;project_docs&quot; or &quot;invoices&quot;. Should be lowercase and URL-safe. Different from display_name which may have spaces.</title><text id='dss&#95;client&#46;directory&#46;name' x='574' y='807'>name</text></g></a>
+<text x='680' y='803' text-anchor='end' class='colType'>t</text>  <use x='552' y='813' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory ( workspace, parent, name ) </title><use x='553' y='812' href='#unq'/></g><a href='#dss_client.directory.parent'><g><title>&#10697;  parent
+     * bigint default 0
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK → directory.id of the parent folder. Set to 0 for top-level (root) directories in the workspace &#8212 the application treats 0 as the sentinel for &quot;no parent&quot;. Checked against (workspace, parent, name) unique constraint.</title><text id='dss&#95;client&#46;directory&#46;parent' x='574' y='826'>parent</text></g></a>
+<text x='680' y='822' text-anchor='end' class='colType'>&#35;</text>  <use x='552' y='832' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory ( workspace, parent, name ) </title><use x='553' y='831' href='#unq'/></g><a href='#dss_client.directory.workspace'><g><title>&#10697;  workspace
+     * bigint
+ &#8599; workspace( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK → workspace.id. Every directory belongs to exactly one workspace. A directory created under workspace=12 cannot contain documents from workspace=15.</title><text id='dss&#95;client&#46;directory&#46;workspace' x='574' y='845' onmouseover="hghl(['directory_fk_directory_workspace','dss_client.workspace.id'])" onmouseout="uhghl(['directory_fk_directory_workspace','dss_client.workspace.id'])">workspace</text></g></a>
+<a href='#dss_client.directory.workspace'><g><title>&#x1F517;  References workspace ( workspace -&gt; id ) </title><use x='670' y='831' href='#fk'/></g></a>
+
+<!-- == Table 'document' == -->
+<rect id='depict_dss&#95;client&#46;document' class='entity' style='stroke:#F9FAFC' x='323' y='504' width='133' height='209' rx='4' ry='4' />
+<rect x='323' y='504' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='323' y='508' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_client.document'><g><title>Table dss_client.document
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Logical file identity. One row per unique filename within a directory/workspace combination. Does not store the filename string directly &#8212 uses name_store FK for normalised filename lookup. Multiple uploads of the same file create new doc_version rows, not new document rows.</title><text id='depict&#45;dss&#95;client&#46;document' x='354' y='526' class='tableHeader' style='fill:#414448;'>document</text></g></a>
+  <use x='324' y='547' href='#nn'/><g><title>&#x1F511;  Pk pk_document ( id ) </title><use x='325' y='546' href='#pk'/></g><a href='#dss_client.document.id'><g><title>&#10697;  id
+     * bigint
+ &#8601; doc_info( file )
+ &#8601; doc_version( parent )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Surrogate PK. Referenced by doc_version.parent, doc_info.file, and other version-level tables.</title><text id='dss&#95;client&#46;document&#46;id' x='346' y='560' onmouseover="hghl(['doc_info_fk_file_info_file_index_0','dss_client.doc_info.file','doc_version_fk_doc_version_document','dss_client.doc_version.parent'])" onmouseout="uhghl(['doc_info_fk_file_info_file_index_0','dss_client.doc_info.file','doc_version_fk_doc_version_document','dss_client.doc_version.parent'])" class='colPk'>id</text></g></a>
+<a href='#dss_client.document.id'><g><title>&#x1F517;  Referred by doc_info ( file -&gt; id ) 
+Referred by doc_version ( parent -&gt; id ) </title><use x='442' y='546' href='#ref'/></g></a>
+  <use x='324' y='566' href='#nn'/><g><title>&#x1F50D;  Unq unq_file_index ( cuid ) </title><use x='325' y='565' href='#unq'/></g><a href='#dss_client.document.cuid'><g><title>&#10697;  cuid
+     * varchar(48) default uuid()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Collision-resistant unique identifier for this document. Stable across version uploads and renames. Safe to expose in external APIs. Example: &quot;2b3a8f1c9e4d7a0b6c5e2f3d8a1b4c7e&quot;.</title><text id='dss&#95;client&#46;document&#46;cuid' x='346' y='579'>cuid</text></g></a>
+<text x='452' y='575' text-anchor='end' class='colType'>t</text>  <use x='324' y='585' href='#nn'/><a href='#dss_client.document.created'><g><title>&#10697;  created
+     * timestamp default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Timestamp when the document record was first created (i.e. when the first version was uploaded).</title><text id='dss&#95;client&#46;document&#46;created' x='346' y='598'>created</text></g></a>
+<text x='452' y='594' text-anchor='end' class='colType'>t</text>  <use x='324' y='604' href='#nn'/><a href='#dss_client.document.modified'><g><title>&#10697;  modified
+     * timestamp default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Automatically updated whenever any column in this row changes (e.g. when the document is moved or soft-deleted).</title><text id='dss&#95;client&#46;document&#46;modified' x='346' y='617'>modified</text></g></a>
+<text x='452' y='613' text-anchor='end' class='colType'>t</text>  <use x='324' y='623' href='#nn'/><g><title>&#x1F50D;  fk_document_directory ( parent ) &#x1F50D;  Unq unq_document ( parent, name ) </title><use x='325' y='622' href='#unq'/></g><a href='#dss_client.document.parent'><g><title>&#10697;  parent
+     * bigint
+ &#8599; directory( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK → directory.id. The virtual folder this document lives in. Changing this value moves the document to a different folder.</title><text id='dss&#95;client&#46;document&#46;parent' x='346' y='636' onmouseover="hghl(['document_fk_document_directory','dss_client.directory.id'])" onmouseout="uhghl(['document_fk_document_directory','dss_client.directory.id'])">parent</text></g></a>
+<a href='#dss_client.document.parent'><g><title>&#x1F517;  References directory ( parent -&gt; id ) </title><use x='442' y='622' href='#fk'/></g></a>
+  <use x='324' y='642' href='#nn'/><g><title>&#x1F50D;  Unq unq_document ( parent, name ) &#x1F50D;  fk_document_name_store ( name ) </title><use x='325' y='641' href='#unq'/></g><a href='#dss_client.document.name'><g><title>&#10697;  name
+     * bigint
+ &#8599; name_store( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK → name_store.id. Represents the logical filename (stem + extension). E.g. name_store id=7 maps to &quot;invoice_jan_2024.pdf&quot;. Do not confuse with a varchar name &#8212 this is a numeric FK.</title><text id='dss&#95;client&#46;document&#46;name' x='346' y='655' onmouseover="hghl(['document_fk_document_name_store','dss_client.name_store.id'])" onmouseout="uhghl(['document_fk_document_name_store','dss_client.name_store.id'])">name</text></g></a>
+<a href='#dss_client.document.name'><g><title>&#x1F517;  References name_store ( name -&gt; id ) </title><use x='442' y='641' href='#fk'/></g></a>
+  <use x='324' y='661' href='#nn'/><a href='#dss_client.document.deleted'><g><title>&#10697;  deleted
+     * bit default 0
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Soft-delete flag. 0=active, 1=deleted. Deleted documents are excluded from browse/search results but their version history is preserved for audit purposes.</title><text id='dss&#95;client&#46;document&#46;deleted' x='346' y='674'>deleted</text></g></a>
+<text x='452' y='670' text-anchor='end' class='colType'>b</text>  <use x='324' y='680' href='#nn'/><g><title>&#x1F50D;  fk_file_index_parent ( workspace ) </title><use x='325' y='679' href='#idx'/></g><a href='#dss_client.document.workspace'><g><title>&#10697;  workspace
+     * bigint
+ &#8599; workspace( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK → workspace.id. Redundantly stored here (parent directory already implies a workspace) for fast workspace-scoped queries without joining through directory.</title><text id='dss&#95;client&#46;document&#46;workspace' x='346' y='693' onmouseover="hghl(['document_fk_document_workspace','dss_client.workspace.id'])" onmouseout="uhghl(['document_fk_document_workspace','dss_client.workspace.id'])">workspace</text></g></a>
+<a href='#dss_client.document.workspace'><g><title>&#x1F517;  References workspace ( workspace -&gt; id ) </title><use x='442' y='679' href='#fk'/></g></a>
 
 <!-- == Shape == -->
 <rect style='fill:url(#shape16711680); stroke-width:0;filter:url(#shadow);'  class='shape' x='114' y='38' width='494' height='114' rx='19' ry='19' />
@@ -1100,7 +1104,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_client.directory'  onclick="window.scrollTo(351, 589);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.directory').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table directory</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_client.directory'  onclick="window.scrollTo(351, 646);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.directory').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table directory</h5></a>
 <p class="text-muted">Virtual folder hierarchy within a workspace&#46; Directories are logical — they exist in the DB only and do not map to physical filesystem folders&#46; Supports soft&#45;delete&#44; parent&#45;child nesting &#40;parent&#61;0 for root&#41;&#44; and CUID&#45;based external referencing&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1134,7 +1138,7 @@ function searchSVG( searchValue) {
 	<tr>
 		<td><span class='text-danger'>*</span><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#unq'/></svg></td>
 		<td><a name='dss_client.directory.cuid'>cuid</a></td>
-		<td class='dataType'> VARCHAR&#40;48&#41;  DEFAULT 'uuid()' </td>
+		<td class='dataType'> VARCHAR&#40;48&#41;  DEFAULT uuid() </td>
 		<td> Collision&#45;resistant unique identifier for this directory&#46; Stable across renames&#46; Used by the application layer as an external&#45;safe reference &#40;avoids exposing numeric auto&#45;increment IDs in APIs&#41;&#46; </td>
 	</tr>
 	<tr>
@@ -1177,7 +1181,7 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_directory_workspace</td>
-		<td > workspace &#8599; <a href='#dss&#95;client&#46;workspace'  onclick="window.scrollTo(142, 741);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.workspace').classList.add('palpable'); return false;">&#10063; workspace</a>(id) </td>
+		<td > workspace &#8599; <a href='#dss&#95;client&#46;workspace'  onclick="window.scrollTo(142, 798);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.workspace').classList.add('palpable'); return false;">&#10063; workspace</a>(id) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
@@ -1210,6 +1214,12 @@ function searchSVG( searchValue) {
 		<td><a name='dss_client.doc_info.display_name'>display&#95;name</a></td>
 		<td class='dataType'> VARCHAR&#40;200&#41;  </td>
 		<td> Human&#45;readable label for the document&#46; Free&#45;form text&#44; may include spaces&#44; punctuation&#44; and Unicode&#46; E&#46;g&#46; &quot;Q1 2024 Invoice – ACME Corp&quot; or &quot;Employee Handbook v3 &#40;Draft&#41;&quot;&#46; Written by the application&#59; not auto&#45;derived&#46; </td>
+	</tr>
+	<tr>
+		<td>&nbsp;</td>
+		<td><a name='dss_client.doc_info.metadata'>metadata</a></td>
+		<td class='dataType'> TEXT  </td>
+		<td> to store document level metadata </td>
 	</tr>
 <tr><th colspan='4'>Indexes</th></tr>
 	<tr>		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#pk'/></svg></td><td>pk&#95;doc&#95;info</td>
@@ -1248,7 +1258,7 @@ function searchSVG( searchValue) {
 	<tr>
 		<td><span class='text-danger'>*</span><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#unq'/></svg></td>
 		<td><a name='dss_client.doc_version.cuid'>cuid</a></td>
-		<td class='dataType'> VARCHAR&#40;48&#41;  DEFAULT 'uuid()' </td>
+		<td class='dataType'> VARCHAR&#40;48&#41;  DEFAULT uuid() </td>
 		<td> Collision&#45;resistant unique identifier for this specific version&#46; Stable and safe for external API exposure&#46; Distinct from the parent document CUID&#46; Example&#58; &quot;f3a8b2c1d9e4a7b0c6d5e3f2a8b1c4d7&quot;&#46; </td>
 	</tr>
 	<tr>
@@ -1330,7 +1340,7 @@ function searchSVG( searchValue) {
 	<tr>
 		<td><span class='text-danger'>*</span><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#unq'/></svg></td>
 		<td><a name='dss_client.document.cuid'>cuid</a></td>
-		<td class='dataType'> VARCHAR&#40;48&#41;  DEFAULT 'uuid()' </td>
+		<td class='dataType'> VARCHAR&#40;48&#41;  DEFAULT uuid() </td>
 		<td> Collision&#45;resistant unique identifier for this document&#46; Stable across version uploads and renames&#46; Safe to expose in external APIs&#46; Example&#58; &quot;2b3a8f1c9e4d7a0b6c5e2f3d8a1b4c7e&quot;&#46; </td>
 	</tr>
 	<tr>
@@ -1397,17 +1407,17 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_document_workspace</td>
-		<td > workspace &#8599; <a href='#dss&#95;client&#46;workspace'  onclick="window.scrollTo(142, 741);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.workspace').classList.add('palpable'); return false;">&#10063; workspace</a>(id) </td>
+		<td > workspace &#8599; <a href='#dss&#95;client&#46;workspace'  onclick="window.scrollTo(142, 798);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.workspace').classList.add('palpable'); return false;">&#10063; workspace</a>(id) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_document_directory</td>
-		<td > parent &#8599; <a href='#dss&#95;client&#46;directory'  onclick="window.scrollTo(351, 589);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.directory').classList.add('palpable'); return false;">&#10063; directory</a>(id) </td>
+		<td > parent &#8599; <a href='#dss&#95;client&#46;directory'  onclick="window.scrollTo(351, 646);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.directory').classList.add('palpable'); return false;">&#10063; directory</a>(id) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_document_name_store</td>
-		<td > name &#8599; <a href='#dss&#95;client&#46;name&#95;store'  onclick="window.scrollTo(60, 608);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.name_store').classList.add('palpable'); return false;">&#10063; name&#95;store</a>(id) </td>
+		<td > name &#8599; <a href='#dss&#95;client&#46;name&#95;store'  onclick="window.scrollTo(60, 665);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.name_store').classList.add('palpable'); return false;">&#10063; name&#95;store</a>(id) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
@@ -1427,7 +1437,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_client.extension'  onclick="window.scrollTo(60, 741);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.extension').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table extension</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_client.extension'  onclick="window.scrollTo(60, 798);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.extension').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table extension</h5></a>
 <p class="text-muted">Deduplicated registry of file extensions &#40;lowercase&#44; no dot&#41;&#46; Paired with vault via name&#95;store to form a full logical filename&#46; Allows efficient type&#45;based queries without scanning varchar filename columns&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1458,7 +1468,7 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_name_store_extension</td>
-		<td > id &#8601; <a href='#dss&#95;client&#46;name&#95;store'  onclick="window.scrollTo(60, 608);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.name_store').classList.add('palpable'); return false;">&#10063; name&#95;store</a>(extension) </td>
+		<td > id &#8601; <a href='#dss&#95;client&#46;name&#95;store'  onclick="window.scrollTo(60, 665);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.name_store').classList.add('palpable'); return false;">&#10063; name&#95;store</a>(extension) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
@@ -1467,7 +1477,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_client.name_store'  onclick="window.scrollTo(60, 608);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.name_store').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table name_store</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_client.name_store'  onclick="window.scrollTo(60, 665);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.name_store').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table name_store</h5></a>
 <p class="text-muted">Normalised filename registry&#46; Each row represents one unique &#40;stem&#44; extension&#41; pair&#44; e&#46;g&#46; &#40;&quot;invoice&#95;jan&#95;2024&quot;&#44; &quot;pdf&quot;&#41;&#46; document&#46;name is a FK to this table&#44; keeping the full filename string out of the document row&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1508,12 +1518,12 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_name_store_extension</td>
-		<td > extension &#8599; <a href='#dss&#95;client&#46;extension'  onclick="window.scrollTo(60, 741);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.extension').classList.add('palpable'); return false;">&#10063; extension</a>(id) </td>
+		<td > extension &#8599; <a href='#dss&#95;client&#46;extension'  onclick="window.scrollTo(60, 798);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.extension').classList.add('palpable'); return false;">&#10063; extension</a>(id) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_name_store_name_vault</td>
-		<td > name &#8599; <a href='#dss&#95;client&#46;vault'  onclick="window.scrollTo(60, 741);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.vault').classList.add('palpable'); return false;">&#10063; vault</a>(id) </td>
+		<td > name &#8599; <a href='#dss&#95;client&#46;vault'  onclick="window.scrollTo(60, 798);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.vault').classList.add('palpable'); return false;">&#10063; vault</a>(id) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
@@ -1528,7 +1538,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_client.vault'  onclick="window.scrollTo(60, 741);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.vault').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table vault</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_client.vault'  onclick="window.scrollTo(60, 798);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.vault').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table vault</h5></a>
 <p class="text-muted">Deduplicated table of bare filename stems &#40;no extension&#41;&#46; Combined with the extension table via name&#95;store to form a complete logical filename&#46; Avoids repeating long filename strings across millions of document rows&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1559,7 +1569,7 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_name_store_name_vault</td>
-		<td > id &#8601; <a href='#dss&#95;client&#46;name&#95;store'  onclick="window.scrollTo(60, 608);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.name_store').classList.add('palpable'); return false;">&#10063; name&#95;store</a>(name) </td>
+		<td > id &#8601; <a href='#dss&#95;client&#46;name&#95;store'  onclick="window.scrollTo(60, 665);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.name_store').classList.add('palpable'); return false;">&#10063; name&#95;store</a>(name) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
@@ -1656,7 +1666,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_client.workspace'  onclick="window.scrollTo(142, 741);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.workspace').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table workspace</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_client.workspace'  onclick="window.scrollTo(142, 798);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.workspace').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table workspace</h5></a>
 <p class="text-muted">Anchor table&#58; one row per registered workspace in this module&#46; Mirrors dsscore&#46;workspace&#46;id so directories and documents can reference a workspace via FK without cross&#45;database joins&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1677,7 +1687,7 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_directory_workspace</td>
-		<td > id &#8601; <a href='#dss&#95;client&#46;directory'  onclick="window.scrollTo(351, 589);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.directory').classList.add('palpable'); return false;">&#10063; directory</a>(workspace) </td>
+		<td > id &#8601; <a href='#dss&#95;client&#46;directory'  onclick="window.scrollTo(351, 646);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_client.directory').classList.add('palpable'); return false;">&#10063; directory</a>(workspace) </td>
 		<td>  </td>
 	</tr>
 	<tr>
