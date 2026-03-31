@@ -426,7 +426,7 @@ namespace Haley.Services {
                     return PopulateFileFromDic(input, dic);
 
             } else if (input.File is StorageFileRoute sfrRoot && !string.IsNullOrWhiteSpace(sfrRoot.RootCuid)) {
-                // ruid path — resolve document CUID to latest version before any other work.
+                // ruid path — resolve document CUID to the latest version before any other work.
                 var existing = await Indexer.GetDocVersionInfoByDocCuid(input.Scope.Module.Cuid.ToString("N"), sfrRoot.RootCuid);
 
                 if (existing?.Status == true && existing.Result is Dictionary<string, object> rdic && rdic.Count > 0) {
