@@ -135,9 +135,10 @@ namespace Haley.Internal {
                             inner join (
                                 select dvi.parent, max(dvi.ver) as max_ver, count(*) as version_count
                                 from doc_version as dvi
+                                where dvi.sub_ver = 0
                                 group by dvi.parent
                              ) as latest on latest.parent = d.id
-                             inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver
+                             inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver and dv.sub_ver = 0
                              left join version_info as vi on vi.id = dv.id
                              where d.workspace = {WSPACE} and d.parent = {PARENT} and d.deleted = 0
                        ) as browse_items
@@ -208,16 +209,16 @@ namespace Haley.Internal {
             }
             
             public class DOCVERSION {
-                public const string EXISTS = $@"select dv.id , dv.cuid as uid from doc_version as dv where dv.parent = {PARENT} and dv.ver = {VERSION};";
+                public const string EXISTS = $@"select dv.id , dv.cuid as uid from doc_version as dv where dv.parent = {PARENT} and dv.ver = {VERSION} and dv.sub_ver = 0;";
                 public const string EXISTS_BY_CUID = $@"select dv.id from doc_version as dv where dv.cuid = {CUID};";
                 public const string EXISTS_BY_ID = $@"select 1 from doc_version as dv where dv.id = {ID};";
                 public const string INSERT = $@"insert ignore into doc_version (parent,ver) values({PARENT},{VERSION});";
-                public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT};";
+                public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT} and dv.sub_ver = 0;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_ID = $@"select dv.parent from doc_version as dv where dv.id = {VALUE} limit 1;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_CUID = $@"select dv.parent from doc_version as dv where dv.cuid = {VALUE} limit 1;";
                 /// <summary>Returns 1 if the given version CUID is the latest version of its document, 0 otherwise.</summary>
                 public const string IS_LATEST_BY_CUID =
-                    $@"select case when dv.ver = (select max(dvi.ver) from doc_version as dvi where dvi.parent = dv.parent) then 1 else 0 end as is_latest
+                    $@"select case when dv.ver = (select max(dvi.ver) from doc_version as dvi where dvi.parent = dv.parent and dvi.sub_ver = 0) then 1 else 0 end as is_latest
                        from doc_version as dv where dv.cuid = {VALUE} limit 1;";
                 public const string GET_META_BY_CUID =
                     $@"select vi.metadata from version_info as vi inner join doc_version as dv on dv.id = vi.id where dv.cuid = {VALUE} limit 1;";
@@ -258,20 +259,58 @@ namespace Haley.Internal {
                        left join doc_info as di on di.file = dv.parent
                        where dv.id = {VALUE};";
 
+                /// <summary>Returns the latest content (sub_ver=0) version row for a document. Excludes thumbnail sub-versions.</summary>
                 public const string GET_LATEST_BY_PARENT =
                     $@"select dv.id, dv.cuid as uid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
-                       inner join (select max(dvi.ver) as ver from doc_version as dvi where dvi.parent = {PARENT}) as dvo on dvo.ver = dv.ver
+                       inner join (select max(dvi.ver) as ver from doc_version as dvi where dvi.parent = {PARENT} and dvi.sub_ver = 0) as dvo on dvo.ver = dv.ver
                        inner join version_info as vi on vi.id = dv.id
                        left join doc_info as di on di.file = {PARENT}
-                       where dv.parent = {PARENT};";
+                       where dv.parent = {PARENT} and dv.sub_ver = 0;";
 
+                /// <summary>Returns all content (sub_ver=0) versions for a document, newest first. Excludes thumbnail sub-versions.</summary>
                 public const string GET_ALL_BY_PARENT =
                     $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata
                        from doc_version as dv
                        left join version_info as vi on vi.id = dv.id
-                       where dv.parent = {PARENT}
+                       where dv.parent = {PARENT} and dv.sub_ver = 0
                        order by dv.ver desc;";
+
+                // ── Thumbnail queries ─────────────────────────────────────────────────
+
+                /// <summary>
+                /// Inserts a thumbnail doc_version row with the given ver (same as the content version)
+                /// and an explicit sub_ver (= MAX(sub_ver)+1 for that parent+ver, computed by caller).
+                /// </summary>
+                public const string INSERT_THUMBNAIL =
+                    $@"insert ignore into doc_version (parent, ver, sub_ver) values ({PARENT}, {VERSION}, {SUB_VER});";
+
+                /// <summary>
+                /// Returns COALESCE(MAX(sub_ver), 0) for thumbnail sub-versions of a specific (parent, ver).
+                /// Caller adds 1 to get the next sub_ver to insert.
+                /// </summary>
+                public const string FIND_LATEST_SUB_VER =
+                    $@"select COALESCE(MAX(dv.sub_ver), 0) from doc_version as dv where dv.parent = {PARENT} and dv.ver = {VERSION} and dv.sub_ver > 0;";
+
+                /// <summary>
+                /// Fetches the latest thumbnail sub-version storage info for a specific (parent document, content ver).
+                /// Returns the row with the highest sub_ver > 0 for the given (parent, ver).
+                /// </summary>
+                public const string GET_LATEST_THUMB_BY_VERSION =
+                    $@"select dv.id, dv.cuid as uid, dv.sub_ver,
+                              vi.storage_ref as path, vi.size, vi.storage_name as saveas_name,
+                              vi.staging_ref as staging_path, vi.hash, vi.flags, vi.profile_info_id
+                       from doc_version as dv
+                       inner join version_info as vi on vi.id = dv.id
+                       where dv.parent = {PARENT} and dv.ver = {VERSION}
+                         and dv.sub_ver = (
+                             select MAX(dvi.sub_ver) from doc_version as dvi
+                             where dvi.parent = {PARENT} and dvi.ver = {VERSION} and dvi.sub_ver > 0
+                         );";
+
+                /// <summary>Fetches back a doc_version row by (parent, ver, sub_ver) — used after INSERT_THUMBNAIL.</summary>
+                public const string EXISTS_BY_VERSION_SUBVER =
+                    $@"select dv.id, dv.cuid as uid from doc_version as dv where dv.parent = {PARENT} and dv.ver = {VERSION} and dv.sub_ver = {SUB_VER};";
 
                 // Optional extended update — only called when caller explicitly provides these fields.
                 // hash/synced_at use COALESCE so a NULL param leaves the existing value unchanged.
@@ -353,9 +392,10 @@ namespace Haley.Internal {
                        inner join (
                            select dvi.parent, max(dvi.ver) as max_ver, count(*) as version_count
                            from doc_version as dvi
+                           where dvi.sub_ver = 0
                            group by dvi.parent
                        ) as latest on latest.parent = d.id
-                       inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver
+                       inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver and dv.sub_ver = 0
                        left join version_info as vi on vi.id = dv.id
                        inner join name_store as ns on ns.id = d.name
                        inner join vault as v on v.id = ns.name

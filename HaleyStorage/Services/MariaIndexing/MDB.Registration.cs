@@ -19,8 +19,9 @@ namespace Haley.Utils {
         }
 
         /// <summary>
-        /// Creates a new <c>doc_version</c> row under the document that owns <paramref name="versionCuid"/>.
-        /// Navigates: versionCuid → doc_version.parent → document.id → insert new doc_version (max+1).
+        /// Creates a new content <c>doc_version</c> row (sub_ver=0) under the document that owns
+        /// <paramref name="versionCuid"/>. Navigates: versionCuid → doc_version.parent → document.id
+        /// → insert new doc_version (MAX(ver)+1, sub_ver=0).
         /// Filename and directory are irrelevant — only the CUID is used to locate the parent document.
         /// Opens a transaction keyed by <paramref name="callId"/> so <c>UpdateDocVersionInfo</c>
         /// can commit or rollback the whole unit in the coordinator's finally block.
@@ -46,11 +47,11 @@ namespace Haley.Utils {
                 if (!docId.HasValue || docId.Value < 1)
                     throw new ArgumentException($"No document found for version CUID '{versionCuid}'.");
 
-                // 2. Determine next version number.
+                // 2. Determine next content version number (sub_ver=0 only).
                 var currentMax = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_LATEST, load, (PARENT, docId.Value));
                 int nextVersion = (currentMax ?? 0) + 1;
 
-                // 3. Insert the new doc_version row.
+                // 3. Insert the new content doc_version row (sub_ver defaults to 0).
                 await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.INSERT, load, (PARENT, docId.Value), (VERSION, nextVersion));
 
                 // 4. Fetch back the new row to get its auto-generated id and cuid.

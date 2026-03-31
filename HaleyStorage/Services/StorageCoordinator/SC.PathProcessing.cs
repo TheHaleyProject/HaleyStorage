@@ -141,9 +141,35 @@ namespace Haley.Services {
         async Task<bool> CreateNewDocumentVersion(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider = null) {
             if (!forupload || inputW?.CreateNewVersion != true || string.IsNullOrWhiteSpace(input.File?.Cuid)) return false;
 
-            var (newVersionId, newVersionGuid) = await Indexer.RegisterNewDocVersion(input.Scope.Module.Cuid.ToString("N"), input.File.Cuid, input.CallID);
+            var moduleCuid = input.Scope.Module.Cuid.ToString("N");
+            long newVersionId;
+            Guid newVersionGuid;
 
-            if (newVersionId < 1) throw new ArgumentException($"Unable to create a new version for version CUID '{input.File.Cuid}'.");
+            if (inputW.IsThumbnail) {
+                // Thumbnail path: resolve content version → document id + ver number → insert with sub_ver.
+                var cvFb = await Indexer.GetDocVersionInfo(moduleCuid, input.File.Cuid);
+                if (cvFb?.Status != true || cvFb.Result is not Dictionary<string, object> cvDic)
+                    throw new ArgumentException($"Unable to resolve content version for CUID '{input.File.Cuid}'.");
+
+                if (!long.TryParse(cvDic["id"]?.ToString(), out long contentVersionId) || contentVersionId < 1)
+                    throw new ArgumentException("Unable to read content version id.");
+                if (!int.TryParse(cvDic["ver"]?.ToString(), out int contentVer) || contentVer < 1)
+                    throw new ArgumentException("Unable to read content version number.");
+
+                var documentId = await Indexer.GetDocumentIdByVersionId(moduleCuid, contentVersionId);
+                if (documentId < 1)
+                    throw new ArgumentException($"Unable to resolve parent document id for version id {contentVersionId}.");
+
+                (newVersionId, newVersionGuid) = await Indexer.RegisterThumbnailVersion(moduleCuid, documentId, contentVer, input.CallID);
+                if (newVersionId < 1)
+                    throw new ArgumentException($"Unable to register thumbnail version for document {documentId}, ver {contentVer}.");
+            } else {
+                // Content path: insert a new doc_version with sub_ver=0 (default).
+                (newVersionId, newVersionGuid) = await Indexer.RegisterNewDocVersion(moduleCuid, input.File.Cuid, input.CallID);
+                if (newVersionId < 1)
+                    throw new ArgumentException($"Unable to create a new version for version CUID '{input.File.Cuid}'.");
+            }
+
             var extension = Path.GetExtension(inputW.OriginalName ?? string.Empty);
             var logicalId = wInfo?.NameMode == VaultNameMode.Number
                 ? newVersionId.ToString()
@@ -166,7 +192,7 @@ namespace Haley.Services {
                     activeProfileInfoId = mW.ProfileInfoId;
                 if (activeProfileInfoId > 0) sfrNew.ProfileInfoId = activeProfileInfoId;
             }
-            return true; // this is success.. so dont proceed.
+            return true;
         }
 
         string DetermineTargetName(IVaultFileReadRequest input,bool forupload) {
@@ -197,7 +223,9 @@ namespace Haley.Services {
                 input.SetRequestedName(targetFileName);
             }
 
-            if (forupload && !IsFormatAllowed(targetExtension, FormatControlMode.Extension))
+            // Format policy is skipped for thumbnail uploads — thumbnails use their own allowed extensions
+            // (ThumbAllowedExtensions) validated at the controller level before reaching here.
+            if (forupload && (input as IVaultFileWriteRequest)?.IsThumbnail != true && !IsFormatAllowed(targetExtension, FormatControlMode.Extension))
                 throw new ArgumentException("Uploading this file format is not allowed.");
 
             if (string.IsNullOrWhiteSpace(input.RequestedName) && !string.IsNullOrWhiteSpace(targetFileName))
@@ -304,12 +332,10 @@ namespace Haley.Services {
             }
 
             // ── Extension consistency check ────────────────────────────────
-            // When a CUID is provided for upload (replace or new version), the incoming
-            // file must share the same extension as the stored document. A document that
-            // was created as .pdf cannot later receive a .png version via CUID — the
-            // document name and type identity would be broken. Upload without a CUID to
-            // create a separate document.
-            await CheckCuidExtensionConsistency(input, inputW,forupload);
+            // Skipped for thumbnail uploads — thumbnails intentionally differ in extension
+            // from the parent document (e.g. a PDF document can have a JPEG thumbnail).
+            if (inputW?.IsThumbnail != true)
+                await CheckCuidExtensionConsistency(input, inputW, forupload);
 
 
             // ── CreateNewVersion fast path ─────────────────────────────────

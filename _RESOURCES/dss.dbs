@@ -163,18 +163,24 @@
 			<column name="parent" prior="doc" type="BIGINT" mandatory="y" >
 				<comment><![CDATA[FK → document.id. Links this version to its parent logical document.]]></comment>
 			</column>
+			<column name="sub_ver" type="INT" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+				<comment><![CDATA[sub version gives the files' own content chain.. 0 is alwasy the main file.. rest are all supporting files.. and thes upporting files never get same extension as the main file.. for example.. if the main content is pdf.. we can still have the sub_version as png or jpeg.. main idea is these sub version files are used sa thumbnails.. 
+interesting idea is one file can have multiple thumbnails and it can be used sa 'rotating thumbnails' so gives user an animated experience..]]></comment>
+			</column>
 			<index name="pk_doc_version" unique="PRIMARY_KEY" >
 				<column name="id" />
-			</index>
-			<index name="unq_file_version" unique="UNIQUE_KEY" >
-				<column name="parent" />
-				<column name="ver" />
 			</index>
 			<index name="idx_file_version_0" unique="NORMAL" >
 				<column name="created" />
 			</index>
 			<index name="unq_doc_version" unique="UNIQUE_KEY" >
 				<column name="cuid" />
+			</index>
+			<index name="unq_file_version" unique="UNIQUE_KEY" >
+				<column name="parent" />
+				<column name="ver" />
+				<column name="sub_ver" />
 			</index>
 			<fk name="fk_doc_version_document" to_schema="dss_client" to_table="document" >
 				<fk_column name="parent" pk="id" />

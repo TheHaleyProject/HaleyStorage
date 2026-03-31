@@ -105,10 +105,11 @@ CREATE TABLE IF NOT EXISTS `doc_version` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'Surrogate PK. Used as the FK anchor for version_info, chunk_info, and chunked_files. Also returned to callers as the "versionId" in upload responses.',
   `cuid` varchar(48) NOT NULL DEFAULT uuid() COMMENT 'Collision-resistant unique identifier for this specific version. Stable and safe for external API exposure. Distinct from the parent document CUID. Example: "f3a8b2c1d9e4a7b0c6d5e3f2a8b1c4d7".',
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Timestamp when this version record was created, i.e. when the upload began. For placeholder uploads this marks when the DB record was reserved, not when the file bytes arrived.',
-  `ver` int(11) NOT NULL DEFAULT 1 COMMENT 'Monotonically increasing version number within the parent document. Starts at 1 for the first upload. The (parent, ver) unique constraint prevents gaps or duplicates. The latest version is MAX(ver) for a given parent.',
+  `ver` int(11) NOT NULL DEFAULT 1 COMMENT 'Monotonically increasing version number within the parent document. Starts at 1 for the first upload. The latest content version is MAX(ver) WHERE sub_ver=0.',
   `parent` bigint(20) NOT NULL COMMENT 'FK → document.id. Links this version to its parent logical document.',
+  `sub_ver` int(11) NOT NULL DEFAULT 0 COMMENT '0 = content version (default). 1, 2, 3… = thumbnail sub-versions under the same content version. Combined with (parent, ver) to form the new unique key.',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `unq_file_version` (`parent`,`ver`),
+  UNIQUE KEY `unq_file_version` (`parent`,`ver`,`sub_ver`),
   UNIQUE KEY `unq_doc_version` (`cuid`),
   KEY `idx_file_version_0` (`created`),
   CONSTRAINT `fk_doc_version_document` FOREIGN KEY (`parent`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION

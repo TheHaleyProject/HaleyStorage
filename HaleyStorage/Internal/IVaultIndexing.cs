@@ -18,9 +18,10 @@ namespace Haley.Services {
         Task<IFeedback> RegisterWorkspace(IVaultWorkSpace info);
         Task<(long id, Guid guid)> RegisterDocuments(IVaultReadRequest request, IVaultStorable holder);
         /// <summary>
-        /// Creates a new <c>doc_version</c> row (version = current max + 1) under the document that
-        /// owns <paramref name="versionCuid"/>. Skips filename/directory lookup entirely —
-        /// the CUID is the only identity signal required. Returns the new version's DB id and CUID.
+        /// Creates a new content <c>doc_version</c> row (sub_ver=0, version = MAX content ver + 1)
+        /// under the document that owns <paramref name="versionCuid"/>. Skips filename/directory
+        /// lookup entirely — the CUID is the only identity signal required.
+        /// Returns the new version's DB id and CUID.
         /// </summary>
         Task<(long id, Guid guid)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null);
         Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IVaultFileRoute file, string callId = null);
@@ -71,6 +72,23 @@ namespace Haley.Services {
         /// Returns a dictionary with keys: <c>storage_provider_key</c>, <c>staging_provider_key</c>, <c>mode</c>.
         /// </summary>
         Task<IFeedback> GetProfileInfo(long profileInfoId);
+
+        // ── Thumbnail ─────────────────────────────────────────────────────────
+
+        /// <summary>Returns the <c>document.id</c> (parent) for a given <c>doc_version.id</c>. Returns 0 when not found.</summary>
+        Task<long> GetDocumentIdByVersionId(string moduleCuid, long versionId);
+
+        /// <summary>
+        /// Inserts a new <c>doc_version</c> row with <c>sub_ver = MAX(sub_ver)+1</c> for the given
+        /// (documentId, contentVer). Returns the new thumbnail version's DB id and CUID.
+        /// </summary>
+        Task<(long id, Guid guid)> RegisterThumbnailVersion(string moduleCuid, long documentId, int contentVer, string callId = null);
+
+        /// <summary>
+        /// Fetches storage info for the latest thumbnail sub-version of a specific content version.
+        /// Returns a failed <see cref="IFeedback"/> when no thumbnail exists.
+        /// </summary>
+        Task<IFeedback> GetLatestThumbInfo(string moduleCuid, long documentId, int contentVer);
 
         // ── Staging promotion ─────────────────────────────────────────────────
 

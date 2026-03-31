@@ -41,6 +41,14 @@ namespace Haley.Models {
         [ConfigurationKeyName("oldvermeta")]
         public bool AllowMetadataOnOldVersions { get; set; } = false;
 
+        /// <summary>Maximum allowed thumbnail file size in kilobytes. Default 500 KB. JSON: <c>thumbmaxkb</c></summary>
+        [ConfigurationKeyName("thumbmaxkb")]
+        public int ThumbMaxSizeKb { get; set; } = 500;
+
+        /// <summary>Comma-separated allowed thumbnail extensions (lowercase, no dot). Default "jpeg,jpg,png,webp,gif". JSON: <c>thumbexts</c></summary>
+        [ConfigurationKeyName("thumbexts")]
+        public string ThumbAllowedExtensions { get; set; } = "jpeg,jpg,png,webp,gif";
+
         public StorageRegistryConfig() { }
     }
 }

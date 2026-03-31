@@ -15,5 +15,12 @@ namespace Haley.Abstractions {
         /// bypassing filename-based lookup. The document's original name is preserved in DB.
         /// </summary>
         bool CreateNewVersion { get; set; }
+        /// <summary>
+        /// When <c>true</c>, the uploaded file is a thumbnail for the file identified by uid/ruid.
+        /// Implies <c>CreateNewVersion = true</c>. The registered <c>doc_version</c> row will share
+        /// the same <c>ver</c> as the resolved content version but with <c>sub_ver &gt; 0</c>.
+        /// Extension consistency and format policy checks are skipped for thumbnail uploads.
+        /// </summary>
+        bool IsThumbnail { get; set; }
     }
 }

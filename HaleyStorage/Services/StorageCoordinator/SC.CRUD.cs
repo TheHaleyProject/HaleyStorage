@@ -31,6 +31,7 @@ namespace Haley.Services {
                 if (input.ReadOnlyMode) { result.Message = "Request is in Read-Only mode."; return result; }
 
                 input.GenerateCallId();
+
                 var gPaths = ProcessAndBuildStoragePath(input, true);
 
                 if (string.IsNullOrWhiteSpace(input.OverrideRef)) {

@@ -16,5 +16,9 @@ namespace Haley.Abstractions {
         /// Default <c>false</c>. Set to <c>true</c> only for bulk data migration scenarios.
         /// </summary>
         bool AllowMetadataOnOldVersions { get; set; }
+        /// <summary>Maximum allowed thumbnail file size in kilobytes. Default 500 KB.</summary>
+        int ThumbMaxSizeKb { get; set; }
+        /// <summary>Comma-separated allowed thumbnail file extensions (lowercase, no dot). Default "jpeg,jpg,png,webp,gif".</summary>
+        string ThumbAllowedExtensions { get; set; }
     }
 }

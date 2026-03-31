@@ -71,7 +71,18 @@ namespace Haley.Utils {
 
                 var versionRows = await _agw.RowsAsync(moduleCuid, INSTANCE.DOCVERSION.GET_ALL_BY_PARENT, default, (PARENT, documentId));
 
-                var response = new VaultFileDetailsResponse { DocumentId = docRow.GetLong("document_id"), DocumentCuid = docRow.GetString("document_cuid") ?? string.Empty, DisplayName = docRow.GetString("display_name") ?? string.Empty, WorkspaceId = docRow.GetLong("workspace_id"), WorkspaceCuid = request.Scope?.Workspace?.Cuid.ToString("N") ?? string.Empty, DirectoryId = docRow.GetLong("directory_id"), DirectoryCuid = docRow.GetString("directory_cuid") ?? string.Empty, DirectoryName = docRow.GetString("directory_name") ?? string.Empty, DirectoryParentId = docRow.GetLong("directory_parent_id"), VersionCount = versionRows.Count, DocumentMetadata = docRow.GetString("doc_metadata") ?? string.Empty };
+                // Check if the latest content version has a thumbnail sub-version.
+                bool hasThumb = false;
+                if (versionRows.Count > 0) {
+                    var latestVer = versionRows[0].GetInt("version_no");
+                    if (latestVer > 0) {
+                        var latestSubVer = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_LATEST_SUB_VER, default,
+                            (PARENT, documentId), (VERSION, latestVer));
+                        hasThumb = (latestSubVer ?? 0) > 0;
+                    }
+                }
+
+                var response = new VaultFileDetailsResponse { DocumentId = docRow.GetLong("document_id"), DocumentCuid = docRow.GetString("document_cuid") ?? string.Empty, DisplayName = docRow.GetString("display_name") ?? string.Empty, WorkspaceId = docRow.GetLong("workspace_id"), WorkspaceCuid = request.Scope?.Workspace?.Cuid.ToString("N") ?? string.Empty, DirectoryId = docRow.GetLong("directory_id"), DirectoryCuid = docRow.GetString("directory_cuid") ?? string.Empty, DirectoryName = docRow.GetString("directory_name") ?? string.Empty, DirectoryParentId = docRow.GetLong("directory_parent_id"), VersionCount = versionRows.Count, DocumentMetadata = docRow.GetString("doc_metadata") ?? string.Empty, HasThumbnail = hasThumb };
 
                 foreach (var row in versionRows) {
                     response.Versions.Add(new VaultFileVersionInfo { VersionId = row.GetLong("version_id"), VersionCuid = row.GetString("version_cuid") ?? string.Empty, VersionNumber = row.GetInt("version_no"), Created = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, Flags = row.GetInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at"), Metadata = row.GetString("metadata") ?? string.Empty });

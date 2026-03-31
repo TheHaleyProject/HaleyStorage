@@ -20,6 +20,7 @@ namespace Haley.Models {
         public ExistConflictResolveMode WriteConflictMode { get; set; } = ExistConflictResolveMode.ReturnError;
         public int BufferSize { get; set; } = 1024 * 80; //Default to 80KB
         public bool CreateNewVersion { get; set; }
+        public bool IsThumbnail { get; set; }
         public string Id { get; set; }
         public Stream FileStream { get; set; }
 

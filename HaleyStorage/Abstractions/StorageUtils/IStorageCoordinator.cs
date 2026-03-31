@@ -123,5 +123,15 @@ namespace Haley.Abstractions {
         /// <paramref name="request"/> provides the module scope; <paramref name="documentCuid"/> is the ruid.
         /// </summary>
         Task<IFeedback> SetDocumentMetadata(IVaultReadRequest request, string documentCuid, string metadata);
+
+        // ── Thumbnail ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Downloads the thumbnail for the file identified by <paramref name="request"/> (uid or ruid).
+        /// Returns a failed response when no thumbnail exists for that version.
+        /// Upload is handled by the standard <see cref="Upload"/> path with
+        /// <see cref="IVaultFileWriteRequest.IsThumbnail"/> set to <c>true</c>.
+        /// </summary>
+        Task<IVaultStreamResponse> DownloadThumbnail(IVaultFileReadRequest request);
     }
 }
