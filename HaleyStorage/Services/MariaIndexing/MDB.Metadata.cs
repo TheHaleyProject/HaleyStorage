@@ -1,6 +1,7 @@
 using Haley.Abstractions;
 using Haley.Models;
 using static Haley.Internal.IndexingConstant;
+using Microsoft.Extensions.Logging;
 using static Haley.Internal.IndexingQueries;
 
 namespace Haley.Utils {
