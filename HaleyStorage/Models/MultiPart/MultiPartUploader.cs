@@ -1,4 +1,4 @@
-﻿//using System.Net.Http.Headers;
+//using System.Net.Http.Headers;
 using Haley.Abstractions;
 using Haley.Models;
 using Haley.Utils;
@@ -224,9 +224,10 @@ namespace Haley.Models {
                         // ---- Write to temporary file ----
                         var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")); //In linux, we write this to /tmp/ (if used inside the container, its much better, because we store only inside the container, and not persisted anywhere.. We can even clean up all the temp folders later.
 
-                        long maxAllowed = validationFb?.Result ?? _defaultMaxFileSizeinMb;
-                        if (maxAllowed < 0) maxAllowed = 0; //0 is unlimited.
-                        maxAllowed = maxAllowed * 1024 * 1024; //In Bytes.
+                        long maxAllowedBytes = validationFb?.Result ?? 0;
+                        if (maxAllowedBytes < 0) maxAllowedBytes = 0; //0 is unlimited.
+                        if (maxAllowedBytes == 0 && _defaultMaxFileSizeinMb > 0)
+                            maxAllowedBytes = _defaultMaxFileSizeinMb * 1024L * 1024L;
 
                         long totalRead = 0;
                         var buffer = new byte[1024 * 500]; // In 80Kb chunks buffer, it takes 29 seconds for 275 MB file. Though it doesn't make much difference, let us keep it as 500KB chunk.
@@ -237,11 +238,11 @@ namespace Haley.Models {
                                 totalRead += read;
 
                                 // Check file size while streaming
-                                if (maxAllowed > 0 && totalRead > maxAllowed) {
+                                if (maxAllowedBytes > 0 && totalRead > maxAllowedBytes) {
                                     fs.Dispose();
                                     //Delete file here itself.
                                     DeleteTemporaryFile(tempPath);
-                                    var msg = $"File '{fileName}' exceeds default limit {maxAllowed / 1024 / 1024} MB.";
+                                    var msg = $"File '{fileName}' exceeds the allowed limit {maxAllowedBytes.ToFileSize(false)}.";
                                     if (_abortOnRejection) throw new Exception(msg); //abort.. stop upload.
 
                                     var failedResponse = new VaultResponse {
@@ -319,3 +320,4 @@ namespace Haley.Models {
         }
     }
 }
+

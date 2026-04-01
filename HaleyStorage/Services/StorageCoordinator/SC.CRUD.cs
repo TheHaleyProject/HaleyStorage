@@ -95,7 +95,7 @@ namespace Haley.Services {
                     result.VersionCuid = sfrUp.Cuid;
                     result.RootCuid = sfrUp.RootCuid;
                 }
-                if (result.Status && !writeResult.AlreadyExisted) {
+                if (result.Status) {
                     result.Size = input.FileStream.Length;
                     result.SizeHR = result.Size.ToFileSize(false);
                 }
@@ -326,3 +326,4 @@ namespace Haley.Services {
 
     }
 }
+
