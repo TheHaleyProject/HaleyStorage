@@ -143,7 +143,7 @@ namespace Haley.Services {
 
         async Task<bool> CreateNewDocumentVersion(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider = null) {
             if (!forupload || string.IsNullOrWhiteSpace(input.File?.Cuid)) return false; //only applicable when uploading a specific version (replace=false scenario, along with the presence of a CUID to identify the version to be replaced).
-            if (inputW?.ReplaceExistingFile == true) return false; //We need to replace the file.. so no point in creating a new version.
+            if (inputW?.ReplaceExistingFile == true && inputW.IsThumbnail != true) return false; // Thumbnail uploads always create a new sub-version row; they never replace the content row.
 
             var moduleCuid = input.Scope.Module.Cuid.ToString("N");
             long newVersionId;

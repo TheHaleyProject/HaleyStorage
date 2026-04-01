@@ -39,17 +39,27 @@ namespace Haley.Utils {
                 if (contentVer < 1) throw new ArgumentException("contentVer must be a positive integer.");
                 if (!_agw.ContainsKey(moduleCuid)) throw new ArgumentException($"No adapter found for module {moduleCuid}.");
 
+                var handlerKey = GetHandlerKey(callId, moduleCuid);
+                var handler = _agw.GetTransactionHandler(moduleCuid);
+                if (handler != null && !string.IsNullOrWhiteSpace(callId)) {
+                    if (_handlers.ContainsKey(handlerKey)) throw new Exception($"A transaction with key {handlerKey} already exists.");
+                    _handlers.TryAdd(handlerKey, (handler, DateTime.UtcNow));
+                    handler.Begin();
+                }
+
+                var load = new DbExecutionLoad(default, handler);
+
                 // 1. Find the current max sub_ver for this (parent, ver) — 0 when no thumbnails exist yet.
-                var currentMaxSubVer = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_LATEST_SUB_VER, default,
+                var currentMaxSubVer = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_LATEST_SUB_VER, load,
                     (PARENT, documentId), (VERSION, contentVer));
                 int nextSubVer = (currentMaxSubVer ?? 0) + 1;
 
                 // 2. Insert the thumbnail doc_version row.
-                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.INSERT_THUMBNAIL, default,
+                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.INSERT_THUMBNAIL, load,
                     (PARENT, documentId), (VERSION, contentVer), (SUB_VER, nextSubVer));
 
                 // 3. Fetch back to get the auto-generated id and cuid.
-                var dvRow = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.EXISTS_BY_VERSION_SUBVER, default,
+                var dvRow = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.EXISTS_BY_VERSION_SUBVER, load,
                     (PARENT, documentId), (VERSION, contentVer), (SUB_VER, nextSubVer));
                 if (dvRow == null || dvRow.Count < 1)
                     throw new Exception($"Unable to retrieve new thumbnail doc_version for document {documentId}, ver {contentVer}, sub_ver {nextSubVer}.");
@@ -66,6 +76,11 @@ namespace Haley.Utils {
                 return (newId, newGuid);
             } catch (Exception ex) {
                 _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                var handlerKey = GetHandlerKey(callId, moduleCuid);
+                if (!string.IsNullOrWhiteSpace(handlerKey) && _handlers.ContainsKey(handlerKey)) {
+                    _handlers[handlerKey].handler?.Rollback();
+                    _handlers.Remove(handlerKey, out _);
+                }
                 if (ThrowExceptions) throw;
                 return (0, Guid.Empty);
             }
