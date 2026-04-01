@@ -32,7 +32,7 @@ namespace Haley.Utils {
         /// thumbnails share the ver with their content version and only differ in sub_ver.
         /// Returns the new thumbnail version's DB id and CUID.
         /// </summary>
-        public async Task<(long id, Guid guid)> RegisterThumbnailVersion(string moduleCuid, long documentId, int contentVer, string callId = null) {
+        public async Task<(long id, Guid guid)> RegisterThumbnailVersion(string moduleCuid, long documentId, int contentVer, long? actor = null, string callId = null) {
             try {
                 if (string.IsNullOrWhiteSpace(moduleCuid)) throw new ArgumentNullException(nameof(moduleCuid));
                 if (documentId < 1) throw new ArgumentException("documentId must be a positive integer.");
@@ -48,6 +48,7 @@ namespace Haley.Utils {
                 }
 
                 var load = new DbExecutionLoad(default, handler);
+                var actorValue = actor ?? 0L;
 
                 // 1. Find the current max sub_ver for this (parent, ver) — 0 when no thumbnails exist yet.
                 var currentMaxSubVer = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_LATEST_SUB_VER, load,
@@ -56,7 +57,7 @@ namespace Haley.Utils {
 
                 // 2. Insert the thumbnail doc_version row.
                 await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.INSERT_THUMBNAIL, load,
-                    (PARENT, documentId), (VERSION, contentVer), (SUB_VER, nextSubVer));
+                    (PARENT, documentId), (VERSION, contentVer), (SUB_VER, nextSubVer), (ACTOR, actorValue));
 
                 // 3. Fetch back to get the auto-generated id and cuid.
                 var dvRow = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.EXISTS_BY_VERSION_SUBVER, load,

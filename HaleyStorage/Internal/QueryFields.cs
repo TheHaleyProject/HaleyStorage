@@ -26,6 +26,7 @@ namespace Haley.Internal {
         public const string SIGNKEY = $@"@{nameof(SIGNKEY)}";
         public const string ENCRYPTKEY = $@"@{nameof(ENCRYPTKEY)}";
         public const string VALUE = $@"@{nameof(VALUE)}";
+        public const string ACTOR = $@"@{nameof(ACTOR)}";
         public const string PASSWORD = $@"@{nameof(PASSWORD)}";
         public const string DATETIME = $@"@{nameof(DATETIME)}";
         public const string PARENT = $@"@{nameof(PARENT)}";

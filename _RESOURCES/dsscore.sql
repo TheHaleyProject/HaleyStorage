@@ -167,6 +167,7 @@ CREATE TABLE IF NOT EXISTS `profile_info` (
   `hash` varchar(48) NOT NULL COMMENT 'Deterministric guid created from the sha256 hash of the metadata, storage key, staging key, mode which uniquely identifies if this is alreday created or not..',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_profile_config` (`profile`,`version`),
+  UNIQUE KEY `unq_profile_info_hash` (`hash`),
   KEY `fk_profile_info_provider` (`storage_provider`),
   KEY `fk_profile_info_provider_0` (`staging_provider`),
   CONSTRAINT `fk_profile_config_profile` FOREIGN KEY (`profile`) REFERENCES `profile` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,

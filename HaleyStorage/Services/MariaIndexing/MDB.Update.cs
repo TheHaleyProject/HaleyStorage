@@ -89,7 +89,7 @@ namespace Haley.Utils {
                 if (!(docId > 0))
                     return fb.SetMessage($"Version {versionId} not found in module {moduleCuid}.");
 
-                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.INSERT_INFO, default, (PARENT, docId!.Value), (DNAME, displayName));
+                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.INSERT_INFO, default, (PARENT, docId!.Value), (DNAME, displayName), (ACTOR, 0L));
                 return fb.SetStatus(true);
             } catch (Exception ex) {
                 return fb.SetMessage(ex.Message);

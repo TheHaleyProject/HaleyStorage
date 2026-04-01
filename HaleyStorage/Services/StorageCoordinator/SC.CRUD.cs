@@ -92,6 +92,7 @@ namespace Haley.Services {
 
                 if (input.File != null) result.SetResult(input.File);
                 if (input.File is StorageFileRoute sfrUp) {
+                    if (sfrUp.Actor == 0 && input.Actor.HasValue) sfrUp.Actor = input.Actor.Value;
                     result.VersionCuid = sfrUp.Cuid;
                     result.RootCuid = sfrUp.RootCuid;
                 }

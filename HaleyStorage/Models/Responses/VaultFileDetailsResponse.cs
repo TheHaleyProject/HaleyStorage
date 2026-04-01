@@ -8,11 +8,13 @@ namespace Haley.Models {
         public long DocumentId { get; set; }
         public string DocumentCuid { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
+        public long DocumentActorId { get; set; }
         public long WorkspaceId { get; set; }
         public string WorkspaceCuid { get; set; } = string.Empty;
         public long DirectoryId { get; set; }
         public string DirectoryCuid { get; set; } = string.Empty;
         public string DirectoryName { get; set; } = string.Empty;
+        public long DirectoryActorId { get; set; }
         public long DirectoryParentId { get; set; }
         public int VersionCount { get; set; }
         /// <summary>Document-level metadata (from doc_info.metadata). Empty string if not set.</summary>

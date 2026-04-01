@@ -33,6 +33,7 @@ namespace Haley.Utils {
                 if (!ws.status) return fb.SetMessage("Workspace not found or not registered.");
 
                 var dbid = request.Scope.Module.Cuid.ToString("N");
+                var actor = request.Actor ?? 0L;
 
                 // Resolve the parent folder ID.
                 // Priority: explicit Id → resolve by CUID or DisplayName → 0 (root).
@@ -50,7 +51,7 @@ namespace Haley.Utils {
 
                 var dirInfo = await InsertAndFetchIDRead(dbid,
                     () => (INSTANCE.DIRECTORY.EXISTS, Consolidate((WSPACE, ws.id), (PARENT, parentId), (NAME, dirDbName))),
-                    () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws.id), (PARENT, parentId), (NAME, dirDbName), (DNAME, folderName))),
+                    () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws.id), (PARENT, parentId), (NAME, dirDbName), (DNAME, folderName), (ACTOR, actor))),
                     readOnly: request.ReadOnlyMode,
                     $"Unable to create directory '{folderName}' in workspace {ws.id}");
 

@@ -53,7 +53,7 @@ CREATE TABLE IF NOT EXISTS `directory` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'Surrogate PK. Referenced by document.parent and by child directories via the parent column.',
   `display_name` varchar(120) NOT NULL COMMENT 'Human-readable folder label displayed in the UI. May contain spaces and mixed case, e.g. "Project Documents" or "Year 2024 Invoices".',
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Timestamp when the directory record was first created.',
-  `modified` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Automatically updated whenever any column in this row changes.',
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Automatically updated whenever any column in this row changes.',
   `cuid` varchar(48) NOT NULL DEFAULT uuid() COMMENT 'Collision-resistant unique identifier for this directory. Stable across renames. Used by the application layer as an external-safe reference (avoids exposing numeric auto-increment IDs in APIs).',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT 'Soft-delete flag. 0=active, 1=deleted. Deleted directories are hidden from browse results but retained in the database for audit and foreign-key integrity.',
   `name` varchar(120) NOT NULL COMMENT 'Normalised folder slug used in uniqueness checks and path construction, e.g. "project_docs" or "invoices". Should be lowercase and URL-safe. Different from display_name which may have spaces.',
@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS `directory` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_directory` (`workspace`,`parent`,`name`),
   UNIQUE KEY `unq_directory_0` (`cuid`),
+  KEY `idx_directory_parent` (`parent`),
+  KEY `idx_directory_workspace_parent_deleted` (`workspace`,`parent`,`deleted`),
   CONSTRAINT `fk_directory_workspace` FOREIGN KEY (`workspace`) REFERENCES `workspace` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1000 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Virtual folder hierarchy within a workspace. Directories are logical — they exist in the DB only and do not map to physical filesystem folders. Supports soft-delete, parent-child nesting (parent=0 for root), and CUID-based external referencing.';
 
@@ -73,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `document` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'Surrogate PK. Referenced by doc_version.parent, doc_info.file, and other version-level tables.',
   `cuid` varchar(48) NOT NULL DEFAULT uuid() COMMENT 'Collision-resistant unique identifier for this document. Stable across version uploads and renames. Safe to expose in external APIs. Example: "2b3a8f1c9e4d7a0b6c5e2f3d8a1b4c7e".',
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Timestamp when the document record was first created (i.e. when the first version was uploaded).',
-  `modified` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Automatically updated whenever any column in this row changes (e.g. when the document is moved or soft-deleted).',
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Automatically updated whenever any column in this row changes (e.g. when the document is moved or soft-deleted).',
   `parent` bigint(20) NOT NULL COMMENT 'FK → directory.id. The virtual folder this document lives in. Changing this value moves the document to a different folder.',
   `name` bigint(20) NOT NULL COMMENT 'FK → name_store.id. Represents the logical filename (stem + extension). E.g. name_store id=7 maps to "invoice_jan_2024.pdf". Do not confuse with a varchar name — this is a numeric FK.',
   `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT 'Soft-delete flag. 0=active, 1=deleted. Deleted documents are excluded from browse/search results but their version history is preserved for audit purposes.',
@@ -84,6 +86,7 @@ CREATE TABLE IF NOT EXISTS `document` (
   KEY `fk_file_index_parent` (`workspace`),
   KEY `fk_document_directory` (`parent`),
   KEY `fk_document_name_store` (`name`),
+  KEY `idx_document_workspace_parent_deleted` (`workspace`,`parent`,`deleted`),
   CONSTRAINT `fk_document_directory` FOREIGN KEY (`parent`) REFERENCES `directory` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_document_name_store` FOREIGN KEY (`name`) REFERENCES `name_store` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_document_workspace` FOREIGN KEY (`workspace`) REFERENCES `workspace` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
@@ -117,6 +120,7 @@ CREATE TABLE IF NOT EXISTS `doc_version` (
   UNIQUE KEY `unq_doc_version` (`cuid`),
   UNIQUE KEY `unq_file_version` (`parent`,`ver`,`sub_ver`),
   KEY `idx_file_version_0` (`created`),
+  KEY `idx_doc_version_parent_subver_ver` (`parent`,`sub_ver`,`ver`),
   CONSTRAINT `fk_doc_version_document` FOREIGN KEY (`parent`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1996 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='One row per file upload event. A document accumulates version rows over time (ver=1, 2, 3...). The version row is the FK anchor for all physical storage metadata (version_info) and chunking state (chunk_info, chunked_files).';
 
@@ -127,7 +131,7 @@ CREATE TABLE IF NOT EXISTS `extension` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Surrogate PK. Referenced by name_store.extension.',
   `name` varchar(100) NOT NULL COMMENT 'File extension without the leading dot, always lowercase. E.g. "pdf", "mp4", "docx", "jpg". Normalised by the application before insert.',
   PRIMARY KEY (`id`),
-  KEY `idx_extension` (`name`)
+  UNIQUE KEY `unq_extension` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1000 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Deduplicated registry of file extensions (lowercase, no dot). Paired with vault via name_store to form a full logical filename. Allows efficient type-based queries without scanning varchar filename columns.';
 
 -- Data exporting was unselected.
@@ -151,7 +155,7 @@ CREATE TABLE IF NOT EXISTS `vault` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'Surrogate PK. Referenced by name_store.name.',
   `name` varchar(200) NOT NULL COMMENT 'Bare filename stem without extension, e.g. "invoice_jan_2024" or "profile_photo". Normalised by the application before insert (trimmed, lowercased where appropriate).',
   PRIMARY KEY (`id`),
-  KEY `idx_name_store` (`name`)
+  UNIQUE KEY `unq_vault_name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=500 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Deduplicated table of bare filename stems (no extension). Combined with the extension table via name_store to form a complete logical filename. Avoids repeating long filename strings across millions of document rows.';
 
 -- Data exporting was unselected.
@@ -170,6 +174,7 @@ CREATE TABLE IF NOT EXISTS `version_info` (
   `profile_info_id` bigint(20) DEFAULT NULL COMMENT 'if null, then we fall back to using the module''s default current profile.. However, current profile could not be the correct one, may be the current profile got modified or changed .. May be we didn''t use the module''s profile, we used the workspace''s profile.. or a workspace profile was addedin between.. so, having the profile_info_id  here is the best option to properly resolve the correct storage path.',
   PRIMARY KEY (`id`),
   KEY `idx_version_info` (`storage_name`),
+  KEY `idx_version_info_profile_info` (`profile_info_id`),
   CONSTRAINT `fk_version_info_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Physical storage metadata for one document version. Stores WHERE the file is (storage_ref, staging_ref), HOW BIG it is (size), WHAT IT IS (hash), and WHAT STATE it is in (flags bitmask). The flags column is the authoritative lifecycle tracker — read it to determine whether a file is a placeholder, in staging, in primary storage, or fully completed.';
 

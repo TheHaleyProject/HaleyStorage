@@ -109,21 +109,21 @@ namespace Haley.Internal {
                 public const string EXISTS = $@"select dir.id, dir.cuid as uid from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME} and dir.deleted = 0;";
                 public const string EXISTS_BY_CUID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.cuid = {VALUE} and dir.deleted = 0;";
                 public const string EXISTS_BY_ID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.id = {VALUE} and dir.deleted = 0;";
-                public const string INSERT = $@"insert ignore into directory (workspace,parent,name,display_name) values ({WSPACE},{PARENT},{NAME},{DNAME});";
+                public const string INSERT = $@"insert ignore into directory (workspace,parent,name,display_name,actor) values ({WSPACE},{PARENT},{NAME},{DNAME},{ACTOR});";
                 public const string GET = $@"select dir.id from directory as dir where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={NAME} and dir.deleted = 0;";
                 public const string GET_BY_CUID = $@"select dir.id from directory as dir where dir.cuid = {CUID} and dir.deleted = 0;";
                 public const string GET_DETAILS =
-                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.parent, dir.workspace, dir.created, dir.modified
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.created, dir.modified
                        from directory as dir
                        where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME} and dir.deleted = 0
                        limit 1;";
                 public const string GET_DETAILS_BY_CUID =
-                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.parent, dir.workspace, dir.created, dir.modified
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.created, dir.modified
                        from directory as dir
                        where dir.cuid = {VALUE} and dir.deleted = 0
                        limit 1;";
                 public const string GET_DETAILS_BY_ID =
-                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.parent, dir.workspace, dir.created, dir.modified
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.created, dir.modified
                        from directory as dir
                        where dir.id = {VALUE} and dir.deleted = 0
                        limit 1;";
@@ -131,13 +131,13 @@ namespace Haley.Internal {
                 public const string BROWSE_ITEMS =
                     $@"select *
                        from (
-                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.parent as parent_id, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
+                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
                              from directory as dir
                              where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.deleted = 0
 
                              union all
 
-                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, d.parent as parent_id, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
+                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
                             from document as d
                             left join doc_info as di on di.file = d.id
                             inner join (
@@ -183,12 +183,12 @@ namespace Haley.Internal {
                 public const string EXISTS = $@"select doc.id , doc.cuid as uid from document as doc where doc.parent = {PARENT} and doc.name = {NAME} and doc.deleted = 0;";
                 public const string EXISTS_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.deleted = 0;";
                 public const string INSERT = $@"insert ignore into document (workspace,parent,name) values ({WSPACE},{PARENT},{NAME});";
-                public const string INSERT_INFO = $@"insert into doc_info (file,display_name) values ({PARENT}, {DNAME}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name);";
+                public const string INSERT_INFO = $@"insert into doc_info (file,display_name,actor) values ({PARENT}, {DNAME}, {ACTOR}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name);";
                 public const string GET_BY_PARENT = $@"select doc.id from document as doc where doc.parent= {PARENT} and doc.name = {NAME} and doc.deleted = 0;";
                 public const string GET_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.deleted = 0;";
                 public const string COUNT_BY_DIRECTORY = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT} and doc.deleted = 0;";
                 public const string GET_DETAILS_BY_ID =
-                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name, di.metadata as doc_metadata
+                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.actor as directory_actor_id, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name, di.metadata as doc_metadata, di.actor as document_actor_id
                        from document as d
                        left join doc_info as di on di.file = d.id
                        inner join directory as dir on dir.id = d.parent and dir.deleted = 0
@@ -220,7 +220,7 @@ namespace Haley.Internal {
                 public const string EXISTS = $@"select dv.id , dv.cuid as uid from doc_version as dv where dv.parent = {PARENT} and dv.ver = {VERSION} and dv.sub_ver = 0;";
                 public const string EXISTS_BY_CUID = $@"select dv.id from doc_version as dv where dv.cuid = {CUID};";
                 public const string EXISTS_BY_ID = $@"select 1 from doc_version as dv where dv.id = {ID};";
-                public const string INSERT = $@"insert ignore into doc_version (parent,ver) values({PARENT},{VERSION});";
+                public const string INSERT = $@"insert ignore into doc_version (parent,ver,actor) values({PARENT},{VERSION},{ACTOR});";
                 public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT} and dv.sub_ver = 0;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_ID = $@"select dv.parent from doc_version as dv where dv.id = {VALUE} limit 1;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_CUID = $@"select dv.parent from doc_version as dv where dv.cuid = {VALUE} limit 1;";
@@ -254,7 +254,7 @@ namespace Haley.Internal {
                        where id = {ID};";
 
                 public const string GET_FULL_BY_CUID =
-                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
+                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, dv.actor, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
                        inner join document as d on d.id = dv.parent
                        inner join version_info as vi on vi.id = dv.id
@@ -262,7 +262,7 @@ namespace Haley.Internal {
                        where dv.cuid = {VALUE};";
 
                 public const string GET_FULL_BY_ID =
-                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
+                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, dv.actor, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
                        inner join document as d on d.id = dv.parent
                        inner join version_info as vi on vi.id = dv.id
@@ -271,7 +271,7 @@ namespace Haley.Internal {
 
                 /// <summary>Returns the latest content (sub_ver=0) version row for a document. Excludes thumbnail sub-versions.</summary>
                 public const string GET_LATEST_BY_PARENT =
-                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
+                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, dv.actor, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
                        inner join document as d on d.id = dv.parent
                        inner join (select max(dvi.ver) as ver from doc_version as dvi where dvi.parent = {PARENT} and dvi.sub_ver = 0) as dvo on dvo.ver = dv.ver
@@ -281,7 +281,7 @@ namespace Haley.Internal {
 
                 /// <summary>Returns all content (sub_ver=0) versions for a document, newest first. Excludes thumbnail sub-versions.</summary>
                 public const string GET_ALL_BY_PARENT =
-                    $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata
+                    $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.actor as actor_id, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata
                        from doc_version as dv
                        left join version_info as vi on vi.id = dv.id
                        where dv.parent = {PARENT} and dv.sub_ver = 0
@@ -294,7 +294,7 @@ namespace Haley.Internal {
                 /// and an explicit sub_ver (= MAX(sub_ver)+1 for that parent+ver, computed by caller).
                 /// </summary>
                 public const string INSERT_THUMBNAIL =
-                    $@"insert ignore into doc_version (parent, ver, sub_ver) values ({PARENT}, {VERSION}, {SUB_VER});";
+                    $@"insert ignore into doc_version (parent, ver, sub_ver, actor) values ({PARENT}, {VERSION}, {SUB_VER}, {ACTOR});";
 
                 /// <summary>
                 /// Returns COALESCE(MAX(sub_ver), 0) for thumbnail sub-versions of a specific (parent, ver).
@@ -397,7 +397,7 @@ namespace Haley.Internal {
 
             public class SEARCH {
                 // Shared file-join columns used by every ITEMS query (same shape as BROWSE_ITEMS).
-                const string _FILE_COLS = $@"1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, d.parent as parent_id, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at";
+                const string _FILE_COLS = $@"1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at";
                 const string _FILE_JOINS =
                     $@"left join doc_info as di on di.file = d.id
                        inner join (
@@ -412,7 +412,7 @@ namespace Haley.Internal {
                        inner join vault as v on v.id = ns.name
                        left join extension as ext on ext.id = ns.extension";
                 const string _FILE_NAME_FILTER = $@"and v.name like {VALUE} and ({EXT} is null or ext.name = {EXT})";
-                const string _DIR_COLS  = $@"0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.parent as parent_id, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at";
+                const string _DIR_COLS  = $@"0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at";
                 const string _ORDER_PAGE =
                     $@"order by sr.sort_group asc, sr.display_name asc, sr.id asc
                        limit {LIMIT_ROWS} offset {OFFSET_ROWS};";

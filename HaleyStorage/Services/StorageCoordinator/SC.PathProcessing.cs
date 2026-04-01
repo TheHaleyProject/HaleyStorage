@@ -199,7 +199,7 @@ namespace Haley.Services {
                 if (documentId < 1)
                     throw new ArgumentException($"Unable to resolve parent document id for version id {contentVersionId}.");
 
-                (newVersionId, newVersionGuid) = await Indexer.RegisterThumbnailVersion(moduleCuid, documentId, contentVer, input.CallID);
+                (newVersionId, newVersionGuid) = await Indexer.RegisterThumbnailVersion(moduleCuid, documentId, contentVer, input.Actor, input.CallID);
                 if (newVersionId < 1)
                     throw new ArgumentException($"Unable to register thumbnail version for document {documentId}, ver {contentVer}.");
                 newVersionNo = contentVer;
@@ -207,7 +207,7 @@ namespace Haley.Services {
                 // Content path: insert a new doc_version with sub_ver=0 (default).
                 // Capture the old version cuid before it gets overwritten, so we can carry forward the document ruid.
                 var oldVersionCuid = input.File.Cuid;
-                (newVersionId, newVersionGuid, newVersionNo) = await Indexer.RegisterNewDocVersion(moduleCuid, oldVersionCuid, input.CallID);
+                (newVersionId, newVersionGuid, newVersionNo) = await Indexer.RegisterNewDocVersion(moduleCuid, oldVersionCuid, input.Actor, input.CallID);
                 if (newVersionId < 1)
                     throw new ArgumentException($"Unable to create a new version for version CUID '{oldVersionCuid}'.");
 
@@ -580,6 +580,8 @@ namespace Haley.Services {
 
             if (long.TryParse(dic["size"]?.ToString(), out var size)) input.File.Size = size;
             if (int.TryParse(dic["ver"]?.ToString(), out var version)) input.File.Version = version;
+            if (input.File is StorageRoute route && long.TryParse(dic.TryGetValue("actor", out var actorObj) ? actorObj?.ToString() : null, out var actor))
+                route.Actor = actor;
             // saveas_name = vi.storage_name alias; dname = di.display_name (human readable)
             input.File.StorageName = dic.TryGetValue("saveas_name", out var sn) ? sn?.ToString() ?? string.Empty : string.Empty;
             // Restore the human-readable display name from doc_info so callers can use it as the download filename.

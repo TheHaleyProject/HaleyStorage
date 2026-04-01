@@ -26,7 +26,7 @@ namespace Haley.Utils {
         /// Opens a transaction keyed by <paramref name="callId"/> so <c>UpdateDocVersionInfo</c>
         /// can commit or rollback the whole unit in the coordinator's finally block.
         /// </summary>
-        public async Task<(long id, Guid guid, int version)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null) {
+        public async Task<(long id, Guid guid, int version)> RegisterNewDocVersion(string moduleCuid, string versionCuid, long? actor = null, string callId = null) {
             try {
                 if (string.IsNullOrWhiteSpace(moduleCuid)) throw new ArgumentNullException(nameof(moduleCuid));
                 if (string.IsNullOrWhiteSpace(versionCuid)) throw new ArgumentNullException(nameof(versionCuid));
@@ -41,6 +41,7 @@ namespace Haley.Utils {
                 }
 
                 var load = new DbExecutionLoad(default, handler);
+                var actorValue = actor ?? 0L;
 
                 // 1. Resolve the parent document ID from the existing version CUID.
                 var docId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.GET_DOCUMENT_ID_BY_VERSION_CUID, load, (VALUE, ToDbCuid(versionCuid)));
@@ -52,7 +53,7 @@ namespace Haley.Utils {
                 int nextVersion = (currentMax ?? 0) + 1;
 
                 // 3. Insert the new content doc_version row (sub_ver defaults to 0).
-                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.INSERT, load, (PARENT, docId.Value), (VERSION, nextVersion));
+                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.INSERT, load, (PARENT, docId.Value), (VERSION, nextVersion), (ACTOR, actorValue));
 
                 // 4. Fetch back the new row to get its auto-generated id and cuid.
                 var dvRow = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.EXISTS, load, (PARENT, docId.Value), (VERSION, nextVersion));

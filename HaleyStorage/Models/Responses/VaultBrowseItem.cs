@@ -11,6 +11,7 @@ namespace Haley.Models {
         public long Id { get; set; }
         public string Cuid { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
+        public long? ActorId { get; set; }
         public long ParentId { get; set; }
         public DateTime? Created { get; set; }
         public DateTime? Modified { get; set; }

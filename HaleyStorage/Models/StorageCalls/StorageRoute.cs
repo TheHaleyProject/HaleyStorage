@@ -13,6 +13,7 @@ namespace Haley.Models {
         public long Id { get; set; }
         public string Cuid { get; set; }  // compact-N guid string; kept as string on routes
         public string DisplayName { get; set; }
+        public long Actor { get; set; }
         public string StorageRef { get; set; }
         public StorageRoute() { }
         public StorageRoute(string displayName, string storageRef) {

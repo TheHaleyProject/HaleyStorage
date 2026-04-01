@@ -12,6 +12,7 @@ namespace Haley.Models {
         bool callIdGenerated;
 
         public string CallID { get; protected set; } = Guid.NewGuid().ToString();
+        public long? Actor { get; set; }
         public IVaultScope Scope { get; set; }
         public string OverrideRef { get; set; }
         public string RequestedName { get; set; }

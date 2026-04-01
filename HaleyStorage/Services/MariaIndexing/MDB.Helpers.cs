@@ -60,6 +60,7 @@ namespace Haley.Utils {
             var dirParent = request.Scope.Folder?.Parent?.Id ?? 0;
             var dirName = request.Scope.Folder?.DisplayName ?? VaultConstants.DEFAULT_NAME;
             var dirDbName = dirName.ToDBName();
+            var actor = request.Actor ?? 0L;
 
             var dirInfo = await InsertAndFetchIDRead(dbid,
                 () => {
@@ -68,7 +69,7 @@ namespace Haley.Utils {
                     var query = dirId < 1 ? INSTANCE.DIRECTORY.EXISTS_BY_CUID : INSTANCE.DIRECTORY.EXISTS_BY_ID;
                     return (query, Consolidate((VALUE, dirId < 1 ? (object)ToDbCuid(dirCuid) : dirId)));
                 },
-                () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws_id), (PARENT, dirParent), (NAME, dirDbName), (DNAME, dirName))),
+                () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws_id), (PARENT, dirParent), (NAME, dirDbName), (DNAME, dirName), (ACTOR, actor))),
                 readOnly: request.ReadOnlyMode,
                 $@"Unable to insert the directory {dirName} to the workspace : {ws_id}"); //Directory registration, same as the workspace doesn't need any transaction as it might be needed by other systems.
 
@@ -196,6 +197,7 @@ namespace Haley.Utils {
             try {
                 if (request.ReadOnlyMode) throw new ArgumentException("Cannot register a document in readonly mode");
                 CleanupStaleHandlers();
+                var actor = request.Actor ?? 0L;
                 //If we are in ParseMode, we still do all the process, but, store the file as is with Parsing information.
                 //For parse mode, let us not throw any exception.
                 //Generate a handler.
@@ -227,7 +229,7 @@ namespace Haley.Utils {
                          readOnly: request.ReadOnlyMode,
                         $@"Unable to insert document with name {request.RequestedName}",false, callId: request.CallID);
                     var dname = Path.GetFileName(request.RequestedName);
-                    await _agw.ExecAsync(dbid, INSTANCE.DOCUMENT.INSERT_INFO, new DbExecutionLoad(default, handler), (PARENT, docInfo.id), (DNAME, dname));
+                    await _agw.ExecAsync(dbid, INSTANCE.DOCUMENT.INSERT_INFO, new DbExecutionLoad(default, handler), (PARENT, docInfo.id), (DNAME, dname), (ACTOR, actor));
                 }
 
                 int version = 1;
@@ -240,7 +242,7 @@ namespace Haley.Utils {
 
                 var dvInfo = await InsertAndFetchIDRead(dbid,
                     () => (INSTANCE.DOCVERSION.EXISTS, Consolidate((PARENT, docInfo.id), (VERSION, version))),
-                    () => (INSTANCE.DOCVERSION.INSERT, Consolidate((PARENT, docInfo.id), (VERSION, version))),
+                    () => (INSTANCE.DOCVERSION.INSERT, Consolidate((PARENT, docInfo.id), (VERSION, version), (ACTOR, actor))),
                      readOnly: request.ReadOnlyMode,
                     $@"Unable to insert document version for the document {docInfo.id}", false, callId: request.CallID);
 

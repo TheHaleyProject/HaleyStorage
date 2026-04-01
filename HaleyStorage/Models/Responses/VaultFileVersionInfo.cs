@@ -10,6 +10,7 @@ namespace Haley.Models {
         public long VersionId { get; set; }
         public string VersionCuid { get; set; } = string.Empty;
         public int VersionNumber { get; set; }
+        public long ActorId { get; set; }
         public DateTime? Created { get; set; }
         public long? Size { get; set; }
         public string StorageName { get; set; } = string.Empty;

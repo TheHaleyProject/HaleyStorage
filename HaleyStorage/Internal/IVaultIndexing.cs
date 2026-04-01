@@ -23,7 +23,7 @@ namespace Haley.Services {
         /// lookup entirely — the CUID is the only identity signal required.
         /// Returns the new version's DB id, CUID, and content version number.
         /// </summary>
-        Task<(long id, Guid guid, int version)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null);
+        Task<(long id, Guid guid, int version)> RegisterNewDocVersion(string moduleCuid, string versionCuid, long? actor = null, string callId = null);
         Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IVaultFileRoute file, string callId = null);
         Task<IFeedback> UpdateDocDisplayName(string moduleCuid, long versionId, string displayName);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id);
@@ -87,7 +87,7 @@ namespace Haley.Services {
         /// Inserts a new <c>doc_version</c> row with <c>sub_ver = MAX(sub_ver)+1</c> for the given
         /// (documentId, contentVer). Returns the new thumbnail version's DB id and CUID.
         /// </summary>
-        Task<(long id, Guid guid)> RegisterThumbnailVersion(string moduleCuid, long documentId, int contentVer, string callId = null);
+        Task<(long id, Guid guid)> RegisterThumbnailVersion(string moduleCuid, long documentId, int contentVer, long? actor = null, string callId = null);
 
         /// <summary>
         /// Fetches storage info for the latest thumbnail sub-version of a specific content version.
