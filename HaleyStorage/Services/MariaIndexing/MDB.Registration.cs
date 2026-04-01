@@ -26,7 +26,7 @@ namespace Haley.Utils {
         /// Opens a transaction keyed by <paramref name="callId"/> so <c>UpdateDocVersionInfo</c>
         /// can commit or rollback the whole unit in the coordinator's finally block.
         /// </summary>
-        public async Task<(long id, Guid guid)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null) {
+        public async Task<(long id, Guid guid, int version)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null) {
             try {
                 if (string.IsNullOrWhiteSpace(moduleCuid)) throw new ArgumentNullException(nameof(moduleCuid));
                 if (string.IsNullOrWhiteSpace(versionCuid)) throw new ArgumentNullException(nameof(versionCuid));
@@ -68,7 +68,7 @@ namespace Haley.Utils {
                 if (!newUid.IsValidGuid(out Guid newGuid) && !newUid.IsCompactGuid(out newGuid))
                     throw new Exception($"Unable to parse GUID from new doc_version uid '{newUid}'.");
 
-                return (newId, newGuid);
+                return (newId, newGuid, nextVersion);
             } catch (Exception ex) {
                 _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
                 var handlerKey = GetHandlerKey(callId, moduleCuid);
@@ -77,7 +77,7 @@ namespace Haley.Utils {
                     _handlers.Remove(handlerKey, out _);
                 }
                 if (ThrowExceptions) throw;
-                return (0, Guid.Empty);
+                return (0, Guid.Empty, 0);
             }
         }
         /// <summary>

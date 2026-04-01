@@ -148,6 +148,7 @@ namespace Haley.Services {
             var moduleCuid = input.Scope.Module.Cuid.ToString("N");
             long newVersionId;
             Guid newVersionGuid;
+            int newVersionNo = 0;
 
             if (inputW.IsThumbnail) {
                 // Thumbnail path: resolve content version → document id + ver number → insert with sub_ver.
@@ -167,11 +168,12 @@ namespace Haley.Services {
                 (newVersionId, newVersionGuid) = await Indexer.RegisterThumbnailVersion(moduleCuid, documentId, contentVer, input.CallID);
                 if (newVersionId < 1)
                     throw new ArgumentException($"Unable to register thumbnail version for document {documentId}, ver {contentVer}.");
+                newVersionNo = contentVer;
             } else {
                 // Content path: insert a new doc_version with sub_ver=0 (default).
                 // Capture the old version cuid before it gets overwritten, so we can carry forward the document ruid.
                 var oldVersionCuid = input.File.Cuid;
-                (newVersionId, newVersionGuid) = await Indexer.RegisterNewDocVersion(moduleCuid, oldVersionCuid, input.CallID);
+                (newVersionId, newVersionGuid, newVersionNo) = await Indexer.RegisterNewDocVersion(moduleCuid, oldVersionCuid, input.CallID);
                 if (newVersionId < 1)
                     throw new ArgumentException($"Unable to create a new version for version CUID '{oldVersionCuid}'.");
 
@@ -191,9 +193,21 @@ namespace Haley.Services {
 
             input.File.SetId(newVersionId);
             input.File.SetCuid(newVersionGuid);
+            input.File.Version = newVersionNo;
             input.File.StorageName = logicalId;
             input.File.StorageRef = provider.BuildStorageRef(logicalId, extension, SplitProvider, Config.SuffixFile);
             if (inputW.FileStream != null) input.File.Size = inputW.FileStream.Length;
+
+            var newVersionInfo = await Indexer.GetDocVersionInfo(moduleCuid, newVersionId);
+            if (newVersionInfo?.Status == true && newVersionInfo.Result is Dictionary<string, object> newVersionDic) {
+                if (input.File.Version < 1 && int.TryParse(newVersionDic["ver"]?.ToString(), out var newVerNo) && newVerNo > 0)
+                    input.File.Version = newVerNo;
+                if (input.File is StorageFileRoute sfrNewRoute
+                    && string.IsNullOrWhiteSpace(sfrNewRoute.RootCuid)
+                    && newVersionDic.TryGetValue("ruid", out var ruidObj)
+                    && !string.IsNullOrWhiteSpace(ruidObj?.ToString()))
+                    sfrNewRoute.RootCuid = ruidObj.ToString();
+            }
 
             // Stamp the active profile_info_id (same pattern as the normal upload path).
             if (input.File is StorageFileRoute sfrNew && sfrNew.ProfileInfoId == 0) {
@@ -521,6 +535,7 @@ namespace Haley.Services {
             input.File.StorageRef = !string.IsNullOrWhiteSpace(storagePath) ? storagePath : stagingPath;
 
             if (long.TryParse(dic["size"]?.ToString(), out var size)) input.File.Size = size;
+            if (int.TryParse(dic["ver"]?.ToString(), out var version)) input.File.Version = version;
             // saveas_name = vi.storage_name alias; dname = di.display_name (human readable)
             input.File.StorageName = dic.TryGetValue("saveas_name", out var sn) ? sn?.ToString() ?? string.Empty : string.Empty;
             // Restore the human-readable display name from doc_info so callers can use it as the download filename.

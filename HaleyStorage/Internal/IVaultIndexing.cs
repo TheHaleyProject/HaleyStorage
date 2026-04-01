@@ -21,9 +21,9 @@ namespace Haley.Services {
         /// Creates a new content <c>doc_version</c> row (sub_ver=0, version = MAX content ver + 1)
         /// under the document that owns <paramref name="versionCuid"/>. Skips filename/directory
         /// lookup entirely — the CUID is the only identity signal required.
-        /// Returns the new version's DB id and CUID.
+        /// Returns the new version's DB id, CUID, and content version number.
         /// </summary>
-        Task<(long id, Guid guid)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null);
+        Task<(long id, Guid guid, int version)> RegisterNewDocVersion(string moduleCuid, string versionCuid, string callId = null);
         Task<IFeedback> UpdateDocVersionInfo(string moduleCuid, IVaultFileRoute file, string callId = null);
         Task<IFeedback> UpdateDocDisplayName(string moduleCuid, long versionId, string displayName);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id);
