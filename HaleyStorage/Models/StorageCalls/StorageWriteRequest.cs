@@ -43,7 +43,7 @@ namespace Haley.Models {
 
         /// <summary>Creates a shallow clone by mapping all properties onto a new <see cref="StorageWriteRequest"/>.</summary>
         public virtual object Clone() {
-            var cloned = new StorageWriteRequest(this.Client.Name);
+            var cloned = new StorageWriteRequest(this.Scope.Client?.DisplayName);
             //use map
             this.MapProperties(cloned);
             return cloned ;

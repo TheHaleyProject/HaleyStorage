@@ -117,7 +117,7 @@ namespace Haley.Services {
         /// has no storage_ref yet (placeholder) or when either extension is absent.
         /// </summary>
         async Task CheckCuidExtensionConsistency(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload) {
-            if (!forupload || string.IsNullOrWhiteSpace(input.File?.Cuid)) return; //no need to check consistency if we are not dealing with uploads or revisions.
+            if (!forupload || string.IsNullOrWhiteSpace(input.File?.Cuid)) return; // only check when targeting a specific version
 
             var incomingExt = Path.GetExtension(inputW?.OriginalName ?? string.Empty)?.ToLowerInvariant();
             if (string.IsNullOrWhiteSpace(incomingExt)) return; // nothing to compare
@@ -126,16 +126,19 @@ namespace Haley.Services {
             var existing = await Indexer.GetDocVersionInfo(moduleCuid, input.File.Cuid);
             if (existing?.Status != true || existing.Result is not Dictionary<string, object> dic) return; // can't determine — let it through
 
+            // Prefer storage_ref; fall back to staging_ref (set when file is still in staging).
             var storagePath = dic.TryGetValue("path", out var p) ? p?.ToString() : null;
-            if (string.IsNullOrWhiteSpace(storagePath)) return; // placeholder — no stored bytes yet
+            var stagingPath = dic.TryGetValue("staging_path", out var sp) ? sp?.ToString() : null;
+            var refPath = !string.IsNullOrWhiteSpace(storagePath) ? storagePath : stagingPath;
+            if (string.IsNullOrWhiteSpace(refPath)) return; // placeholder — no stored bytes yet
 
-            var storedExt = Path.GetExtension(storagePath)?.ToLowerInvariant();
+            var storedExt = Path.GetExtension(refPath)?.ToLowerInvariant();
             if (string.IsNullOrWhiteSpace(storedExt)) return;
 
             if (!string.Equals(incomingExt, storedExt, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException(
                     $"Extension mismatch: the document is stored as '{storedExt}' but the incoming file is '{incomingExt}'. " +
-                    $"Upload without a CUID to create a new document.");
+                    $"Upload without a uid to create a new document.");
         }
 
         async Task<bool> CreateNewDocumentVersion(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider = null) {
@@ -165,9 +168,19 @@ namespace Haley.Services {
                     throw new ArgumentException($"Unable to register thumbnail version for document {documentId}, ver {contentVer}.");
             } else {
                 // Content path: insert a new doc_version with sub_ver=0 (default).
-                (newVersionId, newVersionGuid) = await Indexer.RegisterNewDocVersion(moduleCuid, input.File.Cuid, input.CallID);
+                // Capture the old version cuid before it gets overwritten, so we can carry forward the document ruid.
+                var oldVersionCuid = input.File.Cuid;
+                (newVersionId, newVersionGuid) = await Indexer.RegisterNewDocVersion(moduleCuid, oldVersionCuid, input.CallID);
                 if (newVersionId < 1)
-                    throw new ArgumentException($"Unable to create a new version for version CUID '{input.File.Cuid}'.");
+                    throw new ArgumentException($"Unable to create a new version for version CUID '{oldVersionCuid}'.");
+
+                // Carry the document-level cuid (ruid) forward to the new version's file route.
+                if (input.File is StorageFileRoute sfrOld && string.IsNullOrWhiteSpace(sfrOld.RootCuid)) {
+                    var oldFb = await Indexer.GetDocVersionInfo(moduleCuid, oldVersionCuid);
+                    if (oldFb?.Status == true && oldFb.Result is Dictionary<string, object> oldDic
+                        && oldDic.TryGetValue("ruid", out var ruidObj) && !string.IsNullOrWhiteSpace(ruidObj?.ToString()))
+                        sfrOld.RootCuid = ruidObj.ToString();
+                }
             }
 
             var extension = Path.GetExtension(inputW.OriginalName ?? string.Empty);
@@ -451,6 +464,11 @@ namespace Haley.Services {
                 if (existing?.Status == true && existing.Result is Dictionary<string, object> dic && dic.Count > 0)
                     return PopulateFileFromDic(input, dic);
 
+                // A uid was explicitly supplied but doesn't exist in the DB.
+                // Silently creating a new file under a caller-specified uid is wrong — throw instead.
+                if (forupload)
+                    throw new ArgumentException($"No file found for the supplied uid '{input.File?.Cuid ?? input.File?.Id.ToString()}'. Upload without a uid to create a new file.");
+
             } else if (input.File is StorageFileRoute sfrRoot && !string.IsNullOrWhiteSpace(sfrRoot.RootCuid)) {
                 // ruid path — resolve document CUID to the latest version before any other work.
                 var existing = await Indexer.GetDocVersionInfoByDocCuid(input.Scope.Module.Cuid.ToString("N"), sfrRoot.RootCuid);
@@ -508,7 +526,7 @@ namespace Haley.Services {
             if (!string.IsNullOrWhiteSpace(dname) && string.IsNullOrWhiteSpace(input.File.DisplayName))
                 input.File.SetDisplayName(dname);
 
-            // Flags, staging path, and stored profile_info_id are carried on StorageFileRoute (concrete type).
+            // Flags, staging path, stored profile_info_id, and document cuid are on StorageFileRoute.
             if (input.File is StorageFileRoute sfr) {
                 if (int.TryParse(dic["flags"]?.ToString(), out var flags)) sfr.Flags = flags;
                 sfr.StagingRef = stagingPath ?? string.Empty;
@@ -517,6 +535,11 @@ namespace Haley.Services {
                 if (dic.TryGetValue("profile_info_id", out var pidObj)
                     && long.TryParse(pidObj?.ToString(), out var pid) && pid > 0)
                     sfr.ProfileInfoId = pid;
+                // Restore the document-level cuid (ruid) so the upload response can return it.
+                if (string.IsNullOrWhiteSpace(sfr.RootCuid)
+                    && dic.TryGetValue("ruid", out var ruidObj)
+                    && !string.IsNullOrWhiteSpace(ruidObj?.ToString()))
+                    sfr.RootCuid = ruidObj.ToString();
             }
 
             return true;

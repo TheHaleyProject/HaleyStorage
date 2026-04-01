@@ -111,7 +111,10 @@ namespace Haley.Services {
                     if (Indexer is MariaDBIndexing mdIdx) {
                         mdIdx.FinalizeTransaction(input.CallID, result.Status && !(upInfo == null || upInfo.Status == false));
                     }
-                    _logger?.LogDebug($"Document version update: {upInfo?.Status} — {upInfo?.Result}");
+                    if (upInfo?.Status != true)
+                        _logger?.LogError($"Document version update FAILED: {upInfo?.Message}");
+                    else
+                        _logger?.LogDebug($"Document version update: {upInfo?.Status} — {upInfo?.Result}");
                 }
             }
             return result;

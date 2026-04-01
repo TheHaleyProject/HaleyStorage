@@ -38,7 +38,7 @@ namespace Haley.Services {
         /// Searches for matching folders and files (latest version only) across the workspace.
         /// The term is matched against vault names (filename stems); extension is a separate filter.
         /// </summary>
-        Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, long directoryId = 0, bool recursive = false, int page = 1, int pageSize = 50);
+        Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50);
         Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest request);
         Task EnsureValidation();
         bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;

@@ -16,7 +16,7 @@ namespace Haley.Utils {
     /// </summary>
     internal partial class MariaDBIndexing {
 
-        public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, long directoryId = 0, bool recursive = false, int page = 1, int pageSize = 50) {
+        public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50) {
 
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {
@@ -46,6 +46,7 @@ namespace Haley.Utils {
                 long totalDirs, totalFiles;
                 IEnumerable<DbRow> rows;
 
+                var directoryId = request.Scope.Folder?.Id ?? -1;   // -1 indicates root scope (entire workspace)
                 if (directoryId < 1) {
                     // Scope: entire workspace.
                     totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_DIRS_ALL,  default, (WSPACE, wsId), (VALUE, likePattern)) ?? 0;

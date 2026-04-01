@@ -15,7 +15,7 @@ namespace Haley.Abstractions {
         /// a full recursive subtree (<paramref name="recursive"/> = true).
         /// Returns the latest file version for each matching document. Paginated.
         /// </summary>
-        Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest input, string searchTerm, VaultSearchMode searchMode, string extension = null, long directoryId = 0, bool recursive = false, int page = 1, int pageSize = 50);
+        Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest input, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50);
         Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest input);
         Task<IVaultResponse> CreateDirectory(IVaultReadRequest input, string rawname);
         Task<IFeedback> DeleteDirectory(IVaultReadRequest input, bool recursive);

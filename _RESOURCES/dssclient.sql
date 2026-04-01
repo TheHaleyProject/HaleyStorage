@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS `doc_version` (
   UNIQUE KEY `unq_file_version` (`parent`,`ver`,`sub_ver`),
   UNIQUE KEY `unq_doc_version` (`cuid`),
   KEY `idx_file_version_0` (`created`),
+  KEY `idx_doc_version_parent` (`parent`),
   CONSTRAINT `fk_doc_version_document` FOREIGN KEY (`parent`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1996 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='One row per file upload event. A document accumulates version rows over time (ver=1, 2, 3...). The version row is the FK anchor for all physical storage metadata (version_info) and chunking state (chunk_info, chunked_files).';
 
@@ -165,6 +166,7 @@ CREATE TABLE IF NOT EXISTS `version_info` (
   `profile_info_id` bigint(20) DEFAULT NULL COMMENT 'if null, then we fall back to using the module''s default current profile.. However, current profile could not be the correct one, may be the current profile got modified or changed .. May be we didn''t use the module''s profile, we used the workspace''s profile.. or a workspace profile was addedin between.. so, having the profile_info_id  here is the best option to properly resolve the correct storage path.',
   PRIMARY KEY (`id`),
   KEY `idx_version_info` (`storage_name`),
+  KEY `idx_version_info_staging` (`flags`,`synced_at`),
   CONSTRAINT `fk_version_info_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Physical storage metadata for one document version. Stores WHERE the file is (storage_ref, staging_ref), HOW BIG it is (size), WHAT IT IS (hash), and WHAT STATE it is in (flags bitmask). The flags column is the authoritative lifecycle tracker — read it to determine whether a file is a placeholder, in staging, in primary storage, or fully completed.';
 

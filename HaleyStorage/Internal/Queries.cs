@@ -246,23 +246,26 @@ namespace Haley.Internal {
                        where id = {ID};";
 
                 public const string GET_FULL_BY_CUID =
-                    $@"select dv.id, dv.cuid as uid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
+                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
+                       inner join document as d on d.id = dv.parent
                        inner join version_info as vi on vi.id = dv.id
                        left join doc_info as di on di.file = dv.parent
                        where dv.cuid = {VALUE};";
 
                 public const string GET_FULL_BY_ID =
-                    $@"select dv.id, dv.cuid as uid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
+                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
+                       inner join document as d on d.id = dv.parent
                        inner join version_info as vi on vi.id = dv.id
                        left join doc_info as di on di.file = dv.parent
                        where dv.id = {VALUE};";
 
                 /// <summary>Returns the latest content (sub_ver=0) version row for a document. Excludes thumbnail sub-versions.</summary>
                 public const string GET_LATEST_BY_PARENT =
-                    $@"select dv.id, dv.cuid as uid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
+                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
+                       inner join document as d on d.id = dv.parent
                        inner join (select max(dvi.ver) as ver from doc_version as dvi where dvi.parent = {PARENT} and dvi.sub_ver = 0) as dvo on dvo.ver = dv.ver
                        inner join version_info as vi on vi.id = dv.id
                        left join doc_info as di on di.file = {PARENT}
