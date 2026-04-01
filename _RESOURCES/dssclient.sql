@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS `directory` (
   `name` varchar(120) NOT NULL COMMENT 'Normalised folder slug used in uniqueness checks and path construction, e.g. "project_docs" or "invoices". Should be lowercase and URL-safe. Different from display_name which may have spaces.',
   `parent` bigint(20) NOT NULL DEFAULT 0 COMMENT 'FK → directory.id of the parent folder. Set to 0 for top-level (root) directories in the workspace — the application treats 0 as the sentinel for "no parent". Checked against (workspace, parent, name) unique constraint.',
   `workspace` bigint(20) NOT NULL COMMENT 'FK → workspace.id. Every directory belongs to exactly one workspace. A directory created under workspace=12 cannot contain documents from workspace=15.',
+  `actor` bigint(20) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_directory` (`workspace`,`parent`,`name`),
   UNIQUE KEY `unq_directory_0` (`cuid`),
@@ -94,25 +95,28 @@ CREATE TABLE IF NOT EXISTS `document` (
 CREATE TABLE IF NOT EXISTS `doc_info` (
   `file` bigint(20) NOT NULL COMMENT 'PK and FK → document.id. One-to-one optional relationship — insert a row here to attach a custom display name to the document. Omit to use the raw filename derived from name_store.',
   `display_name` varchar(200) NOT NULL COMMENT 'Human-readable label for the document. Free-form text, may include spaces, punctuation, and Unicode. E.g. "Q1 2024 Invoice – ACME Corp" or "Employee Handbook v3 (Draft)". Written by the application; not auto-derived.',
-  `metadata` TEXT NULL DEFAULT NULL COMMENT 'Optional document-level metadata (JSON or plain text). Stable across all versions. Set independently via PUT /api/va/file/docmeta.',
+  `metadata` text DEFAULT NULL COMMENT 'to store document level metadata',
+  `actor` bigint(20) NOT NULL DEFAULT 0,
   PRIMARY KEY (`file`),
   KEY `idx_doc_info` (`display_name`),
   CONSTRAINT `fk_file_info_file_index_0` FOREIGN KEY (`file`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Optional display name override for a document. When present, the application shows display_name instead of the raw filename derived from name_store. Inserted/updated by UpdateDocDisplayName(). Not every document has a row here.';
+
+-- Data exporting was unselected.
 
 -- Dumping structure for table dss_client.doc_version
 CREATE TABLE IF NOT EXISTS `doc_version` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT 'Surrogate PK. Used as the FK anchor for version_info, chunk_info, and chunked_files. Also returned to callers as the "versionId" in upload responses.',
   `cuid` varchar(48) NOT NULL DEFAULT uuid() COMMENT 'Collision-resistant unique identifier for this specific version. Stable and safe for external API exposure. Distinct from the parent document CUID. Example: "f3a8b2c1d9e4a7b0c6d5e3f2a8b1c4d7".',
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Timestamp when this version record was created, i.e. when the upload began. For placeholder uploads this marks when the DB record was reserved, not when the file bytes arrived.',
-  `ver` int(11) NOT NULL DEFAULT 1 COMMENT 'Monotonically increasing version number within the parent document. Starts at 1 for the first upload. The latest content version is MAX(ver) WHERE sub_ver=0.',
+  `ver` int(11) NOT NULL DEFAULT 1 COMMENT 'Monotonically increasing version number within the parent document. Starts at 1 for the first upload. The (parent, ver) unique constraint prevents gaps or duplicates. The latest version is MAX(ver) for a given parent.',
   `parent` bigint(20) NOT NULL COMMENT 'FK → document.id. Links this version to its parent logical document.',
-  `sub_ver` int(11) NOT NULL DEFAULT 0 COMMENT '0 = content version (default). 1, 2, 3… = thumbnail sub-versions under the same content version. Combined with (parent, ver) to form the new unique key.',
+  `sub_ver` int(11) NOT NULL DEFAULT 0 COMMENT 'sub version gives the files'' own content chain.. 0 is alwasy the main file.. rest are all supporting files.. and thes upporting files never get same extension as the main file.. for example.. if the main content is pdf.. we can still have the sub_version as png or jpeg.. main idea is these sub version files are used sa thumbnails.. \ninteresting idea is one file can have multiple thumbnails and it can be used sa ''rotating thumbnails'' so gives user an animated experience..',
+  `actor` bigint(20) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `unq_file_version` (`parent`,`ver`,`sub_ver`),
   UNIQUE KEY `unq_doc_version` (`cuid`),
+  UNIQUE KEY `unq_file_version` (`parent`,`ver`,`sub_ver`),
   KEY `idx_file_version_0` (`created`),
-  KEY `idx_doc_version_parent` (`parent`),
   CONSTRAINT `fk_doc_version_document` FOREIGN KEY (`parent`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1996 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='One row per file upload event. A document accumulates version rows over time (ver=1, 2, 3...). The version row is the FK anchor for all physical storage metadata (version_info) and chunking state (chunk_info, chunked_files).';
 
@@ -166,7 +170,6 @@ CREATE TABLE IF NOT EXISTS `version_info` (
   `profile_info_id` bigint(20) DEFAULT NULL COMMENT 'if null, then we fall back to using the module''s default current profile.. However, current profile could not be the correct one, may be the current profile got modified or changed .. May be we didn''t use the module''s profile, we used the workspace''s profile.. or a workspace profile was addedin between.. so, having the profile_info_id  here is the best option to properly resolve the correct storage path.',
   PRIMARY KEY (`id`),
   KEY `idx_version_info` (`storage_name`),
-  KEY `idx_version_info_staging` (`flags`,`synced_at`),
   CONSTRAINT `fk_version_info_doc_version` FOREIGN KEY (`id`) REFERENCES `doc_version` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Physical storage metadata for one document version. Stores WHERE the file is (storage_ref, staging_ref), HOW BIG it is (size), WHAT IT IS (hash), and WHAT STATE it is in (flags bitmask). The flags column is the authoritative lifecycle tracker — read it to determine whether a file is a placeholder, in staging, in primary storage, or fully completed.';
 

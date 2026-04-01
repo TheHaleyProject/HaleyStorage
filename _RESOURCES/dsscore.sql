@@ -81,11 +81,7 @@ BEGIN
 END//
 DELIMITER ;
 
--- Converts all tables in databases whose name starts with the given prefix
--- to utf8mb4 / utf8mb4_unicode_ci.  prefix must be at least 3 characters.
--- Usage examples:
---   CALL FixCollationsWithPrefix('dssm_');
---   CALL FixCollationsWithPrefix('msscore');
+-- Dumping structure for procedure dss_core.FixCollationsWithPrefix
 DELIMITER //
 CREATE PROCEDURE `FixCollationsWithPrefix`(IN prefix VARCHAR(100))
 BEGIN

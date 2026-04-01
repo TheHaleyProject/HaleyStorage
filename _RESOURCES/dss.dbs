@@ -102,6 +102,9 @@
 			<column name="workspace" type="BIGINT" mandatory="y" >
 				<comment><![CDATA[FK → workspace.id. Every directory belongs to exactly one workspace. A directory created under workspace=12 cannot contain documents from workspace=15.]]></comment>
 			</column>
+			<column name="actor" type="BIGINT" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
 			<index name="pk_directory" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -130,6 +133,9 @@
 			</column>
 			<column name="metadata" type="TEXT" >
 				<comment><![CDATA[to store document level metadata]]></comment>
+			</column>
+			<column name="actor" type="BIGINT" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
 			</column>
 			<index name="pk_doc_info" unique="PRIMARY_KEY" >
 				<column name="file" />
@@ -167,6 +173,9 @@
 				<defo><![CDATA[0]]></defo>
 				<comment><![CDATA[sub version gives the files' own content chain.. 0 is alwasy the main file.. rest are all supporting files.. and thes upporting files never get same extension as the main file.. for example.. if the main content is pdf.. we can still have the sub_version as png or jpeg.. main idea is these sub version files are used sa thumbnails.. 
 interesting idea is one file can have multiple thumbnails and it can be used sa 'rotating thumbnails' so gives user an animated experience..]]></comment>
+			</column>
+			<column name="actor" type="BIGINT" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
 			</column>
 			<index name="pk_doc_version" unique="PRIMARY_KEY" >
 				<column name="id" />
@@ -800,7 +809,7 @@ END]]></string>
 			<entity schema="dss_client" name="chunk_info" color="C1D8EE" x="95" y="209" />
 			<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="95" y="418" />
 			<entity schema="dss_client" name="directory" color="C1D8EE" x="551" y="646" />
-			<entity schema="dss_client" name="doc_info" color="C1D8EE" x="551" y="475" />
+			<entity schema="dss_client" name="doc_info" color="C1D8EE" x="551" y="494" />
 			<entity schema="dss_client" name="doc_version" color="C1D8EE" x="323" y="304" />
 			<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="513" />
 			<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="798" />
