@@ -63,6 +63,11 @@ namespace Haley.Services {
         Task<bool> SetModuleStorageProfile(string moduleCuid, int profileId);
         Task<bool> SetWorkspaceStorageProfile(string workspaceCuid, int profileInfoId);
         /// <summary>
+        /// Walks all cached modules and restores any persisted storage-profile assignments from the DB.
+        /// Call once at startup after module registrations are complete.
+        /// </summary>
+        Task RehydrateModuleProfilesAsync();
+        /// <summary>
         /// Walks all cached workspaces and restores any persisted storage-profile overrides from the DB.
         /// Call once at startup after all registrations are complete.
         /// </summary>

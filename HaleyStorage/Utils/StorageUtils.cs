@@ -158,13 +158,13 @@ namespace Haley.Utils
                 throw new DirectoryNotFoundException("Base directory not found. Please ensure it is present.");
 
             if (string.IsNullOrWhiteSpace(req.OverrideRef)) {
-                req.SetOverrideRef(basePath);
+                req.OverrideRef = basePath;
                 // All folders are virtual (DB-only); they never contribute a physical path segment.
                 if (fileReq?.File != null) {
-                    req.SetOverrideRef(JoinStoragePath(req.OverrideRef, fileReq.File.FetchRoutePath(req.OverrideRef, true, allowRootAccess, readOnlyMode, checkDirectories), checkDirectories));
+                    req.OverrideRef = JoinStoragePath(req.OverrideRef, fileReq.File.FetchRoutePath(req.OverrideRef, true, allowRootAccess, readOnlyMode, checkDirectories), checkDirectories);
                 }
             } else {
-                req.SetOverrideRef(JoinStoragePath(basePath, req.OverrideRef, checkDirectories));
+                req.OverrideRef = JoinStoragePath(basePath, req.OverrideRef, checkDirectories);
             }
 
             if (string.IsNullOrWhiteSpace(req.OverrideRef))
@@ -279,3 +279,4 @@ namespace Haley.Utils
         }
     }
 }
+

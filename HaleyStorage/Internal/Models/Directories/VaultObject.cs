@@ -118,5 +118,9 @@ namespace Haley.Models {
         public VaultObject(string displayName) {
             DisplayName = displayName ?? VaultConstants.DEFAULT_NAME;
         }
+
+        public override string ToString() {
+            return $@"{GetType().Name} [Id={Id}, Name='{Name}', Cuid={Cuid}]";
+        }
     }
 }

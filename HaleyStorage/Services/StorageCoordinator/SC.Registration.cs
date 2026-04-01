@@ -176,12 +176,15 @@ namespace Haley.Services {
                     }
                 }
 
-                // Restore any persisted workspace profile overrides from the DB so provider
+                // Restore any persisted module/workspace profile overrides from the DB so provider
                 // resolution is correct after a process restart.
-                if (Indexer != null) await Indexer.RehydrateWorkspaceProfilesAsync();
+                if (Indexer != null) {
+                    await Indexer.RehydrateModuleProfilesAsync();
+                    await Indexer.RehydrateWorkspaceProfilesAsync();
+                }
 
                 // Link any module that still has no profile to the default provider profile.
-                // Must run after RehydrateWorkspaceProfilesAsync so explicit profiles are not overwritten.
+                // Must run after profile rehydration so explicit DB profiles are not overwritten.
                 await EnsureModulesHaveDefaultProfileAsync();
 
                 return result.SetStatus(true).SetMessage("Successfully registered.");

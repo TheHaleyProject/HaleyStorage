@@ -38,8 +38,8 @@ namespace Haley.Services {
                 if (p != null) return p;
             }
             if (Indexer != null) {
-                if (TryResolveWorkspaceProvider(request, out var wp)) return wp;
-                if (request?.Scope?.Module != null)
+                if (TryResolveWorkspaceProvider(request, out var wp)) return wp; //First priority to check if this workspace has any dedicated provider..
+                if (request?.Scope?.Module != null) //Fallback to module providers
                     return ResolveProvider(request.Scope.Module.Cuid.ToString("N"));
             }
             return GetDefaultProvider();
@@ -49,10 +49,15 @@ namespace Haley.Services {
         internal IStorageProvider ResolveProvider(string moduleCuid) {
             if (!string.IsNullOrWhiteSpace(moduleCuid)
                 && Indexer != null
-                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m)
-                && !string.IsNullOrWhiteSpace(m?.StorageProviderKey)
-                && _providers.TryGetValue(m.StorageProviderKey, out var p))
-                return p;
+                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m)) {
+                if (m?.ProfileInfoId > 0) {
+                    var profileProvider = ResolveByProfileInfoId(m.ProfileInfoId);
+                    if (profileProvider != null) return profileProvider;
+                }
+                if (!string.IsNullOrWhiteSpace(m?.StorageProviderKey)
+                    && _providers.TryGetValue(m.StorageProviderKey, out var p))
+                    return p;
+            }
             return GetDefaultProvider();
         }
 
@@ -100,10 +105,16 @@ namespace Haley.Services {
         internal IStorageProvider ResolveStagingProvider(string moduleCuid) {
             if (!string.IsNullOrWhiteSpace(moduleCuid)
                 && Indexer != null
-                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m)
-                && !string.IsNullOrWhiteSpace(m?.StagingProviderKey)
-                && _providers.TryGetValue(m.StagingProviderKey, out var sp))
-                return sp;
+                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m)) {
+                if (m?.ProfileInfoId > 0 && TryGetProfileInfoCached(m.ProfileInfoId, out _, out var stagingKey, out _)) {
+                    if (!string.IsNullOrWhiteSpace(stagingKey) && _providers.TryGetValue(stagingKey, out var profileStaging))
+                        return profileStaging;
+                    return null;
+                }
+                if (!string.IsNullOrWhiteSpace(m?.StagingProviderKey)
+                    && _providers.TryGetValue(m.StagingProviderKey, out var sp))
+                    return sp;
+            }
             return null;
         }
 
@@ -131,8 +142,11 @@ namespace Haley.Services {
         internal VaultProfileMode ResolveProfileMode(string moduleCuid) {
             if (!string.IsNullOrWhiteSpace(moduleCuid)
                 && Indexer != null
-                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m))
+                && Indexer.TryGetComponentInfo<VaultModule>(moduleCuid, out VaultModule m)) {
+                if (m?.ProfileInfoId > 0 && TryGetProfileInfoCached(m.ProfileInfoId, out _, out _, out var profileMode))
+                    return profileMode;
                 return m.ProfileMode;
+            }
             return VaultProfileMode.DirectSave;
         }
 

@@ -121,13 +121,16 @@ namespace Haley.Utils {
 
         /// <summary>
         /// Associates a module with a storage profile by updating <c>module.storage_profile</c>.
+        /// Then immediately hydrates the in-memory cache entry with the resolved provider keys and mode
+        /// so <see cref="StorageCoordinator"/> picks them up without a restart.
         /// Returns <c>true</c> on success.
         /// </summary>
-        public async Task<bool> SetModuleStorageProfile(string moduleCuid, int profileId) {
+        public async Task<bool> SetModuleStorageProfile(string moduleCuid, int profileInfoId) {
             if (string.IsNullOrWhiteSpace(moduleCuid)) throw new ArgumentNullException(nameof(moduleCuid));
-            if (profileId < 1) throw new ArgumentException("profileId must be > 0");
+            if (profileInfoId < 1) throw new ArgumentException("profileInfoId must be > 0");
             await EnsureValidation();
-            await _agw.ExecAsync(_key, MODULE.UPDATE_STORAGE_PROFILE_BY_CUID, default, (CUID,          moduleCuid), (PROFILE_ID,    profileId));
+            await _agw.ExecAsync(_key, MODULE.UPDATE_STORAGE_PROFILE_BY_CUID, default, (CUID, moduleCuid), (PROFILE_ID, profileInfoId));
+            await HydrateModuleProfileAsync(moduleCuid, profileInfoId);
             return true;
         }
 
@@ -144,6 +147,24 @@ namespace Haley.Utils {
             await _agw.ExecAsync(_key, WORKSPACE.UPDATE_STORAGE_PROFILE_BY_CUID, default, (CUID,              workspaceCuid), (STORAGE_PROFILE,   profileInfoId));
             await HydrateWorkspaceProfileAsync(workspaceCuid, profileInfoId);
             return true;
+        }
+
+        /// <summary>
+        /// Startup hydration: loads all modules that have a <c>storage_profile</c> set in the DB
+        /// and populates <see cref="VaultModule.StorageProviderKey"/>,
+        /// <see cref="VaultModule.StagingProviderKey"/>, and <see cref="VaultModule.ProfileMode"/>
+        /// on the matching in-memory cache entries.
+        /// Call this once at startup after all module registrations are complete.
+        /// </summary>
+        public async Task RehydrateModuleProfilesAsync() {
+            await EnsureValidation();
+            var rows = await _agw.RowsAsync(_key, MODULE.GET_ALL_PROFILES_WITH_KEYS, default);
+            foreach (var row in rows) {
+                var cuid = row["cuid"]?.ToString();
+                if (string.IsNullOrWhiteSpace(cuid)) continue;
+                if (!_cache.TryGetValue(cuid, out var cached) || cached is not VaultModule module) continue;
+                ApplyProfileRowToModule(module, row);
+            }
         }
 
         /// <summary>
@@ -166,10 +187,25 @@ namespace Haley.Utils {
 
         // ── Private helpers ───────────────────────────────────────────────────
 
+        async Task HydrateModuleProfileAsync(string moduleCuid, int profileInfoId) {
+            var row = await _agw.RowAsync(_key, PROFILE_INFO.GET_WITH_PROVIDER_KEYS, default, (PROFILE_ID, profileInfoId));
+            if (row != null && _cache.TryGetValue(moduleCuid, out var cached) && cached is VaultModule module)
+                ApplyProfileRowToModule(module, row);
+        }
+
         async Task HydrateWorkspaceProfileAsync(string workspaceCuid, int profileInfoId) {
             var row = await _agw.RowAsync(_key, PROFILE_INFO.GET_WITH_PROVIDER_KEYS, default, (PROFILE_ID, profileInfoId));
             if (row != null && _cache.TryGetValue(workspaceCuid, out var cached) && cached is VaultWorkSpace ws)
                 ApplyProfileRowToWorkspace(ws, row);
+        }
+
+        void ApplyProfileRowToModule(VaultModule module, DbRow row) {
+            module.StorageProviderKey = row.TryGetValue("storage_provider_key", out var spk) ? spk?.ToString() ?? string.Empty : string.Empty;
+            module.StagingProviderKey = row.TryGetValue("staging_provider_key", out var stk) ? stk?.ToString() ?? string.Empty : string.Empty;
+            if (row.TryGetValue("mode", out var mode) && int.TryParse(mode?.ToString(), out var modeInt))
+                module.ProfileMode = (VaultProfileMode)modeInt;
+            if (row.TryGetValue("profile_info_id", out var pid) && long.TryParse(pid?.ToString(), out var pidLong) && pidLong > 0)
+                module.ProfileInfoId = pidLong;
         }
 
         void ApplyProfileRowToWorkspace(VaultWorkSpace ws, DbRow row) {

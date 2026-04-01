@@ -37,7 +37,7 @@ namespace Haley.Services {
                 ? fr.File.StorageRef ?? string.Empty
                 : string.Empty;
             var path = provider.BuildFullPath(bpath, fileRef);
-            if (input is StorageReadRequest req) req.SetOverrideRef(path);
+            if (input is StorageReadRequest req) req.OverrideRef = path;
             return (bpath, path);
         }
 
@@ -233,7 +233,7 @@ namespace Haley.Services {
                     targetExtension = Path.GetExtension(fs.Name);
 
                 if (!string.IsNullOrWhiteSpace(targetExtension)) targetFileName += targetExtension;
-                input.SetRequestedName(targetFileName);
+                input.RequestedName = targetFileName;
             }
 
             // Format policy is skipped for thumbnail uploads — thumbnails use their own allowed extensions
@@ -242,7 +242,7 @@ namespace Haley.Services {
                 throw new ArgumentException("Uploading this file format is not allowed.");
 
             if (string.IsNullOrWhiteSpace(input.RequestedName) && !string.IsNullOrWhiteSpace(targetFileName))
-                input.SetRequestedName(targetFileName);
+                input.RequestedName = targetFileName;
             return targetFileName;
         }
 
@@ -572,3 +572,4 @@ namespace Haley.Services {
         }
     }
 }
+

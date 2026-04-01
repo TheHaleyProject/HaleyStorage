@@ -132,7 +132,7 @@ namespace Haley.Models {
                 await using var tempStream = new FileStream(file.TempPath, FileMode.Open, FileAccess.Read);
                 reqClone.FileStream = tempStream;
                 reqClone.OriginalName = file.FileName;
-                reqClone.SetRequestedName(file.FileName);
+                reqClone.RequestedName =file.FileName;
 
                 IVaultResponse saveSummary = new VaultResponse() { Status = false };
                 try {
