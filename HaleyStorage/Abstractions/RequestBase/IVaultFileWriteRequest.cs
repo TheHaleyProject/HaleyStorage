@@ -14,7 +14,7 @@ namespace Haley.Abstractions {
         /// A brand-new <c>doc_version</c> row (version+1) is created under that document,
         /// bypassing filename-based lookup. The document's original name is preserved in DB.
         /// </summary>
-        bool CreateNewVersion { get; set; }
+        bool? ReplaceExistingFile { get; set; }
         /// <summary>
         /// When <c>true</c>, the uploaded file is a thumbnail for the file identified by uid/ruid.
         /// Implies <c>CreateNewVersion = true</c>. The registered <c>doc_version</c> row will share
