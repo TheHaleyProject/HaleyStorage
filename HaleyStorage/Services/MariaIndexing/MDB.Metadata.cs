@@ -29,6 +29,11 @@ namespace Haley.Utils {
                     return fb.SetMessage("Module CUID and version CUID are required.");
                 if (!_agw.ContainsKey(moduleCuid))
                     return fb.SetMessage($"No adapter found for key {moduleCuid}");
+
+                var versionId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.EXISTS_BY_CUID, default, (CUID, ToDbCuid(versionCuid)));
+                if (versionId == null || versionId < 1)
+                    return fb.SetMessage($"Version not found: {versionCuid}");
+
                 var metadata = await _agw.ScalarAsync<string>(moduleCuid, INSTANCE.DOCVERSION.GET_META_BY_CUID, default, (VALUE, ToDbCuid(versionCuid)));
                 return fb.SetStatus(true).SetResult(metadata ?? string.Empty);
             } catch (Exception ex) {
@@ -65,6 +70,11 @@ namespace Haley.Utils {
                     return fb.SetMessage("Module CUID and document CUID are required.");
                 if (!_agw.ContainsKey(moduleCuid))
                     return fb.SetMessage($"No adapter found for key {moduleCuid}");
+
+                var documentId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCUMENT.EXISTS_BY_CUID, default, (CUID, ToDbCuid(documentCuid)));
+                if (documentId == null || documentId < 1)
+                    return fb.SetMessage($"Document not found: {documentCuid}");
+
                 var metadata = await _agw.ScalarAsync<string>(moduleCuid, INSTANCE.DOCUMENT.GET_META_BY_CUID, default, (CUID, ToDbCuid(documentCuid)));
                 return fb.SetStatus(true).SetResult(metadata ?? string.Empty);
             } catch (Exception ex) {

@@ -141,6 +141,40 @@ namespace Haley.Services {
                     $"Upload without a uid to create a new document.");
         }
 
+        /// <summary>
+        /// When a request carries only a document-level CUID (ruid), resolve it to the latest content
+        /// version CUID before the normal version-based upload flow runs. This keeps upload semantics
+        /// consistent: extension checks, replace, new-version creation, and thumbnails all operate on
+        /// a concrete content version uid.
+        /// </summary>
+        async Task ResolveVersionCuidFromRootCuid(IVaultFileReadRequest input, bool forupload) {
+            if (input?.File is not StorageFileRoute sfr
+                || string.IsNullOrWhiteSpace(sfr.RootCuid)
+                || !string.IsNullOrWhiteSpace(sfr.Cuid))
+                return;
+
+            var moduleCuid = input.Scope.Module.Cuid.ToString("N");
+            var existing = await Indexer.GetDocVersionInfoByDocCuid(moduleCuid, sfr.RootCuid);
+            if (existing?.Status != true || existing.Result is not Dictionary<string, object> dic || dic.Count < 1) {
+                if (forupload)
+                    throw new ArgumentException($"No file found for the supplied ruid '{sfr.RootCuid}'. Upload without a uid/ruid to create a new file.");
+                throw new ArgumentException($"File not found for the supplied ruid '{sfr.RootCuid}'.");
+            }
+
+            var resolvedCuid = dic.TryGetValue("uid", out var uidObj) ? uidObj?.ToString() : null;
+            if (string.IsNullOrWhiteSpace(resolvedCuid)) {
+                if (forupload)
+                    throw new ArgumentException($"Unable to resolve the latest content version uid for ruid '{sfr.RootCuid}'.");
+                throw new ArgumentException($"Unable to resolve the latest content version for ruid '{sfr.RootCuid}'.");
+            }
+
+            input.File.SetCuid(resolvedCuid);
+            if (string.IsNullOrWhiteSpace(sfr.RootCuid)
+                && dic.TryGetValue("ruid", out var ruidObj)
+                && !string.IsNullOrWhiteSpace(ruidObj?.ToString()))
+                sfr.RootCuid = ruidObj.ToString();
+        }
+
         async Task<bool> CreateNewDocumentVersion(IVaultFileReadRequest input, IVaultFileWriteRequest inputW, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider = null) {
             if (!forupload || string.IsNullOrWhiteSpace(input.File?.Cuid)) return false; //only applicable when uploading a specific version (replace=false scenario, along with the presence of a CUID to identify the version to be replaced).
             if (inputW?.ReplaceExistingFile == true && inputW.IsThumbnail != true) return false; // Thumbnail uploads always create a new sub-version row; they never replace the content row.
@@ -358,6 +392,11 @@ namespace Haley.Services {
             if (!Indexer.TryGetComponentInfo<VaultWorkSpace>(input.Scope.Workspace.Cuid.ToString("N"), out VaultWorkSpace wInfo) && forupload) {
                 throw new Exception($"Unable to find workspace info. Name: {input.Scope.Workspace.Name} — Cuid: {input.Scope.Workspace.Cuid}.");
             }
+
+            // If the caller supplied a document-level CUID (ruid) instead of a version CUID,
+            // resolve it up front so the rest of the upload flow continues against a concrete
+            // content version. This keeps replace/new-version/thumbnail behavior identical to uid uploads.
+            await ResolveVersionCuidFromRootCuid(input, forupload);
 
             // ── Extension consistency check ────────────────────────────────
             // Skipped for thumbnail uploads — thumbnails intentionally differ in extension
