@@ -482,6 +482,11 @@ namespace Haley.Services {
 
                 // A uid was explicitly supplied but doesn't exist in the DB.
                 // Silently creating a new file under a caller-specified uid is wrong — throw instead.
+                if (!forupload) {
+                    var identityName = input.File.Id > 0 ? "id" : "uid";
+                    var identityValue = input.File.Id > 0 ? input.File.Id.ToString() : input.File?.Cuid;
+                    throw new ArgumentException($"File not found for the supplied {identityName} '{identityValue}'.");
+                }
                 if (forupload)
                     throw new ArgumentException($"No file found for the supplied uid '{input.File?.Cuid ?? input.File?.Id.ToString()}'. Upload without a uid to create a new file.");
 
@@ -494,7 +499,7 @@ namespace Haley.Services {
                         input.File.SetCuid(rdic["uid"]?.ToString());
                     return PopulateFileFromDic(input, rdic);
                 }
-                if (!forupload) throw new ArgumentException("File not found for the given ruid.");
+                if (!forupload) throw new ArgumentException($"File not found for the supplied ruid '{sfrRoot.RootCuid}'.");
 
             } else if (!string.IsNullOrWhiteSpace(input.File?.DisplayName) || !string.IsNullOrWhiteSpace(input.RequestedName)) {
                 var searchName = input.File?.DisplayName ?? input.RequestedName;

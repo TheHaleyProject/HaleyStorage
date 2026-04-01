@@ -12,9 +12,9 @@ namespace Haley.Utils {
     /// </summary>
     internal partial class MariaDBIndexing {
         /// <summary>
-        /// Resolves a document-level CUID (ruid) to the latest version's full info row.
-        /// Looks up the document by its own CUID, then delegates to <see cref="GetDocVersionInfo(string,long)"/>
-        /// which fetches the max version via <c>GET_LATEST_BY_PARENT</c>.
+        /// Resolves a document-level CUID (ruid) to the latest content version's full info row.
+        /// Looks up the document by its own CUID, then fetches the max content version via
+        /// <c>GET_LATEST_BY_PARENT</c> (sub_ver = 0 only).
         /// </summary>
         public async Task<IFeedback> GetDocVersionInfoByDocCuid(string moduleCuid, string documentCuid) {
             var fb = new Feedback();
@@ -27,7 +27,10 @@ namespace Haley.Utils {
                 var docId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCUMENT.GET_BY_CUID, default, (CUID, docCuid));
                 if (docId == null || docId < 1)
                     return fb.SetMessage($"Document not found for ruid {documentCuid}");
-                return await GetDocVersionInfo(moduleCuid, docId.Value);
+                var dic = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.GET_LATEST_BY_PARENT, default, (PARENT, docId.Value));
+                if (dic == null || dic.Count < 1)
+                    return fb.SetMessage($"No content version found for ruid {documentCuid}");
+                return fb.SetStatus(true).SetMessage("Document version info obtained").SetResult(dic);
             } catch (Exception ex) {
                 _logger?.LogError(ex.StackTrace);
                 return fb.SetMessage(ex.StackTrace);

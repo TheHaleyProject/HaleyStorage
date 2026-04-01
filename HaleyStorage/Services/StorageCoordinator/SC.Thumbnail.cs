@@ -63,26 +63,59 @@ namespace Haley.Services {
 
                 var storagePath = thumbDic.TryGetValue("path", out var p) ? p?.ToString() : null;
                 var stagingPath = thumbDic.TryGetValue("staging_path", out var sp) ? sp?.ToString() : null;
+                var flags = thumbDic.TryGetValue("flags", out var fl) && int.TryParse(fl?.ToString(), out var flagValue)
+                    ? (VersionFlags)flagValue
+                    : VersionFlags.None;
+                var profileInfoId = thumbDic.TryGetValue("profile_info_id", out var pid) && long.TryParse(pid?.ToString(), out var resolvedProfileInfoId)
+                    ? resolvedProfileInfoId
+                    : 0L;
 
                 if (string.IsNullOrWhiteSpace(storagePath) && string.IsNullOrWhiteSpace(stagingPath)) {
                     result.Message = "Thumbnail has no storage path in DB.";
                     return result;
                 }
 
-                var provider = ResolveProvider(request);
-                var basePath = FetchWorkspaceBasePath(request, provider);
                 var targetRef = !string.IsNullOrWhiteSpace(storagePath) ? storagePath : stagingPath;
-                var fullPath = provider.BuildFullPath(basePath, targetRef);
+                ProviderReadResult readResult;
+                string accessUrl = null;
 
-                var readResult = await provider.ReadAsync(fullPath, autoSearchExtension: false);
+                if ((flags & VersionFlags.InStaging) != 0 && (flags & VersionFlags.InStorage) == 0 && !string.IsNullOrWhiteSpace(stagingPath)) {
+                    var stagingProvider = profileInfoId > 0
+                        ? GetProvidersForProfile(profileInfoId, moduleCuid).staging
+                        : ResolveStagingProvider(request);
+
+                    if (stagingProvider == null) {
+                        result.Message = "Thumbnail is marked as staged, but no staging provider is available.";
+                        return result;
+                    }
+
+                    accessUrl = await stagingProvider.GetAccessUrl(stagingPath, TimeSpan.FromHours(1));
+                    readResult = string.IsNullOrWhiteSpace(accessUrl)
+                        ? await stagingProvider.ReadAsync(stagingPath, autoSearchExtension: false)
+                        : ProviderReadResult.Ok(Stream.Null, string.Empty);
+                } else {
+                    var provider = profileInfoId > 0
+                        ? GetProvidersForProfile(profileInfoId, moduleCuid).primary
+                        : ResolveProvider(request);
+                    var basePath = FetchWorkspaceBasePath(request, provider);
+                    var fullPath = provider.BuildFullPath(basePath, targetRef);
+                    readResult = await provider.ReadAsync(fullPath, autoSearchExtension: false);
+                }
+
                 if (!readResult.Success) { result.Message = readResult.Message; return result; }
 
                 var saveasName = thumbDic.TryGetValue("saveas_name", out var sn) ? sn?.ToString() ?? "thumb" : "thumb";
+                var resolvedExtension = !string.IsNullOrWhiteSpace(readResult.Extension)
+                    ? readResult.Extension
+                    : Path.GetExtension(targetRef);
+                if (string.IsNullOrWhiteSpace(Path.GetExtension(saveasName)) && !string.IsNullOrWhiteSpace(resolvedExtension))
+                    saveasName += resolvedExtension;
 
                 result.Status = true;
                 result.Stream = readResult.Stream;
+                result.AccessUrl = accessUrl;
                 // Use the thumbnail's own extension (e.g. .jpg) — not the document's extension.
-                result.Extension = Path.GetExtension(saveasName);
+                result.Extension = !string.IsNullOrWhiteSpace(resolvedExtension) ? resolvedExtension : Path.GetExtension(saveasName);
                 result.SaveName = saveasName;
                 return result;
             } catch (Exception ex) {
