@@ -64,7 +64,7 @@ namespace Haley.Services {
                     // Annotate the file route so the DB update records staging_path and flags.
                     if (input.File is StorageFileRoute sfr) {
                         sfr.StagingRef = stagingKey;
-                        sfr.Flags = 4; // InStaging — promote will set InStorage|Completed later
+                        sfr.Flags = (int)VersionFlags.InStaging;
                         // Clear the primary storage ref: storage_path stays null in DB until promoted.
                         sfr.StorageRef = string.Empty;
                     }
@@ -73,7 +73,7 @@ namespace Haley.Services {
                     writeProvider = ResolveProvider(input);
                     writePath = input.OverrideRef;
                     if (input.File is StorageFileRoute sfr)
-                        sfr.Flags = 8 | 64; // InStorage | Completed
+                        sfr.Flags = (int)(VersionFlags.InStorage | VersionFlags.Completed);
                 }
 
                 // Security: for FS, ensure target path stays within the storage root.
@@ -217,28 +217,49 @@ namespace Haley.Services {
         // ─── Delete ───────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Deletes a file from its resolved storage provider path.
-        /// Returns an error feedback when <see cref="WriteMode"/> is <c>false</c> or the file does not exist.
+        /// Soft-deletes the logical document identified by the supplied uid or ruid.
+        /// The DB row is marked deleted; physical archive movement happens later only when a
+        /// same-name reupload needs to free the active name slot.
         /// </summary>
         public async Task<IFeedback> Delete(IVaultFileReadRequest input) {
             var feedback = new Feedback() { Status = false };
             if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
             if (input.ReadOnlyMode) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
+            if (Indexer == null) { feedback.Message = "Delete requires an indexer."; return feedback; }
+            if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
 
-            var path = ProcessAndBuildStoragePath(input, true).targetPath;
-            if (string.IsNullOrWhiteSpace(path)) {
-                feedback.Message = "Unable to generate path from provided inputs.";
+            input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+            var deleteResult = await Indexer.SoftDeleteDocument(input);
+            feedback.Status = deleteResult?.Status == true;
+            feedback.Message = deleteResult?.Message ?? "Unable to delete the document.";
+            return feedback;
+        }
+
+        /// <summary>
+        /// Restores a soft-deleted logical document identified by uid or ruid.
+        /// FileSystem-backed archived bytes are moved back before the DB flags are cleared.
+        /// </summary>
+        public async Task<IFeedback> Restore(IVaultFileReadRequest input) {
+            var feedback = new Feedback() { Status = false };
+            if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
+            if (input?.ReadOnlyMode == true) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
+            if (Indexer == null) { feedback.Message = "Restore requires an indexer."; return feedback; }
+            if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
+
+            input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+
+            var deletedInfo = await Indexer.GetDeletedDocument(input);
+            if (deletedInfo?.Status != true || deletedInfo.Result == null) {
+                feedback.Message = deletedInfo?.Message ?? "Deleted document not found.";
                 return feedback;
             }
 
-            var provider = ResolveProvider(input);
-            if (!provider.Exists(path)) {
-                feedback.Message = $"File does not exist: {path}.";
-                return feedback;
-            }
+            var readiness = await EnsureDeletedDocumentFilesAvailableForRestore(input, deletedInfo.Result);
+            if (!readiness.Status) return readiness;
 
-            feedback.Status = await provider.DeleteAsync(path);
-            feedback.Message = feedback.Status? "File deleted." : "Unable to delete the file. Check if it is in use by another process and try again.";
+            var restoreResult = await Indexer.RestoreDeletedDocument(input.Scope.Module.Cuid.ToString("N"), deletedInfo.Result.DocumentId);
+            feedback.Status = restoreResult?.Status == true;
+            feedback.Message = restoreResult?.Message ?? "Unable to restore the document.";
             return feedback;
         }
 
@@ -316,11 +337,17 @@ namespace Haley.Services {
         }
 
         /// <summary>
-        /// Soft-deletes a virtual directory in MariaDB. Currently a stub — not yet implemented.
+        /// Soft-deletes a virtual directory in MariaDB.
         /// </summary>
-        public Task<IFeedback> DeleteDirectory(IVaultReadRequest input, bool recursive) {
-            // TODO: soft-delete virtual directory in MariaDB via Indexer.DeleteDirectory.
-            return Task.FromResult<IFeedback>(new Feedback() { Status = false, Message = "DeleteDirectory requires indexer implementation (pending MariaDB phase)." });
+        public async Task<IFeedback> DeleteDirectory(IVaultReadRequest input, bool recursive) {
+            var feedback = new Feedback() { Status = false };
+            if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
+            if (input?.ReadOnlyMode == true) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
+            if (Indexer == null) { feedback.Message = "DeleteDirectory requires an indexer."; return feedback; }
+            if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
+
+            input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+            return await Indexer.SoftDeleteDirectory(input, recursive);
         }
 
         // ─── Revision backup helper ───────────────────────────────────────────

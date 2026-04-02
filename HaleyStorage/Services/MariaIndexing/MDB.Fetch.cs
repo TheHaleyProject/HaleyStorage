@@ -46,6 +46,25 @@ namespace Haley.Utils {
             return GetDocVersionInfoInternal(moduleCuid, 0, cuid);
         }
         /// <summary>
+        /// Fetches the full active version row by its provider-level <c>storage_name</c>.
+        /// Unlike the filesystem fast path, this stays DB-backed so deleted versions are not exposed.
+        /// </summary>
+        public async Task<IFeedback> GetDocVersionInfoByStorageName(string moduleCuid, string storageName) {
+            var result = new Feedback();
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid)) return result.SetMessage("Module CUID is mandatory to fetch document info");
+                if (string.IsNullOrWhiteSpace(storageName)) return result.SetMessage("Storage name is required.");
+                if (!_agw.ContainsKey(moduleCuid)) return result.SetMessage($@"No adapter found for the key {moduleCuid}");
+
+                var dic = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.GET_FULL_BY_STORAGE_NAME, default, (VALUE, storageName));
+                if (dic == null || dic.Count < 1) return result.SetMessage($@"Unable to fetch the document version info for storage name {storageName}");
+                return result.SetStatus(true).SetMessage("Document version info obtained").SetResult(dic);
+            } catch (Exception ex) {
+                _logger?.LogError(ex.StackTrace);
+                return result.SetMessage(ex.StackTrace);
+            }
+        }
+        /// <summary>
         /// Fetches the latest <c>version_info</c> row for a file identified by name within a specific
         /// workspace ID and directory. Looks up the document by joining <c>vault</c>, <c>name_store</c>,
         /// <c>extension</c>, and <c>directory</c> tables, then retrieves the latest version.

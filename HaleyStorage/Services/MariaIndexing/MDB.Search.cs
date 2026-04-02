@@ -16,7 +16,7 @@ namespace Haley.Utils {
     /// </summary>
     internal partial class MariaDBIndexing {
 
-        public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50) {
+        public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50, bool includeAll = false) {
 
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {
@@ -49,22 +49,22 @@ namespace Haley.Utils {
                 var directoryId = request.Scope.Folder?.Id ?? -1;   // -1 indicates root scope (entire workspace)
                 if (directoryId < 1) {
                     // Scope: entire workspace.
-                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_DIRS_ALL,  default, (WSPACE, wsId), (VALUE, likePattern)) ?? 0;
-                    totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_FILES_ALL, default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
-                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_ALL, default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
+                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_ALL_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_ALL,  default, (WSPACE, wsId), (VALUE, likePattern)) ?? 0;
+                    totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_FILES_ALL_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_FILES_ALL, default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
+                    rows       = await _agw.RowsAsync(moduleCuid, includeAll ? INSTANCE.SEARCH.ITEMS_ALL_INCLUDE_DELETED : INSTANCE.SEARCH.ITEMS_ALL, default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 } else if (!recursive) {
                     // Scope: direct children of a specific directory.
-                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_DIRS_IN_DIR,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern)) ?? 0;
-                    totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_FILES_IN_DIR, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
-                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_IN_DIR, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
+                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_IN_DIR_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_IN_DIR,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern)) ?? 0;
+                    totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_FILES_IN_DIR_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_FILES_IN_DIR, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
+                    rows       = await _agw.RowsAsync(moduleCuid, includeAll ? INSTANCE.SEARCH.ITEMS_IN_DIR_INCLUDE_DELETED : INSTANCE.SEARCH.ITEMS_IN_DIR, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 } else {
                     // Scope: recursive subtree of a directory (WITH RECURSIVE CTE).
-                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_DIRS_RECURSIVE,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern)) ?? 0;
-                    totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.SEARCH.COUNT_FILES_RECURSIVE, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
-                    rows       = await _agw.RowsAsync(moduleCuid, INSTANCE.SEARCH.ITEMS_RECURSIVE, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
+                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_RECURSIVE_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_RECURSIVE,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern)) ?? 0;
+                    totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_FILES_RECURSIVE_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_FILES_RECURSIVE, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
+                    rows       = await _agw.RowsAsync(moduleCuid, includeAll ? INSTANCE.SEARCH.ITEMS_RECURSIVE_INCLUDE_DELETED : INSTANCE.SEARCH.ITEMS_RECURSIVE, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 }
 
-                var response = new VaultFolderBrowseResponse { WorkspaceId    = wsId, WorkspaceCuid  = request.Scope.Workspace.Cuid.ToString("N"), IsRoot         = directoryId < 1, CurrentFolderId = directoryId, Page           = page, PageSize       = pageSize, TotalFolders   = totalDirs, TotalFiles     = totalFiles, TotalItems     = totalDirs + totalFiles };
+                var response = new VaultFolderBrowseResponse { WorkspaceId    = wsId, WorkspaceCuid  = request.Scope.Workspace.Cuid.ToString("N"), IsRoot = directoryId < 1, CurrentFolderId = directoryId, IncludeAll = includeAll, Page = page, PageSize = pageSize, TotalFolders = totalDirs, TotalFiles = totalFiles, TotalItems = totalDirs + totalFiles };
 
                 foreach (var row in rows)
                     response.Items.Add(MapBrowseItem(row));

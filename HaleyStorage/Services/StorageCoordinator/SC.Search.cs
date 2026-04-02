@@ -12,7 +12,7 @@ namespace Haley.Services {
     /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
 
-        public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest input, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50) {
+        public async Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest input, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50, bool includeAll = false) {
 
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {
@@ -25,7 +25,7 @@ namespace Haley.Services {
 
                 input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, VaultObjectType.WorkSpace));
 
-                return await Indexer.SearchItems(input, searchTerm, searchMode, extension, recursive, page, pageSize);
+                return await Indexer.SearchItems(input, searchTerm, searchMode, extension, recursive, page, pageSize, includeAll);
             } catch (Exception ex) {
                 return fb.SetMessage(ex.Message);
             }

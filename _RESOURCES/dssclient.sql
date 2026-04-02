@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS `directory` (
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Timestamp when the directory record was first created.',
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Automatically updated whenever any column in this row changes.',
   `cuid` varchar(48) NOT NULL DEFAULT uuid() COMMENT 'Collision-resistant unique identifier for this directory. Stable across renames. Used by the application layer as an external-safe reference (avoids exposing numeric auto-increment IDs in APIs).',
-  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT 'Soft-delete flag. 0=active, 1=deleted. Deleted directories are hidden from browse results but retained in the database for audit and foreign-key integrity.',
+  `delete_state` tinyint(4) NOT NULL DEFAULT 0 COMMENT 'Lifecycle state. 0=active, 1=soft deleted, 2=archived, 3=purged.',
+  `deleted` datetime DEFAULT NULL COMMENT 'UTC timestamp when this row entered a non-active delete_state. NULL while active.',
   `name` varchar(120) NOT NULL COMMENT 'Normalised folder slug used in uniqueness checks and path construction, e.g. "project_docs" or "invoices". Should be lowercase and URL-safe. Different from display_name which may have spaces.',
   `parent` bigint(20) NOT NULL DEFAULT 0 COMMENT 'FK → directory.id of the parent folder. Set to 0 for top-level (root) directories in the workspace — the application treats 0 as the sentinel for "no parent". Checked against (workspace, parent, name) unique constraint.',
   `workspace` bigint(20) NOT NULL COMMENT 'FK → workspace.id. Every directory belongs to exactly one workspace. A directory created under workspace=12 cannot contain documents from workspace=15.',
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS `directory` (
   UNIQUE KEY `unq_directory` (`workspace`,`parent`,`name`),
   UNIQUE KEY `unq_directory_0` (`cuid`),
   KEY `idx_directory_parent` (`parent`),
-  KEY `idx_directory_workspace_parent_deleted` (`workspace`,`parent`,`deleted`),
+  KEY `idx_directory_workspace_parent_delete_state` (`workspace`,`parent`,`delete_state`),
   CONSTRAINT `fk_directory_workspace` FOREIGN KEY (`workspace`) REFERENCES `workspace` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1000 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Virtual folder hierarchy within a workspace. Directories are logical — they exist in the DB only and do not map to physical filesystem folders. Supports soft-delete, parent-child nesting (parent=0 for root), and CUID-based external referencing.';
 
@@ -78,7 +79,9 @@ CREATE TABLE IF NOT EXISTS `document` (
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Automatically updated whenever any column in this row changes (e.g. when the document is moved or soft-deleted).',
   `parent` bigint(20) NOT NULL COMMENT 'FK → directory.id. The virtual folder this document lives in. Changing this value moves the document to a different folder.',
   `name` bigint(20) NOT NULL COMMENT 'FK → name_store.id. Represents the logical filename (stem + extension). E.g. name_store id=7 maps to "invoice_jan_2024.pdf". Do not confuse with a varchar name — this is a numeric FK.',
-  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT 'Soft-delete flag. 0=active, 1=deleted. Deleted documents are excluded from browse/search results but their version history is preserved for audit purposes.',
+  `original_name` bigint(20) DEFAULT NULL COMMENT 'FK → name_store.id. Preserves the original logical filename when a deleted document is tombstoned to free the active (parent,name) slot for a re-upload. NULL while the document still owns its active name.',
+  `delete_state` tinyint(4) NOT NULL DEFAULT 0 COMMENT 'Lifecycle state. 0=active, 1=soft deleted, 2=archived, 3=purged.',
+  `deleted` datetime DEFAULT NULL COMMENT 'UTC timestamp when this row entered a non-active delete_state. NULL while active.',
   `workspace` bigint(20) NOT NULL COMMENT 'FK → workspace.id. Redundantly stored here (parent directory already implies a workspace) for fast workspace-scoped queries without joining through directory.',
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_file_index` (`cuid`),
@@ -86,9 +89,11 @@ CREATE TABLE IF NOT EXISTS `document` (
   KEY `fk_file_index_parent` (`workspace`),
   KEY `fk_document_directory` (`parent`),
   KEY `fk_document_name_store` (`name`),
-  KEY `idx_document_workspace_parent_deleted` (`workspace`,`parent`,`deleted`),
+  KEY `fk_document_original_name_store` (`original_name`),
+  KEY `idx_document_workspace_parent_delete_state` (`workspace`,`parent`,`delete_state`),
   CONSTRAINT `fk_document_directory` FOREIGN KEY (`parent`) REFERENCES `directory` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_document_name_store` FOREIGN KEY (`name`) REFERENCES `name_store` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_document_original_name_store` FOREIGN KEY (`original_name`) REFERENCES `name_store` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_document_workspace` FOREIGN KEY (`workspace`) REFERENCES `workspace` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1988 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Logical file identity. One row per unique filename within a directory/workspace combination. Does not store the filename string directly — uses name_store FK for normalised filename lookup. Multiple uploads of the same file create new doc_version rows, not new document rows.';
 
@@ -115,12 +120,15 @@ CREATE TABLE IF NOT EXISTS `doc_version` (
   `ver` int(11) NOT NULL DEFAULT 1 COMMENT 'Monotonically increasing version number within the parent document. Starts at 1 for the first upload. The (parent, ver) unique constraint prevents gaps or duplicates. The latest version is MAX(ver) for a given parent.',
   `parent` bigint(20) NOT NULL COMMENT 'FK → document.id. Links this version to its parent logical document.',
   `sub_ver` int(11) NOT NULL DEFAULT 0 COMMENT 'sub version gives the files'' own content chain.. 0 is alwasy the main file.. rest are all supporting files.. and thes upporting files never get same extension as the main file.. for example.. if the main content is pdf.. we can still have the sub_version as png or jpeg.. main idea is these sub version files are used sa thumbnails.. \ninteresting idea is one file can have multiple thumbnails and it can be used sa ''rotating thumbnails'' so gives user an animated experience..',
+  `delete_state` tinyint(4) NOT NULL DEFAULT 0 COMMENT 'Lifecycle state for this version row. 0=active, 1=soft deleted, 2=archived, 3=purged.',
+  `deleted` datetime DEFAULT NULL COMMENT 'UTC timestamp when this version row entered a non-active delete_state. NULL while active.',
   `actor` bigint(20) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`),
   UNIQUE KEY `unq_doc_version` (`cuid`),
   UNIQUE KEY `unq_file_version` (`parent`,`ver`,`sub_ver`),
   KEY `idx_file_version_0` (`created`),
-  KEY `idx_doc_version_parent_subver_ver` (`parent`,`sub_ver`,`ver`),
+  KEY `idx_doc_version_parent_delete_state_subver_ver` (`parent`,`delete_state`,`sub_ver`,`ver`),
+  KEY `idx_doc_version_parent_ver_delete_state_subver` (`parent`,`ver`,`delete_state`,`sub_ver`),
   CONSTRAINT `fk_doc_version_document` FOREIGN KEY (`parent`) REFERENCES `document` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1996 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='One row per file upload event. A document accumulates version rows over time (ver=1, 2, 3...). The version row is the FK anchor for all physical storage metadata (version_info) and chunking state (chunk_info, chunked_files).';
 

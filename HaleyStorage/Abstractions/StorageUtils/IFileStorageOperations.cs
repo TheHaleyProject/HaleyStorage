@@ -10,6 +10,7 @@ namespace Haley.Abstractions {
         Task<IVaultStreamResponse> Download(IVaultFileReadRequest input, bool auto_search_extension = true);
         Task<IVaultStreamResponse> Download(IVaultFileRoute input, bool auto_search_extension = true);
         Task<IFeedback> Delete(IVaultFileReadRequest input);
+        Task<IFeedback> Restore(IVaultFileReadRequest input);
         IFeedback Exists(IVaultReadRequest input, bool isFilePath = false);
         long GetSize(IVaultReadRequest input);
     }

@@ -106,38 +106,79 @@ namespace Haley.Internal {
             }
 
             public class DIRECTORY {
-                public const string EXISTS = $@"select dir.id, dir.cuid as uid from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME} and dir.deleted = 0;";
-                public const string EXISTS_BY_CUID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.cuid = {VALUE} and dir.deleted = 0;";
-                public const string EXISTS_BY_ID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.id = {VALUE} and dir.deleted = 0;";
+                public const string EXISTS = $@"select dir.id, dir.cuid as uid from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME} and dir.delete_state = 0;";
+                public const string EXISTS_BY_CUID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.cuid = {VALUE} and dir.delete_state = 0;";
+                public const string EXISTS_BY_ID = $@"select dir.id, dir.cuid as uid from directory as dir where dir.id = {VALUE} and dir.delete_state = 0;";
                 public const string INSERT = $@"insert ignore into directory (workspace,parent,name,display_name,actor) values ({WSPACE},{PARENT},{NAME},{DNAME},{ACTOR});";
-                public const string GET = $@"select dir.id from directory as dir where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={NAME} and dir.deleted = 0;";
-                public const string GET_BY_CUID = $@"select dir.id from directory as dir where dir.cuid = {CUID} and dir.deleted = 0;";
+                public const string GET = $@"select dir.id from directory as dir where dir.workspace = {WSPACE} and dir.parent={PARENT} and dir.name ={NAME} and dir.delete_state = 0;";
+                public const string GET_BY_CUID = $@"select dir.id from directory as dir where dir.cuid = {CUID} and dir.delete_state = 0;";
+                public const string GET_BY_CUID_ALL = $@"select dir.id from directory as dir where dir.cuid = {CUID} limit 1;";
                 public const string GET_DETAILS =
-                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.created, dir.modified
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.delete_state, dir.deleted, dir.created, dir.modified
                        from directory as dir
-                       where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME} and dir.deleted = 0
+                       where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME} and dir.delete_state = 0
                        limit 1;";
                 public const string GET_DETAILS_BY_CUID =
-                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.created, dir.modified
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.delete_state, dir.deleted, dir.created, dir.modified
                        from directory as dir
-                       where dir.cuid = {VALUE} and dir.deleted = 0
+                       where dir.cuid = {VALUE} and dir.delete_state = 0
                        limit 1;";
                 public const string GET_DETAILS_BY_ID =
-                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.created, dir.modified
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.delete_state, dir.deleted, dir.created, dir.modified
                        from directory as dir
-                       where dir.id = {VALUE} and dir.deleted = 0
+                       where dir.id = {VALUE} and dir.delete_state = 0
                        limit 1;";
-                public const string COUNT_CHILDREN = $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.deleted = 0;";
+                public const string GET_DETAILS_ALL =
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.delete_state, dir.deleted, dir.created, dir.modified
+                       from directory as dir
+                       where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {NAME}
+                       limit 1;";
+                public const string GET_DETAILS_BY_CUID_ALL =
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.delete_state, dir.deleted, dir.created, dir.modified
+                       from directory as dir
+                       where dir.cuid = {VALUE}
+                       limit 1;";
+                public const string GET_DETAILS_BY_ID_ALL =
+                    $@"select dir.id, dir.cuid as uid, dir.name, dir.display_name, dir.actor, dir.parent, dir.workspace, dir.delete_state, dir.deleted, dir.created, dir.modified
+                       from directory as dir
+                       where dir.id = {VALUE}
+                       limit 1;";
+                public const string COUNT_CHILDREN = $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.delete_state = 0;";
+                public const string COUNT_CHILDREN_ALL = $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT};";
                 public const string BROWSE_ITEMS =
                     $@"select *
                        from (
-                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
+                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.delete_state, dir.deleted, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
                              from directory as dir
-                             where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.deleted = 0
+                             where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.delete_state = 0
 
                              union all
 
-                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
+                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.delete_state, d.deleted, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
+                            from document as d
+                            left join doc_info as di on di.file = d.id
+                            inner join (
+                                select dvi.parent, max(dvi.ver) as max_ver, count(*) as version_count
+                                from doc_version as dvi
+                                where dvi.sub_ver = 0 and dvi.delete_state = 0
+                                group by dvi.parent
+                             ) as latest on latest.parent = d.id
+                             inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver and dv.sub_ver = 0 and dv.delete_state = 0
+                             left join version_info as vi on vi.id = dv.id
+                             where d.workspace = {WSPACE} and d.parent = {PARENT} and d.delete_state = 0
+                       ) as browse_items
+                       order by browse_items.sort_group asc, browse_items.display_name asc, browse_items.id asc
+                       limit {LIMIT_ROWS} offset {OFFSET_ROWS};";
+                public const string BROWSE_ITEMS_ALL =
+                    $@"select *
+                       from (
+                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.delete_state, dir.deleted, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
+                             from directory as dir
+                             where dir.workspace = {WSPACE} and dir.parent = {PARENT}
+
+                             union all
+
+                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.delete_state, d.deleted, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
                             from document as d
                             left join doc_info as di on di.file = d.id
                             inner join (
@@ -148,17 +189,19 @@ namespace Haley.Internal {
                              ) as latest on latest.parent = d.id
                              inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver and dv.sub_ver = 0
                              left join version_info as vi on vi.id = dv.id
-                             where d.workspace = {WSPACE} and d.parent = {PARENT} and d.deleted = 0
+                             where d.workspace = {WSPACE} and d.parent = {PARENT}
                        ) as browse_items
                        order by browse_items.sort_group asc, browse_items.display_name asc, browse_items.id asc
                        limit {LIMIT_ROWS} offset {OFFSET_ROWS};";
+                public const string GET_CHILD_IDS_ALL = $@"select dir.id from directory as dir where dir.parent = {PARENT};";
+                public const string SOFT_DELETE_BY_ID = $@"update directory set delete_state = 1, deleted = {DELETED} where id = {ID};";
 
                 public const string GET_BY_DOC_VERSION_CUID =
                     $@"select dir.display_name, dir.cuid, dir.name
                        from doc_version as dv
-                       join document as d on d.id = dv.parent and d.deleted = 0
-                       join directory as dir on dir.id = d.parent and dir.deleted = 0
-                       where dv.cuid = {CUID};";
+                       join document as d on d.id = dv.parent and d.delete_state = 0
+                       join directory as dir on dir.id = d.parent and dir.delete_state = 0
+                       where dv.cuid = {CUID} and dv.delete_state = 0;";
             }
             public class EXTENSION {
                 public const string EXISTS = $@"select ext.id from extension as ext where ext.name = {NAME};";
@@ -180,24 +223,49 @@ namespace Haley.Internal {
             }
 
             public class DOCUMENT {
-                public const string EXISTS = $@"select doc.id , doc.cuid as uid from document as doc where doc.parent = {PARENT} and doc.name = {NAME} and doc.deleted = 0;";
-                public const string EXISTS_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.deleted = 0;";
+                public const string EXISTS = $@"select doc.id , doc.cuid as uid from document as doc where doc.parent = {PARENT} and doc.name = {NAME} and doc.delete_state = 0;";
+                public const string EXISTS_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.delete_state = 0;";
+                public const string EXISTS_DELETED = $@"select doc.id, doc.cuid as uid from document as doc where doc.parent = {PARENT} and doc.name = {NAME} and doc.delete_state > 0;";
+                public const string EXISTS_BY_CUID_ALL = $@"select doc.id from document as doc where doc.cuid = {CUID} limit 1;";
                 public const string INSERT = $@"insert ignore into document (workspace,parent,name) values ({WSPACE},{PARENT},{NAME});";
                 public const string INSERT_INFO = $@"insert into doc_info (file,display_name,actor) values ({PARENT}, {DNAME}, {ACTOR}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name);";
-                public const string GET_BY_PARENT = $@"select doc.id from document as doc where doc.parent= {PARENT} and doc.name = {NAME} and doc.deleted = 0;";
-                public const string GET_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.deleted = 0;";
-                public const string COUNT_BY_DIRECTORY = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT} and doc.deleted = 0;";
+                public const string GET_BY_PARENT = $@"select doc.id from document as doc where doc.parent= {PARENT} and doc.name = {NAME} and doc.delete_state = 0;";
+                public const string GET_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.delete_state = 0;";
+                public const string COUNT_BY_DIRECTORY = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT} and doc.delete_state = 0;";
+                public const string COUNT_BY_DIRECTORY_ALL = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT};";
                 public const string GET_DETAILS_BY_ID =
                     $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.actor as directory_actor_id, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name, di.metadata as doc_metadata, di.actor as document_actor_id
                        from document as d
                        left join doc_info as di on di.file = d.id
-                       inner join directory as dir on dir.id = d.parent and dir.deleted = 0
-                       where d.id = {ID} and d.deleted = 0
+                       inner join directory as dir on dir.id = d.parent and dir.delete_state = 0
+                       where d.id = {ID} and d.delete_state = 0
+                       limit 1;";
+                public const string GET_LIFECYCLE_BY_ID =
+                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, d.parent as directory_id, d.name as current_name_id, d.original_name as original_name_id, d.delete_state, d.deleted, concat(cv.name, case when cext.name = 'default' then '' else concat('.', cext.name) end) as current_file_name, concat(coalesce(ov.name, cv.name), case when coalesce(oext.name, cext.name) = 'default' then '' else concat('.', coalesce(oext.name, cext.name)) end) as restore_file_name
+                       from document as d
+                       inner join name_store as cns on cns.id = d.name
+                       inner join vault as cv on cv.id = cns.name
+                       inner join extension as cext on cext.id = cns.extension
+                       left join name_store as ons on ons.id = d.original_name
+                       left join vault as ov on ov.id = ons.name
+                       left join extension as oext on oext.id = ons.extension
+                       where d.id = {ID}
+                       limit 1;";
+                public const string GET_LIFECYCLE_BY_CUID =
+                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, d.parent as directory_id, d.name as current_name_id, d.original_name as original_name_id, d.delete_state, d.deleted, concat(cv.name, case when cext.name = 'default' then '' else concat('.', cext.name) end) as current_file_name, concat(coalesce(ov.name, cv.name), case when coalesce(oext.name, cext.name) = 'default' then '' else concat('.', coalesce(oext.name, cext.name)) end) as restore_file_name
+                       from document as d
+                       inner join name_store as cns on cns.id = d.name
+                       inner join vault as cv on cv.id = cns.name
+                       inner join extension as cext on cext.id = cns.extension
+                       left join name_store as ons on ons.id = d.original_name
+                       left join vault as ov on ov.id = ons.name
+                       left join extension as oext on oext.id = ons.extension
+                       where d.cuid = {CUID}
                        limit 1;";
                 public const string GET_META_BY_CUID =
-                    $@"select di.metadata from doc_info as di inner join document as d on d.id = di.file where d.cuid = {CUID} and d.deleted = 0 limit 1;";
+                    $@"select di.metadata from doc_info as di inner join document as d on d.id = di.file where d.cuid = {CUID} and d.delete_state = 0 limit 1;";
                 public const string UPSERT_META =
-                    $@"insert into doc_info (file, display_name, metadata) select d.id, coalesce(di.display_name, ''), {METADATA} from document as d left join doc_info as di on di.file = d.id where d.cuid = {CUID} and d.deleted = 0 limit 1 on duplicate key update metadata = VALUES(metadata);";
+                    $@"insert into doc_info (file, display_name, metadata) select d.id, coalesce(di.display_name, ''), {METADATA} from document as d left join doc_info as di on di.file = d.id where d.cuid = {CUID} and d.delete_state = 0 limit 1 on duplicate key update metadata = VALUES(metadata);";
                 public const string GET_BY_NAME =
                     $@"select dv.id
                        from document as dv
@@ -211,25 +279,34 @@ namespace Haley.Internal {
                         inner join (
                             select dir.id
                             from directory as dir
-                            where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {DIRNAME} and dir.deleted = 0
-                        ) as odir on odir.id = dv.parent
-                        where dv.deleted = 0;";
+                            where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name = {DIRNAME} and dir.delete_state = 0
+                         ) as odir on odir.id = dv.parent
+                         where dv.delete_state = 0;";
+                public const string GET_IDS_BY_PARENT_ALL = $@"select doc.id from document as doc where doc.parent = {PARENT};";
+                public const string SOFT_DELETE_BY_ID = $@"update document set delete_state = 1, deleted = {DELETED} where id = {ID};";
+                public const string RESTORE_BY_ID = $@"update document set delete_state = 0, deleted = null where id = {ID};";
+                public const string ARCHIVE_RENAME = $@"update document set name = {NAME}, original_name = case when original_name is null then {ORIGINAL_NAME} else original_name end, delete_state = 2 where id = {ID} and delete_state > 0;";
+                public const string RESTORE_NAME = $@"update document set name = coalesce(original_name, name), original_name = null where id = {ID} and delete_state > 0;";
             }
             
             public class DOCVERSION {
                 public const string EXISTS = $@"select dv.id , dv.cuid as uid from doc_version as dv where dv.parent = {PARENT} and dv.ver = {VERSION} and dv.sub_ver = 0;";
                 public const string EXISTS_BY_CUID = $@"select dv.id from doc_version as dv where dv.cuid = {CUID};";
+                public const string EXISTS_ACTIVE_BY_CUID = $@"select dv.id from doc_version as dv inner join document as d on d.id = dv.parent and d.delete_state = 0 where dv.cuid = {CUID} and dv.delete_state = 0;";
                 public const string EXISTS_BY_ID = $@"select 1 from doc_version as dv where dv.id = {ID};";
                 public const string INSERT = $@"insert ignore into doc_version (parent,ver,actor) values({PARENT},{VERSION},{ACTOR});";
-                public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT} and dv.sub_ver = 0;";
+                public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT} and dv.sub_ver = 0 and dv.delete_state = 0;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_ID = $@"select dv.parent from doc_version as dv where dv.id = {VALUE} limit 1;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_CUID = $@"select dv.parent from doc_version as dv where dv.cuid = {VALUE} limit 1;";
                 /// <summary>Returns 1 if the given version CUID is the latest version of its document, 0 otherwise.</summary>
                 public const string IS_LATEST_BY_CUID =
-                    $@"select case when dv.ver = (select max(dvi.ver) from doc_version as dvi where dvi.parent = dv.parent and dvi.sub_ver = 0) then 1 else 0 end as is_latest
-                       from doc_version as dv where dv.cuid = {VALUE} limit 1;";
+                    $@"select case when dv.ver = (select max(dvi.ver) from doc_version as dvi where dvi.parent = dv.parent and dvi.sub_ver = 0 and dvi.delete_state = 0) then 1 else 0 end as is_latest
+                       from doc_version as dv
+                       inner join document as d on d.id = dv.parent and d.delete_state = 0
+                       where dv.cuid = {VALUE} and dv.delete_state = 0
+                       limit 1;";
                 public const string GET_META_BY_CUID =
-                    $@"select vi.metadata from version_info as vi inner join doc_version as dv on dv.id = vi.id where dv.cuid = {VALUE} limit 1;";
+                    $@"select vi.metadata from version_info as vi inner join doc_version as dv on dv.id = vi.id inner join document as d on d.id = dv.parent and d.delete_state = 0 where dv.cuid = {VALUE} and dv.delete_state = 0 limit 1;";
                 public const string UPDATE_META_BY_ID =
                     $@"update version_info set metadata = {METADATA} where id = {ID};";
 
@@ -256,36 +333,54 @@ namespace Haley.Internal {
                 public const string GET_FULL_BY_CUID =
                     $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, dv.actor, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
-                       inner join document as d on d.id = dv.parent
+                       inner join document as d on d.id = dv.parent and d.delete_state = 0
                        inner join version_info as vi on vi.id = dv.id
                        left join doc_info as di on di.file = dv.parent
-                       where dv.cuid = {VALUE};";
+                       where dv.cuid = {VALUE} and dv.delete_state = 0;";
+
+                public const string GET_FULL_BY_STORAGE_NAME =
+                    $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, dv.actor, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
+                       from version_info as vi
+                       inner join doc_version as dv on dv.id = vi.id and dv.delete_state = 0
+                       inner join document as d on d.id = dv.parent and d.delete_state = 0
+                       left join doc_info as di on di.file = dv.parent
+                       where vi.storage_name = {VALUE}
+                       limit 1;";
 
                 public const string GET_FULL_BY_ID =
                     $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, dv.actor, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
-                       inner join document as d on d.id = dv.parent
+                       inner join document as d on d.id = dv.parent and d.delete_state = 0
                        inner join version_info as vi on vi.id = dv.id
                        left join doc_info as di on di.file = dv.parent
-                       where dv.id = {VALUE};";
+                       where dv.id = {VALUE} and dv.delete_state = 0;";
 
                 /// <summary>Returns the latest content (sub_ver=0) version row for a document. Excludes thumbnail sub-versions.</summary>
                 public const string GET_LATEST_BY_PARENT =
                     $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, dv.actor, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
-                       inner join document as d on d.id = dv.parent
-                       inner join (select max(dvi.ver) as ver from doc_version as dvi where dvi.parent = {PARENT} and dvi.sub_ver = 0) as dvo on dvo.ver = dv.ver
+                       inner join document as d on d.id = dv.parent and d.delete_state = 0
+                       inner join (select max(dvi.ver) as ver from doc_version as dvi where dvi.parent = {PARENT} and dvi.sub_ver = 0 and dvi.delete_state = 0) as dvo on dvo.ver = dv.ver
                        inner join version_info as vi on vi.id = dv.id
                        left join doc_info as di on di.file = {PARENT}
-                       where dv.parent = {PARENT} and dv.sub_ver = 0;";
+                       where dv.parent = {PARENT} and dv.sub_ver = 0 and dv.delete_state = 0;";
 
                 /// <summary>Returns all content (sub_ver=0) versions for a document, newest first. Excludes thumbnail sub-versions.</summary>
                 public const string GET_ALL_BY_PARENT =
                     $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.actor as actor_id, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata
                        from doc_version as dv
                        left join version_info as vi on vi.id = dv.id
-                       where dv.parent = {PARENT} and dv.sub_ver = 0
+                       where dv.parent = {PARENT} and dv.sub_ver = 0 and dv.delete_state = 0
                        order by dv.ver desc;";
+                public const string GET_ALL_BY_PARENT_ALL =
+                    $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.sub_ver as sub_version_no, dv.actor as actor_id, dv.delete_state, dv.deleted, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata, vi.profile_info_id
+                       from doc_version as dv
+                       left join version_info as vi on vi.id = dv.id
+                       where dv.parent = {PARENT}
+                       order by dv.ver desc, dv.sub_ver desc;";
+                public const string SOFT_DELETE_BY_PARENT = $@"update doc_version set delete_state = 1, deleted = {DELETED} where parent = {PARENT};";
+                public const string ARCHIVE_BY_PARENT = $@"update doc_version set delete_state = 2 where parent = {PARENT} and delete_state > 0;";
+                public const string RESTORE_BY_PARENT = $@"update doc_version set delete_state = 0, deleted = null where parent = {PARENT};";
 
                 // ── Thumbnail queries ─────────────────────────────────────────────────
 
@@ -301,7 +396,7 @@ namespace Haley.Internal {
                 /// Caller adds 1 to get the next sub_ver to insert.
                 /// </summary>
                 public const string FIND_LATEST_SUB_VER =
-                    $@"select COALESCE(MAX(dv.sub_ver), 0) from doc_version as dv where dv.parent = {PARENT} and dv.ver = {VERSION} and dv.sub_ver > 0;";
+                    $@"select COALESCE(MAX(dv.sub_ver), 0) from doc_version as dv where dv.parent = {PARENT} and dv.ver = {VERSION} and dv.sub_ver > 0 and dv.delete_state = 0;";
 
                 /// <summary>
                 /// Fetches the latest thumbnail sub-version storage info for a specific (parent document, content ver).
@@ -313,10 +408,10 @@ namespace Haley.Internal {
                               vi.staging_ref as staging_path, vi.hash, vi.flags, vi.profile_info_id
                        from doc_version as dv
                        inner join version_info as vi on vi.id = dv.id
-                       where dv.parent = {PARENT} and dv.ver = {VERSION}
+                       where dv.parent = {PARENT} and dv.ver = {VERSION} and dv.delete_state = 0
                          and dv.sub_ver = (
                              select MAX(dvi.sub_ver) from doc_version as dvi
-                             where dvi.parent = {PARENT} and dvi.ver = {VERSION} and dvi.sub_ver > 0
+                             where dvi.parent = {PARENT} and dvi.ver = {VERSION} and dvi.sub_ver > 0 and dvi.delete_state = 0
                          );";
 
                 /// <summary>Fetches back a doc_version row by (parent, ver, sub_ver) — used after INSERT_THUMBNAIL.</summary>
@@ -371,10 +466,11 @@ namespace Haley.Internal {
                               vi.staging_ref, vi.profile_info_id, ws.cuid as workspace_cuid
                        from version_info as vi
                        inner join doc_version as dv  on dv.id = vi.id
-                       inner join document    as d   on d.id = dv.parent  and d.deleted = 0
-                       inner join directory   as dir on dir.id = d.parent and dir.deleted = 0
+                       inner join document    as d   on d.id = dv.parent  and d.delete_state = 0
+                       inner join directory   as dir on dir.id = d.parent and dir.delete_state = 0
                        inner join workspace   as ws  on ws.id = dir.workspace
                        where (vi.flags & 4) > 0
+                         and dv.delete_state = 0
                          and (vi.flags & 8) = 0
                          and vi.synced_at is null
                        order by vi.id asc
@@ -397,8 +493,22 @@ namespace Haley.Internal {
 
             public class SEARCH {
                 // Shared file-join columns used by every ITEMS query (same shape as BROWSE_ITEMS).
-                const string _FILE_COLS = $@"1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at";
+                const string _FILE_COLS = $@"1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.delete_state, d.deleted, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at";
+                const string _FILE_COLS_ALL = $@"1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.delete_state, d.deleted, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at";
                 const string _FILE_JOINS =
+                    $@"left join doc_info as di on di.file = d.id
+                       inner join (
+                           select dvi.parent, max(dvi.ver) as max_ver, count(*) as version_count
+                           from doc_version as dvi
+                           where dvi.sub_ver = 0 and dvi.delete_state = 0
+                           group by dvi.parent
+                       ) as latest on latest.parent = d.id
+                       inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver and dv.sub_ver = 0 and dv.delete_state = 0
+                       left join version_info as vi on vi.id = dv.id
+                       inner join name_store as ns on ns.id = d.name
+                       inner join vault as v on v.id = ns.name
+                       left join extension as ext on ext.id = ns.extension";
+                const string _FILE_JOINS_ALL =
                     $@"left join doc_info as di on di.file = d.id
                        inner join (
                            select dvi.parent, max(dvi.ver) as max_ver, count(*) as version_count
@@ -412,7 +522,7 @@ namespace Haley.Internal {
                        inner join vault as v on v.id = ns.name
                        left join extension as ext on ext.id = ns.extension";
                 const string _FILE_NAME_FILTER = $@"and v.name like {VALUE} and ({EXT} is null or ext.name = {EXT})";
-                const string _DIR_COLS  = $@"0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at";
+                const string _DIR_COLS  = $@"0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.delete_state, dir.deleted, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at";
                 const string _ORDER_PAGE =
                     $@"order by sr.sort_group asc, sr.display_name asc, sr.id asc
                        limit {LIMIT_ROWS} offset {OFFSET_ROWS};";
@@ -422,12 +532,23 @@ namespace Haley.Internal {
                     $@"with recursive dir_tree as (
                            select id
                            from directory
-                           where id = {PARENT} and workspace = {WSPACE} and deleted = 0
+                           where id = {PARENT} and workspace = {WSPACE} and delete_state = 0
                            union all
                            select dch.id
                            from directory dch
                            inner join dir_tree dt on dch.parent = dt.id
-                           where dch.workspace = {WSPACE} and dch.deleted = 0
+                           where dch.workspace = {WSPACE} and dch.delete_state = 0
+                       ) ";
+                const string _CTE_ALL =
+                    $@"with recursive dir_tree as (
+                           select id
+                           from directory
+                           where id = {PARENT} and workspace = {WSPACE}
+                           union all
+                           select dch.id
+                           from directory dch
+                           inner join dir_tree dt on dch.parent = dt.id
+                           where dch.workspace = {WSPACE}
                        ) ";
 
                 // ── Workspace-wide (no directory scope) ───────────────────────────────
@@ -436,20 +557,37 @@ namespace Haley.Internal {
                        from (
                             select {_DIR_COLS}
                             from directory as dir
-                            where dir.workspace = {WSPACE} and dir.deleted = 0 and dir.name like {VALUE}
+                            where dir.workspace = {WSPACE} and dir.delete_state = 0 and dir.name like {VALUE}
                             union all
                             select {_FILE_COLS}
                             from document as d
                             {_FILE_JOINS}
-                            where d.workspace = {WSPACE} and d.deleted = 0 {_FILE_NAME_FILTER}
+                            where d.workspace = {WSPACE} and d.delete_state = 0 {_FILE_NAME_FILTER}
+                        ) as sr
+                        {_ORDER_PAGE}";
+                public const string ITEMS_ALL_INCLUDE_DELETED =
+                    $@"select *
+                       from (
+                            select {_DIR_COLS}
+                            from directory as dir
+                            where dir.workspace = {WSPACE} and dir.name like {VALUE}
+                            union all
+                            select {_FILE_COLS_ALL}
+                            from document as d
+                            {_FILE_JOINS_ALL}
+                            where d.workspace = {WSPACE} {_FILE_NAME_FILTER}
                         ) as sr
                         {_ORDER_PAGE}";
 
                 public const string COUNT_DIRS_ALL =
-                    $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.deleted = 0 and dir.name like {VALUE};";
+                    $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.delete_state = 0 and dir.name like {VALUE};";
+                public const string COUNT_DIRS_ALL_INCLUDE_DELETED =
+                    $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.name like {VALUE};";
 
                 public const string COUNT_FILES_ALL =
-                    $@"select count(*) from document as d {_FILE_JOINS} where d.workspace = {WSPACE} and d.deleted = 0 {_FILE_NAME_FILTER};";
+                    $@"select count(*) from document as d {_FILE_JOINS} where d.workspace = {WSPACE} and d.delete_state = 0 {_FILE_NAME_FILTER};";
+                public const string COUNT_FILES_ALL_INCLUDE_DELETED =
+                    $@"select count(*) from document as d {_FILE_JOINS_ALL} where d.workspace = {WSPACE} {_FILE_NAME_FILTER};";
 
                 // ── Single directory — direct children only ────────────────────────────
                 public const string ITEMS_IN_DIR =
@@ -457,20 +595,37 @@ namespace Haley.Internal {
                        from (
                             select {_DIR_COLS}
                             from directory as dir
-                            where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.deleted = 0 and dir.name like {VALUE}
+                            where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.delete_state = 0 and dir.name like {VALUE}
                             union all
                             select {_FILE_COLS}
                             from document as d
                             {_FILE_JOINS}
-                            where d.workspace = {WSPACE} and d.parent = {PARENT} and d.deleted = 0 {_FILE_NAME_FILTER}
+                            where d.workspace = {WSPACE} and d.parent = {PARENT} and d.delete_state = 0 {_FILE_NAME_FILTER}
+                        ) as sr
+                        {_ORDER_PAGE}";
+                public const string ITEMS_IN_DIR_INCLUDE_DELETED =
+                    $@"select *
+                       from (
+                            select {_DIR_COLS}
+                            from directory as dir
+                            where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name like {VALUE}
+                            union all
+                            select {_FILE_COLS_ALL}
+                            from document as d
+                            {_FILE_JOINS_ALL}
+                            where d.workspace = {WSPACE} and d.parent = {PARENT} {_FILE_NAME_FILTER}
                         ) as sr
                         {_ORDER_PAGE}";
 
                 public const string COUNT_DIRS_IN_DIR =
-                    $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.deleted = 0 and dir.name like {VALUE};";
+                    $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.delete_state = 0 and dir.name like {VALUE};";
+                public const string COUNT_DIRS_IN_DIR_INCLUDE_DELETED =
+                    $@"select count(*) from directory as dir where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.name like {VALUE};";
 
                 public const string COUNT_FILES_IN_DIR =
-                    $@"select count(*) from document as d {_FILE_JOINS} where d.workspace = {WSPACE} and d.parent = {PARENT} and d.deleted = 0 {_FILE_NAME_FILTER};";
+                    $@"select count(*) from document as d {_FILE_JOINS} where d.workspace = {WSPACE} and d.parent = {PARENT} and d.delete_state = 0 {_FILE_NAME_FILTER};";
+                public const string COUNT_FILES_IN_DIR_INCLUDE_DELETED =
+                    $@"select count(*) from document as d {_FILE_JOINS_ALL} where d.workspace = {WSPACE} and d.parent = {PARENT} {_FILE_NAME_FILTER};";
 
                 // ── Recursive subtree from a directory ────────────────────────────────
                 public const string ITEMS_RECURSIVE = _CTE +
@@ -478,20 +633,37 @@ namespace Haley.Internal {
                        from (
                             select {_DIR_COLS}
                             from directory as dir
-                            where dir.id in (select id from dir_tree) and dir.id != {PARENT} and dir.deleted = 0 and dir.name like {VALUE}
+                            where dir.id in (select id from dir_tree) and dir.id != {PARENT} and dir.delete_state = 0 and dir.name like {VALUE}
                             union all
                             select {_FILE_COLS}
                             from document as d
                             {_FILE_JOINS}
-                            where d.parent in (select id from dir_tree) and d.deleted = 0 {_FILE_NAME_FILTER}
+                            where d.parent in (select id from dir_tree) and d.delete_state = 0 {_FILE_NAME_FILTER}
+                        ) as sr
+                        {_ORDER_PAGE}";
+                public const string ITEMS_RECURSIVE_INCLUDE_DELETED = _CTE_ALL +
+                    $@"select *
+                       from (
+                            select {_DIR_COLS}
+                            from directory as dir
+                            where dir.id in (select id from dir_tree) and dir.id != {PARENT} and dir.name like {VALUE}
+                            union all
+                            select {_FILE_COLS_ALL}
+                            from document as d
+                            {_FILE_JOINS_ALL}
+                            where d.parent in (select id from dir_tree) {_FILE_NAME_FILTER}
                         ) as sr
                         {_ORDER_PAGE}";
 
                 public const string COUNT_DIRS_RECURSIVE = _CTE +
-                    $@"select count(*) from directory as dir where dir.id in (select id from dir_tree) and dir.id != {PARENT} and dir.deleted = 0 and dir.name like {VALUE};";
+                    $@"select count(*) from directory as dir where dir.id in (select id from dir_tree) and dir.id != {PARENT} and dir.delete_state = 0 and dir.name like {VALUE};";
+                public const string COUNT_DIRS_RECURSIVE_INCLUDE_DELETED = _CTE_ALL +
+                    $@"select count(*) from directory as dir where dir.id in (select id from dir_tree) and dir.id != {PARENT} and dir.name like {VALUE};";
 
                 public const string COUNT_FILES_RECURSIVE = _CTE +
-                    $@"select count(*) from document as d {_FILE_JOINS} where d.parent in (select id from dir_tree) and d.deleted = 0 {_FILE_NAME_FILTER};";
+                    $@"select count(*) from document as d {_FILE_JOINS} where d.parent in (select id from dir_tree) and d.delete_state = 0 {_FILE_NAME_FILTER};";
+                public const string COUNT_FILES_RECURSIVE_INCLUDE_DELETED = _CTE_ALL +
+                    $@"select count(*) from document as d {_FILE_JOINS_ALL} where d.parent in (select id from dir_tree) {_FILE_NAME_FILTER};";
             }
         }
     }

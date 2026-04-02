@@ -28,18 +28,25 @@ namespace Haley.Services {
         Task<IFeedback> UpdateDocDisplayName(string moduleCuid, long versionId, string displayName);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, string cuid);
+        Task<IFeedback> GetDocVersionInfoByStorageName(string moduleCuid, string storageName);
         /// <summary>Resolves a document CUID (ruid) to the latest version's full info row.</summary>
         Task<IFeedback> GetDocVersionInfoByDocCuid(string moduleCuid, string documentCuid);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, string wsCuid, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long wsId, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);
-        Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50);
+        Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50, bool includeAll = false);
         Task<IFeedback<(long id, string cuid)>> RegisterDirectory(IVaultReadRequest request, string folderName);
         /// <summary>
         /// Searches for matching folders and files (latest version only) across the workspace.
         /// The term is matched against vault names (filename stems); extension is a separate filter.
         /// </summary>
-        Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50);
+        Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50, bool includeAll = false);
         Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest request);
+        Task<IFeedback<DeletedDocumentInfo>> SoftDeleteDocument(IVaultFileReadRequest request);
+        Task<IFeedback<DeletedDocumentInfo>> GetDeletedDocument(IVaultFileReadRequest request);
+        Task<IFeedback<DeletedDocumentInfo>> GetDeletedDocumentByName(IVaultReadRequest request, string fileName);
+        Task<IFeedback> FinalizeDeletedDocumentArchive(string moduleCuid, long documentId, string tombstoneFileName);
+        Task<IFeedback> RestoreDeletedDocument(string moduleCuid, long documentId);
+        Task<IFeedback> SoftDeleteDirectory(IVaultReadRequest request, bool recursive);
         Task EnsureValidation();
         bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
         bool TryAddInfo(IVaultObject dirInfo, bool replace = false);

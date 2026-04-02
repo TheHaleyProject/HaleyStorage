@@ -30,7 +30,7 @@ namespace Haley.Utils {
                 if (!_agw.ContainsKey(moduleCuid))
                     return fb.SetMessage($"No adapter found for key {moduleCuid}");
 
-                var versionId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.EXISTS_BY_CUID, default, (CUID, ToDbCuid(versionCuid)));
+                var versionId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.EXISTS_ACTIVE_BY_CUID, default, (CUID, ToDbCuid(versionCuid)));
                 if (versionId == null || versionId < 1)
                     return fb.SetMessage($"Version not found: {versionCuid}");
 
@@ -50,7 +50,7 @@ namespace Haley.Utils {
                 if (!_agw.ContainsKey(moduleCuid))
                     return fb.SetMessage($"No adapter found for key {moduleCuid}");
 
-                var versionId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.EXISTS_BY_CUID, default, (CUID, ToDbCuid(versionCuid)));
+                var versionId = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.EXISTS_ACTIVE_BY_CUID, default, (CUID, ToDbCuid(versionCuid)));
                 if (versionId == null || versionId < 1)
                     return fb.SetMessage($"Version not found: {versionCuid}");
 

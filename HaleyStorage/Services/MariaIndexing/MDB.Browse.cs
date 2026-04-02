@@ -12,7 +12,7 @@ namespace Haley.Utils {
     /// Partial class — DB-backed browse/explore APIs for folders and file history.
     /// </summary>
     internal partial class MariaDBIndexing {
-        public async Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50) {
+        public async Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50, bool includeAll = false) {
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {
                 if (request == null) return fb.SetMessage("Input request cannot be empty.");
@@ -31,16 +31,16 @@ namespace Haley.Utils {
                 var wsId = await ResolveWorkspaceId(request.Scope.Workspace.Cuid.ToString("N"));
                 if (wsId < 1) return fb.SetMessage("Workspace is not registered in the core index.");
 
-                var folderInfo = await ResolveFolderInfo(moduleCuid, request, wsId);
+                var folderInfo = await ResolveFolderInfo(moduleCuid, request, wsId, includeAll);
                 if (!folderInfo.status) return fb.SetMessage(folderInfo.message);
 
-                var totalFolders = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DIRECTORY.COUNT_CHILDREN, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
-                var totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCUMENT.COUNT_BY_DIRECTORY, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
+                var totalFolders = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.DIRECTORY.COUNT_CHILDREN_ALL : INSTANCE.DIRECTORY.COUNT_CHILDREN, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
+                var totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.DOCUMENT.COUNT_BY_DIRECTORY_ALL : INSTANCE.DOCUMENT.COUNT_BY_DIRECTORY, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
                 var offset = (page - 1) * pageSize;
 
-                var rows = await _agw.RowsAsync(moduleCuid, INSTANCE.DIRECTORY.BROWSE_ITEMS, default, (WSPACE, wsId), (PARENT, folderInfo.id), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
+                var rows = await _agw.RowsAsync(moduleCuid, includeAll ? INSTANCE.DIRECTORY.BROWSE_ITEMS_ALL : INSTANCE.DIRECTORY.BROWSE_ITEMS, default, (WSPACE, wsId), (PARENT, folderInfo.id), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
 
-                var response = new VaultFolderBrowseResponse { WorkspaceId = wsId, WorkspaceCuid = request.Scope.Workspace.Cuid.ToString("N"), IsRoot = folderInfo.isRoot, CurrentFolderId = folderInfo.id, CurrentFolderCuid = folderInfo.cuid, CurrentFolderName = folderInfo.displayName, CurrentFolderParentId = folderInfo.parentId, Page = page, PageSize = pageSize, TotalFolders = totalFolders, TotalFiles = totalFiles, TotalItems = totalFolders + totalFiles };
+                var response = new VaultFolderBrowseResponse { WorkspaceId = wsId, WorkspaceCuid = request.Scope.Workspace.Cuid.ToString("N"), IsRoot = folderInfo.isRoot, CurrentFolderId = folderInfo.id, CurrentFolderCuid = folderInfo.cuid, CurrentFolderName = folderInfo.displayName, CurrentFolderParentId = folderInfo.parentId, IncludeAll = includeAll, Page = page, PageSize = pageSize, TotalFolders = totalFolders, TotalFiles = totalFiles, TotalItems = totalFolders + totalFiles };
 
                 foreach (var row in rows) {
                     response.Items.Add(MapBrowseItem(row));
@@ -100,7 +100,7 @@ namespace Haley.Utils {
             return await _agw.ScalarAsync<long?>(_key, WORKSPACE.EXISTS_BY_CUID, default, (CUID, workspaceCuid)) ?? 0;
         }
 
-        async Task<(bool status, string message, bool isRoot, long id, string cuid, string displayName, long parentId)> ResolveFolderInfo(string moduleCuid, IVaultReadRequest request, long workspaceId) {
+        async Task<(bool status, string message, bool isRoot, long id, string cuid, string displayName, long parentId)> ResolveFolderInfo(string moduleCuid, IVaultReadRequest request, long workspaceId, bool includeAll = false) {
             var folder = request.Scope?.Folder;
             if (folder == null || (folder.Id < 1 && string.IsNullOrWhiteSpace(folder.Cuid) && string.IsNullOrWhiteSpace(folder.DisplayName))) {
                 return (true, string.Empty, true, 0, string.Empty, string.Empty, 0);
@@ -108,12 +108,12 @@ namespace Haley.Utils {
 
             DbRow row = null;
             if (folder.Id > 0) {
-                row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS_BY_ID, default, (VALUE, folder.Id));
+                row = await _agw.RowAsync(moduleCuid, includeAll ? INSTANCE.DIRECTORY.GET_DETAILS_BY_ID_ALL : INSTANCE.DIRECTORY.GET_DETAILS_BY_ID, default, (VALUE, folder.Id));
             } else if (!string.IsNullOrWhiteSpace(folder.Cuid)) {
-                row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS_BY_CUID, default, (VALUE, ToDbCuid(folder.Cuid)));
+                row = await _agw.RowAsync(moduleCuid, includeAll ? INSTANCE.DIRECTORY.GET_DETAILS_BY_CUID_ALL : INSTANCE.DIRECTORY.GET_DETAILS_BY_CUID, default, (VALUE, ToDbCuid(folder.Cuid)));
             } else {
                 var parentId = folder.Parent?.Id ?? 0;
-                row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS, default, (WSPACE, workspaceId), (PARENT, parentId), (NAME, folder.DisplayName.ToDBName()));
+                row = await _agw.RowAsync(moduleCuid, includeAll ? INSTANCE.DIRECTORY.GET_DETAILS_ALL : INSTANCE.DIRECTORY.GET_DETAILS, default, (WSPACE, workspaceId), (PARENT, parentId), (NAME, folder.DisplayName.ToDBName()));
             }
 
             if (row == null) return (false, "Folder not found.", false, 0, string.Empty, string.Empty, 0);
@@ -151,7 +151,8 @@ namespace Haley.Utils {
         }
 
         static VaultBrowseItem MapBrowseItem(DbRow row) {
-            return new VaultBrowseItem { ItemType = row.GetString("item_type") ?? string.Empty, Id = row.GetLong("id"), Cuid = row.GetString("uid") ?? string.Empty, DisplayName = row.GetString("display_name") ?? string.Empty, ActorId = row.GetNullableLong("actor_id"), ParentId = row.GetLong("parent_id"), Created = row.GetDateTime("created"), Modified = row.GetDateTime("modified"), LatestVersionId = row.GetNullableLong("version_id"), LatestVersionCuid = row.GetString("version_cuid") ?? string.Empty, LatestVersionNumber = row.GetNullableInt("version_no"), VersionCount = row.GetNullableInt("version_count"), LatestVersionCreated = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, Flags = row.GetNullableInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at") };
+            var deleteState = row.GetInt("delete_state");
+            return new VaultBrowseItem { ItemType = row.GetString("item_type") ?? string.Empty, Id = row.GetLong("id"), Cuid = row.GetString("uid") ?? string.Empty, DisplayName = row.GetString("display_name") ?? string.Empty, ActorId = row.GetNullableLong("actor_id"), ParentId = row.GetLong("parent_id"), DeleteState = deleteState, IsDeleted = deleteState > 0, Deleted = row.GetDateTime("deleted"), Created = row.GetDateTime("created"), Modified = row.GetDateTime("modified"), LatestVersionId = row.GetNullableLong("version_id"), LatestVersionCuid = row.GetString("version_cuid") ?? string.Empty, LatestVersionNumber = row.GetNullableInt("version_no"), VersionCount = row.GetNullableInt("version_count"), LatestVersionCreated = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, Flags = row.GetNullableInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at") };
         }
     }
 }

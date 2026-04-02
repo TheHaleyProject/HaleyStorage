@@ -177,6 +177,10 @@ interesting idea is one file can have multiple thumbnails and it can be used sa 
 			<column name="actor" type="BIGINT" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 			</column>
+			<column name="deleted" type="BIT" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+				<comment><![CDATA[Soft-delete flag. 0=active, 1=deleted. Deleted documents are excluded from browse/search results but their version history is preserved for audit purposes.]]></comment>
+			</column>
 			<index name="pk_doc_version" unique="PRIMARY_KEY" >
 				<column name="id" />
 			</index>
@@ -810,7 +814,7 @@ END]]></string>
 			<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="95" y="418" />
 			<entity schema="dss_client" name="directory" color="C1D8EE" x="551" y="646" />
 			<entity schema="dss_client" name="doc_info" color="C1D8EE" x="551" y="494" />
-			<entity schema="dss_client" name="doc_version" color="C1D8EE" x="323" y="304" />
+			<entity schema="dss_client" name="doc_version" color="C1D8EE" x="323" y="266" />
 			<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="513" />
 			<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="798" />
 			<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="665" />

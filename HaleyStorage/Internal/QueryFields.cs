@@ -27,8 +27,11 @@ namespace Haley.Internal {
         public const string ENCRYPTKEY = $@"@{nameof(ENCRYPTKEY)}";
         public const string VALUE = $@"@{nameof(VALUE)}";
         public const string ACTOR = $@"@{nameof(ACTOR)}";
+        public const string ORIGINAL_NAME = $@"@{nameof(ORIGINAL_NAME)}";
         public const string PASSWORD = $@"@{nameof(PASSWORD)}";
         public const string DATETIME = $@"@{nameof(DATETIME)}";
+        public const string DELETED = $@"@{nameof(DELETED)}";
+        public const string DELETED_AT = $@"@{nameof(DELETED_AT)}";
         public const string PARENT = $@"@{nameof(PARENT)}";
         public const string DIRNAME = $@"@{nameof(DIRNAME)}";
         public const string CONTROLMODE = $@"@{nameof(CONTROLMODE)}";    // legacy — kept for any non-workspace callers

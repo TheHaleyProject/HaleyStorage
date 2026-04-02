@@ -13,6 +13,9 @@ namespace Haley.Models {
         public string DisplayName { get; set; } = string.Empty;
         public long? ActorId { get; set; }
         public long ParentId { get; set; }
+        public int DeleteState { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? Deleted { get; set; }
         public DateTime? Created { get; set; }
         public DateTime? Modified { get; set; }
 

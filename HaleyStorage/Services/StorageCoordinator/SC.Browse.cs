@@ -9,7 +9,7 @@ namespace Haley.Services {
     /// Partial class — DB-backed browse/explore APIs.
     /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
-        public async Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest input, int page = 1, int pageSize = 50) {
+        public async Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest input, int page = 1, int pageSize = 50, bool includeAll = false) {
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {
                 if (input == null) return fb.SetMessage("Input request cannot be empty.");
@@ -17,7 +17,7 @@ namespace Haley.Services {
                 if (input.Scope?.Workspace == null) return fb.SetMessage("Workspace information is required.");
 
                 input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
-                return await Indexer.BrowseFolder(input, page, pageSize);
+                return await Indexer.BrowseFolder(input, page, pageSize, includeAll);
             } catch (Exception ex) {
                 return fb.SetMessage(ex.Message);
             }

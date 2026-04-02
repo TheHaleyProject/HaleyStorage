@@ -317,7 +317,6 @@ namespace Haley.Services {
 
             // Attempt to resolve path without generating a new one (DB-backed).
             if ((!forupload || !string.IsNullOrWhiteSpace(input.File?.Cuid)) && input.File != null) {
-                if (PopulateFromSavedPath(input, forupload, wInfo, provider)) return true;
                 if (await GetPathFromIndexer(input, forupload, input.Scope.Workspace.Cuid.ToString("N"))) return true;
             }
             return false;
@@ -420,6 +419,13 @@ namespace Haley.Services {
 
             // ── Determine the target filename ──────────────────────────────
             string targetFileName = DetermineTargetName(input, forupload) ?? string.Empty;
+
+            if (forupload
+                && inputW?.IsThumbnail != true
+                && string.IsNullOrWhiteSpace(input.File?.Cuid)
+                && string.IsNullOrWhiteSpace((input.File as StorageFileRoute)?.RootCuid)) {
+                await ArchiveDeletedNameCollision(input, targetFileName);
+            }
 
             if (input.File != null && !string.IsNullOrWhiteSpace(input.File.StorageRef)) return; //We already have what we need.. no need to check further.
                                                                                                  // ── Generate storage path and register with indexer ────────────
@@ -539,6 +545,15 @@ namespace Haley.Services {
                     return PopulateFileFromDic(input, rdic);
                 }
                 if (!forupload) throw new ArgumentException($"File not found for the supplied ruid '{sfrRoot.RootCuid}'.");
+
+            } else if (!string.IsNullOrWhiteSpace(input.File?.StorageName)) {
+                var existing = await Indexer.GetDocVersionInfoByStorageName(input.Scope.Module.Cuid.ToString("N"), input.File.StorageName);
+
+                if (existing?.Status == true && existing.Result is Dictionary<string, object> sdic && sdic.Count > 0)
+                    return PopulateFileFromDic(input, sdic);
+
+                if (!forupload)
+                    throw new ArgumentException($"File not found for the supplied storage name '{input.File.StorageName}'.");
 
             } else if (!string.IsNullOrWhiteSpace(input.File?.DisplayName) || !string.IsNullOrWhiteSpace(input.RequestedName)) {
                 var searchName = input.File?.DisplayName ?? input.RequestedName;
