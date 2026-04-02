@@ -143,7 +143,7 @@
 <a name='layout1' style='position:sticky; top:0;'></a><h4>msscore</h4>
 <input type='text' placeholder='Highlight in Diagram' oninput='searchSVG(this.value)' class='text-start my-2'/>
 <div class='svgContainer'>
-<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'   width='741' height='1022' viewBox='0 0 741 1022' >
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'   width='722' height='756' viewBox='0 0 722 756' >
   <script type='text/ecmascript'>
   <![CDATA[
   function hghl(el) { for ( var i in el ){ var elem = document.getElementById(el[i]); if ( elem != null ) elem.setAttribute('class','highlight');  }  }
@@ -381,14 +381,6 @@
   <marker id='Arrow' viewBox='0 0 9.50 9.50' refX='4.75' refY='4.75' markerWidth='9.50' markerHeight='9.50' orient='auto-start-reverse'>
     <path d='M 4.750,2.375 L 9.500,4.750 L 4.750,7.125 z' style='stroke-width:1;' class='filled'/>
   </marker>
-  <linearGradient id='ttl_C1D8EE' x1='0%' y1='0%' x2='100%' y2='0%' >
-     <stop offset='0%' stop-color='#6CA6DE' /> 
-     <stop offset='100%' stop-color='#A0BFDD' /> 
-  </linearGradient>
-  <linearGradient id='tbg_C1D8EE' x1='0%' y1='0%' x2='100%' y2='0%' >
-     <stop offset='0%' stop-color='#E3E4E5' /> 
-     <stop offset='100%' stop-color='#F4F5F7' /> 
-  </linearGradient>
   <linearGradient id='ttl_3986C1' x1='0%' y1='0%' x2='100%' y2='0%' >
      <stop offset='0%' stop-color='#6CACDE' /> 
      <stop offset='100%' stop-color='#A0C2DD' /> 
@@ -397,15 +389,19 @@
      <stop offset='0%' stop-color='#E3E4E5' /> 
      <stop offset='100%' stop-color='#F4F5F7' /> 
   </linearGradient>
+  <linearGradient id='ttl_C1D8EE' x1='0%' y1='0%' x2='100%' y2='0%' >
+     <stop offset='0%' stop-color='#6CA6DE' /> 
+     <stop offset='100%' stop-color='#A0BFDD' /> 
+  </linearGradient>
+  <linearGradient id='tbg_C1D8EE' x1='0%' y1='0%' x2='100%' y2='0%' >
+     <stop offset='0%' stop-color='#E3E4E5' /> 
+     <stop offset='100%' stop-color='#F4F5F7' /> 
+  </linearGradient>
 </defs>
 
 <!-- == Shape Colors == -->
-  <radialGradient id='shape16711680' cx='25%' cy='20%' r='80%' fx='10%' fy='10%'>
-    <stop offset='0%' stop-color='#FCF4F4' />
-    <stop offset='100%' stop-color='#F1C6C6' />
-  </radialGradient>
 <!-- == Desktop == -->
-<rect x='0' y='0' width='741' height='1022' rx='10' ry='10' style='fill:url(#layoutBgA); stroke:#ccc; stroke-width:.7px; cursor:move;' />
+<rect x='0' y='0' width='722' height='756' rx='10' ry='10' style='fill:url(#layoutBgA); stroke:#ccc; stroke-width:.7px; cursor:move;' />
 
 <!-- == Legend == -->
 <g transform='translate(10,10)'>
@@ -414,412 +410,400 @@
 Zoom with CTRL+whell mouse button, pan by dragging the diagram with the right-mouse button</title><use x='349' y='28' href='#bulb' width='24' height='24'/></g>
   <g><title>DbSchema Database Designer</title><use x='20' y='40' href='#logo'/></g>  <text x='20' y='30' class='legendTitle' >msscore</text> 
   <text x='57' y='47' class='legendSubTitle'><tspan>Read schema comments as mouse-over tooltips</tspan></text>
-  <a href='https://dbschema.com'><text x='57' y='61' class='legendSubTitle'><tspan>DbSchema.com © 2026-03-22 Wise Coders<title>DbSchema.com © 2026-03-22 Wise Coders</title></tspan></text></a> 
+  <a href='https://dbschema.com'><text x='57' y='61' class='legendSubTitle'><tspan>DbSchema.com © 2026-04-03 Wise Coders<title>DbSchema.com © 2026-04-03 Wise Coders</title></tspan></text></a> 
 </g>
 
 <g transform='translate(0,110)'>
-<!-- == Fk 'module_fk_direcory_client' == -->
-<path id='module_fk_direcory_client'  onmouseover="hghl(['module_fk_direcory_client','dss_core.module.parent','dss_core.client.id'])" onmouseout="uhghl(['module_fk_direcory_client','dss_core.module.parent','dss_core.client.id'])" transform='translate(10,0)' class='unhighlight' d='M 247,361L 209,361' >
-	<title>&#x1F517;  Foreign Key fk_direcory_client
-module &#10132; client ( parent -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 247,361L 209,361' ><title>&#x1F517;  Foreign Key fk_direcory_client
-module &#10132; client ( parent -&gt; id )
-</title></path>
-<text x='256' y='355' transform='rotate(0 256,355)' class='relName'></text>
-<!-- == Fk 'module_fk_module_profile_info' == -->
-<path id='module_fk_module_profile_info'  onmouseover="hghl(['module_fk_module_profile_info','dss_core.module.storage_profile','dss_core.profile_info.id'])" onmouseout="uhghl(['module_fk_module_profile_info','dss_core.module.storage_profile','dss_core.profile_info.id'])" transform='translate(10,0)' class='unhighlight' d='M 418,532L 447,532Q 456,532 456,542L 456,589' >
-	<title>&#x1F517;  Foreign Key fk_module_profile_info
-module &#10132; profile_info ( storage_profile -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#ZeroMore)'   class='dotted '  d='M 418,532L 447,532Q 456,532 456,542L 456,589' ><title>&#x1F517;  Foreign Key fk_module_profile_info
-module &#10132; profile_info ( storage_profile -&gt; id )
-</title></path>
-<text x='427' y='526' transform='rotate(0 427,526)' class='relName'></text>
 <!-- == Fk 'client_keys_fk_client_keys_client' == -->
-<path id='client_keys_fk_client_keys_client'  onmouseover="hghl(['client_keys_fk_client_keys_client','dss_core.client_keys.client','dss_core.client.id'])" onmouseout="uhghl(['client_keys_fk_client_keys_client','dss_core.client_keys.client','dss_core.client.id'])" transform='translate(10,0)' class='unhighlight' d='M 57,570L 48,570Q 38,570 38,561L 38,371Q 38,361 48,361L 57,361' >
+<path id='client_keys_fk_client_keys_client'  onmouseover="hghl(['client_keys_fk_client_keys_client','dss_core.client_keys.client','dss_core.client.id'])" onmouseout="uhghl(['client_keys_fk_client_keys_client','dss_core.client_keys.client','dss_core.client.id'])" transform='translate(10,0)' class='unhighlight' d='M 38,304L 29,304Q 19,304 19,295L 19,105Q 19,95 29,95L 38,95' >
 	<title>&#x1F517;  Foreign Key fk_client_keys_client
 client_keys &#10132; client ( client -&gt; id )
 </title>
 </path>
-<path transform='translate(10,0)' marker-start='url(#One)' marker-end='url(#One)'    d='M 57,570L 48,570Q 38,570 38,561L 38,371Q 38,361 48,361L 57,361' ><title>&#x1F517;  Foreign Key fk_client_keys_client
+<path transform='translate(10,0)' marker-start='url(#One)' marker-end='url(#One)'    d='M 38,304L 29,304Q 19,304 19,295L 19,105Q 19,95 29,95L 38,95' ><title>&#x1F517;  Foreign Key fk_client_keys_client
 client_keys &#10132; client ( client -&gt; id )
 </title></path>
-<text x='66' y='564' transform='rotate(0 66,564)' class='relName'></text>
-<!-- == Fk 'profile_info_fk_profile_config_profile' == -->
-<path id='profile_info_fk_profile_config_profile'  onmouseover="hghl(['profile_info_fk_profile_config_profile','dss_core.profile_info.profile','dss_core.profile.id'])" onmouseout="uhghl(['profile_info_fk_profile_config_profile','dss_core.profile_info.profile','dss_core.profile.id'])" transform='translate(10,0)' class='unhighlight' d='M 266,684L 238,684Q 228,684 228,694L 228,732Q 228,741 219,741L 209,741' >
-	<title>&#x1F517;  Foreign Key fk_profile_config_profile
-profile_info &#10132; profile ( profile -&gt; id )
+<text x='47' y='298' transform='rotate(0 47,298)' class='relName'></text>
+<!-- == Fk 'module_fk_direcory_client' == -->
+<path id='module_fk_direcory_client'  onmouseover="hghl(['module_fk_direcory_client','dss_core.module.parent','dss_core.client.id'])" onmouseout="uhghl(['module_fk_direcory_client','dss_core.module.parent','dss_core.client.id'])" transform='translate(10,0)' class='unhighlight' d='M 228,95L 190,95' >
+	<title>&#x1F517;  Foreign Key fk_direcory_client
+module &#10132; client ( parent -&gt; id )
 </title>
 </path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 266,684L 238,684Q 228,684 228,694L 228,732Q 228,741 219,741L 209,741' ><title>&#x1F517;  Foreign Key fk_profile_config_profile
-profile_info &#10132; profile ( profile -&gt; id )
+<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 228,95L 190,95' ><title>&#x1F517;  Foreign Key fk_direcory_client
+module &#10132; client ( parent -&gt; id )
 </title></path>
-<text x='275' y='678' transform='rotate(0 275,678)' class='relName'></text>
-<!-- == Fk 'profile_info_fk_profile_info_provider' == -->
-<path id='profile_info_fk_profile_info_provider'  onmouseover="hghl(['profile_info_fk_profile_info_provider','dss_core.profile_info.storage_provider','dss_core.provider.id'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider','dss_core.profile_info.storage_provider','dss_core.provider.id'])" transform='translate(10,0)' class='unhighlight' d='M 437,741L 485,741Q 494,741 494,732L 494,713Q 494,703 504,703L 513,703' >
-	<title>&#x1F517;  Foreign Key fk_profile_info_provider
-profile_info &#10132; provider ( storage_provider -&gt; id )
+<text x='237' y='89' transform='rotate(0 237,89)' class='relName'></text>
+<!-- == Fk 'module_fk_module_profile_info' == -->
+<path id='module_fk_module_profile_info'  onmouseover="hghl(['module_fk_module_profile_info','dss_core.module.storage_profile','dss_core.profile_info.id'])" onmouseout="uhghl(['module_fk_module_profile_info','dss_core.module.storage_profile','dss_core.profile_info.id'])" transform='translate(10,0)' class='unhighlight' d='M 399,266L 428,266Q 437,266 437,276L 437,323' >
+	<title>&#x1F517;  Foreign Key fk_module_profile_info
+module &#10132; profile_info ( storage_profile -&gt; id )
 </title>
 </path>
-<path transform='translate(10,0)' marker-start='url(#ZeroMore)' marker-end='url(#ZeroOne)'  class='dotted '  d='M 437,741L 485,741Q 494,741 494,732L 494,713Q 494,703 504,703L 513,703' ><title>&#x1F517;  Foreign Key fk_profile_info_provider
-profile_info &#10132; provider ( storage_provider -&gt; id )
+<path transform='translate(10,0)' marker-start='url(#ZeroMore)'   class='dotted '  d='M 399,266L 428,266Q 437,266 437,276L 437,323' ><title>&#x1F517;  Foreign Key fk_module_profile_info
+module &#10132; profile_info ( storage_profile -&gt; id )
 </title></path>
-<text x='446' y='735' transform='rotate(0 446,735)' class='relName'></text>
-<!-- == Fk 'profile_info_fk_profile_info_provider_0' == -->
-<path id='profile_info_fk_profile_info_provider_0'  onmouseover="hghl(['profile_info_fk_profile_info_provider_0','dss_core.profile_info.staging_provider','dss_core.provider.id'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider_0','dss_core.profile_info.staging_provider','dss_core.provider.id'])" transform='translate(10,0)' class='unhighlight' d='M 437,760L 447,760Q 456,760 456,751L 456,751Q 456,741 466,741L 475,741' >
-	<title>&#x1F517;  Foreign Key fk_profile_info_provider_0
-profile_info &#10132; provider ( staging_provider -&gt; id )
-</title>
-</path>
-<path transform='translate(10,0)' marker-start='url(#ZeroMore)'   class='dotted '  d='M 437,760L 447,760Q 456,760 456,751L 456,751Q 456,741 466,741L 475,741' ><title>&#x1F517;  Foreign Key fk_profile_info_provider_0
-profile_info &#10132; provider ( staging_provider -&gt; id )
-</title></path>
-<text x='446' y='754' transform='rotate(0 446,754)' class='relName'></text>
+<text x='408' y='260' transform='rotate(0 408,260)' class='relName'></text>
 <!-- == Fk 'workspace_fk_workspace_module' == -->
-<path id='workspace_fk_workspace_module'  onmouseover="hghl(['workspace_fk_workspace_module','dss_core.workspace.parent','dss_core.module.id'])" onmouseout="uhghl(['workspace_fk_workspace_module','dss_core.workspace.parent','dss_core.module.id'])" transform='translate(10,0)' class='unhighlight' d='M 494,418L 418,418' >
+<path id='workspace_fk_workspace_module'  onmouseover="hghl(['workspace_fk_workspace_module','dss_core.workspace.parent','dss_core.module.id'])" onmouseout="uhghl(['workspace_fk_workspace_module','dss_core.workspace.parent','dss_core.module.id'])" transform='translate(10,0)' class='unhighlight' d='M 475,152L 399,152' >
 	<title>&#x1F517;  Foreign Key fk_workspace_module
 workspace &#10132; module ( parent -&gt; id )
 </title>
 </path>
-<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 494,418L 418,418' ><title>&#x1F517;  Foreign Key fk_workspace_module
+<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 475,152L 399,152' ><title>&#x1F517;  Foreign Key fk_workspace_module
 workspace &#10132; module ( parent -&gt; id )
 </title></path>
-<text x='503' y='412' transform='rotate(0 503,412)' class='relName'></text>
+<text x='484' y='146' transform='rotate(0 484,146)' class='relName'></text>
 <!-- == Fk 'workspace_fk_workspace_profile_info' == -->
-<path id='workspace_fk_workspace_profile_info'  onmouseover="hghl(['workspace_fk_workspace_profile_info','dss_core.workspace.storage_profile','dss_core.profile_info.id'])" onmouseout="uhghl(['workspace_fk_workspace_profile_info','dss_core.workspace.storage_profile','dss_core.profile_info.id'])" transform='translate(10,0)' class='unhighlight' d='M 494,570L 466,570Q 456,570 456,580L 456,656Q 456,665 447,665L 437,665' >
+<path id='workspace_fk_workspace_profile_info'  onmouseover="hghl(['workspace_fk_workspace_profile_info','dss_core.workspace.storage_profile','dss_core.profile_info.id'])" onmouseout="uhghl(['workspace_fk_workspace_profile_info','dss_core.workspace.storage_profile','dss_core.profile_info.id'])" transform='translate(10,0)' class='unhighlight' d='M 475,304L 447,304Q 437,304 437,314L 437,390Q 437,399 428,399L 418,399' >
 	<title>&#x1F517;  Foreign Key fk_workspace_profile_info
 workspace &#10132; profile_info ( storage_profile -&gt; id )
 </title>
 </path>
-<path transform='translate(10,0)' marker-start='url(#ZeroMore)' marker-end='url(#ZeroOne)'  class='dotted '  d='M 494,570L 466,570Q 456,570 456,580L 456,656Q 456,665 447,665L 437,665' ><title>&#x1F517;  Foreign Key fk_workspace_profile_info
+<path transform='translate(10,0)' marker-start='url(#ZeroMore)' marker-end='url(#ZeroOne)'  class='dotted '  d='M 475,304L 447,304Q 437,304 437,314L 437,390Q 437,399 428,399L 418,399' ><title>&#x1F517;  Foreign Key fk_workspace_profile_info
 workspace &#10132; profile_info ( storage_profile -&gt; id )
 </title></path>
-<text x='503' y='564' transform='rotate(0 503,564)' class='relName'></text>
-<!-- == Table 'module' == -->
-<rect id='depict_dss&#95;core&#46;module' class='entity' style='stroke:#F9FAFC' x='266' y='314' width='152' height='247' rx='4' ry='4' />
-<rect x='266' y='314' width='152' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='266' y='318' width='152' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_core.module'><g><title>Table dss_core.module
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      A logical feature area or application section inside a client (e.g. &quot;documents&quot;, &quot;invoices&quot;, &quot;avatars&quot;).
-      Each module gets its own isolated MariaDB schema named dss_module_&lt;cuid&gt; so file indexes for different feature areas are fully separated &#8212 a query for &quot;invoices&quot; never touches the &quot;avatars&quot; database.
-      Example: client &quot;hr_portal&quot; → module &quot;employee_docs&quot;. All files under this module are indexed in the &quot;dss_module_&lt;employee_docs_cuid&gt;&quot; database.
-      The storage_profile column points to the cloud/FS provider configuration to use for uploads at the module level. Individual workspaces may override this with their own storage_profile.</title><text id='depict&#45;dss&#95;core&#46;module' x='315' y='336' class='tableHeader' style='fill:#414448;'>module</text></g></a>
-  <use x='267' y='357' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory_01 ( parent, name ) &#x1F50D;  Unq unq_module ( parent, guid ) </title><use x='268' y='356' href='#unq'/></g><a href='#dss_core.module.parent'><g><title>&#10697;  parent
-     * int
- &#8599; client( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK to client.id. Every module belongs to exactly one client.</title><text id='dss&#95;core&#46;module&#46;parent' x='289' y='370' onmouseover="hghl(['module_fk_direcory_client','dss_core.client.id'])" onmouseout="uhghl(['module_fk_direcory_client','dss_core.client.id'])">parent</text></g></a>
-<a href='#dss_core.module.parent'><g><title>&#x1F517;  References client ( parent -&gt; id ) </title><use x='404' y='356' href='#fk'/></g></a>
-  <use x='267' y='376' href='#nn'/><g><title>&#x1F50D;  Unq unq_module ( parent, guid ) </title><use x='268' y='375' href='#unq'/></g><a href='#dss_core.module.guid'><g><title>&#10697;  guid
-     * varchar(42)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      CUID generated from the name. Own name hash (not hierarchy aware)</title><text id='dss&#95;core&#46;module&#46;guid' x='289' y='389'>guid</text></g></a>
-<text x='414' y='385' text-anchor='end' class='colType'>t</text>  <use x='267' y='395' href='#nn'/><g><title>&#x1F50D;  Unq unq_module_0 ( cuid ) </title><use x='268' y='394' href='#unq'/></g><a href='#dss_core.module.cuid'><g><title>&#10697;  cuid
-     * varchar(48)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Deterministic compact-N GUID derived from SHA-256(client_name##module_name). Used as the per-module MariaDB schema name prefix (e.g. &quot;dss_module_&lt;cuid&gt;&quot;). Stable for as long as the client and module names do not change.</title><text id='dss&#95;core&#46;module&#46;cuid' x='289' y='408'>cuid</text></g></a>
-<text x='414' y='404' text-anchor='end' class='colType'>t</text>  <use x='267' y='414' href='#nn'/><g><title>&#x1F511;  Pk pk_module ( id ) </title><use x='268' y='413' href='#pk'/></g><a href='#dss_core.module.id'><g><title>&#10697;  id
-     * int
- &#8601; workspace( parent )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;module&#46;id' x='289' y='427' onmouseover="hghl(['workspace_fk_workspace_module','dss_core.workspace.parent'])" onmouseout="uhghl(['workspace_fk_workspace_module','dss_core.workspace.parent'])" class='colPk'>id</text></g></a>
-<a href='#dss_core.module.id'><g><title>&#x1F517;  Referred by workspace ( parent -&gt; id ) </title><use x='404' y='413' href='#ref'/></g></a>
-  <use x='267' y='433' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory_01 ( parent, name ) </title><use x='268' y='432' href='#unq'/></g><a href='#dss_core.module.name'><g><title>&#10697;  name
-     * varchar(120)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Machine-usable slug (e.g. &quot;documents&quot;, &quot;invoices&quot;, &quot;avatars&quot;). Combined with the parent client name to derive the CUID. Unique per client.</title><text id='dss&#95;core&#46;module&#46;name' x='289' y='446'>name</text></g></a>
-<text x='414' y='442' text-anchor='end' class='colType'>t</text>  <use x='267' y='452' href='#nn'/><a href='#dss_core.module.display_name'><g><title>&#10697;  display_name
-     * varchar(120)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Human-readable label (e.g. &quot;Document Archive&quot;, &quot;Invoice Store&quot;). No effect on routing or path computation.</title><text id='dss&#95;core&#46;module&#46;display&#95;name' x='289' y='465'>display&#95;name</text></g></a>
-<text x='414' y='461' text-anchor='end' class='colType'>t</text>  <use x='267' y='471' href='#nn'/><a href='#dss_core.module.active'><g><title>&#10697;  active
-     * bit default 1
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      1 = module is active and accepts new uploads. 0 = soft-disabled; existing files remain readable but new uploads are rejected.</title><text id='dss&#95;core&#46;module&#46;active' x='289' y='484'>active</text></g></a>
-<text x='414' y='480' text-anchor='end' class='colType'>b</text>  <use x='267' y='490' href='#nn'/><a href='#dss_core.module.created'><g><title>&#10697;  created
-     * datetime default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;module&#46;created' x='289' y='503'>created</text></g></a>
-<text x='414' y='499' text-anchor='end' class='colType'>t</text>  <use x='267' y='509' href='#nn'/><a href='#dss_core.module.modified'><g><title>&#10697;  modified
-     * timestamp default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Automatically updated whenever any column changes.</title><text id='dss&#95;core&#46;module&#46;modified' x='289' y='522'>modified</text></g></a>
-<text x='414' y='518' text-anchor='end' class='colType'>t</text>  <g><title>&#x1F50D;  fk_module_profile ( storage_profile ) </title><use x='268' y='527' href='#idx'/></g><a href='#dss_core.module.storage_profile'><g><title>&#10697;  storage_profile
-     int
- &#8599; profile_info( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Optional FK to profile_info.id. When set, all workspaces under this module default to the specified provider and upload mode unless they override it with their own storage_profile. NULL means use the StorageCoordinator default (typically the local filesystem provider).</title><text id='dss&#95;core&#46;module&#46;storage&#95;profile' x='289' y='541' onmouseover="hghl(['module_fk_module_profile_info','dss_core.profile_info.id'])" onmouseout="uhghl(['module_fk_module_profile_info','dss_core.profile_info.id'])">storage&#95;profile</text></g></a>
-<a href='#dss_core.module.storage_profile'><g><title>&#x1F517;  References profile_info ( storage_profile -&gt; id ) </title><use x='404' y='527' href='#fk'/></g></a>
-
-<!-- == Table 'client_keys' == -->
-<rect id='depict_dss&#95;core&#46;client&#95;keys' class='entity' style='stroke:#F9FAFC' x='76' y='523' width='114' height='133' rx='4' ry='4' />
-<rect x='76' y='523' width='114' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='76' y='527' width='114' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_core.client_keys'><g><title>Table dss_core.client_keys
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Security credentials for each client &#8212 hashed password plus server-generated signing and encryption keys.
-      Separated from the client table so that credential rotation (key refresh, password change) does not touch the client identity row and does not affect any downstream FKs.
-      Example: when &quot;hr_portal&quot; is registered, a random 512-char signing key and encrypt key are generated and stored here alongside the SHA-256 of the provided password.</title><text id='depict&#45;dss&#95;core&#46;client&#95;keys' x='96' y='545' class='tableHeader' style='fill:#414448;'>client&#95;keys</text></g></a>
-  <use x='77' y='566' href='#nn'/><g><title>&#x1F511;  Pk pk_client_keys ( client ) </title><use x='78' y='565' href='#pk'/></g><a href='#dss_core.client_keys.client'><g><title>&#10697;  client
-     * int
- &#8599; client( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK to client.id. One key bundle per client &#8212 the primary key doubles as the foreign key.</title><text id='dss&#95;core&#46;client&#95;keys&#46;client' x='99' y='579' onmouseover="hghl(['client_keys_fk_client_keys_client','dss_core.client.id'])" onmouseout="uhghl(['client_keys_fk_client_keys_client','dss_core.client.id'])" class='colPk'>client</text></g></a>
-<a href='#dss_core.client_keys.client'><g><title>&#x1F517;  References client ( client -&gt; id ) </title><use x='176' y='565' href='#fk'/></g></a>
-  <use x='77' y='585' href='#nn'/><a href='#dss_core.client_keys.signing'><g><title>&#10697;  signing
-     * varchar(300)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Server-generated random 512-character string used to sign JWTs and access tokens issued to this client. Rotated by re-registering the client with a new password.</title><text id='dss&#95;core&#46;client&#95;keys&#46;signing' x='99' y='598'>signing</text></g></a>
-<text x='186' y='594' text-anchor='end' class='colType'>t</text>  <use x='77' y='604' href='#nn'/><a href='#dss_core.client_keys.encrypt'><g><title>&#10697;  encrypt
-     * varchar(300)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Server-generated random 512-character string used for symmetric encryption of payload data scoped to this client (e.g. encrypted cookie values, sealed metadata blobs).</title><text id='dss&#95;core&#46;client&#95;keys&#46;encrypt' x='99' y='617'>encrypt</text></g></a>
-<text x='186' y='613' text-anchor='end' class='colType'>t</text>  <use x='77' y='623' href='#nn'/><a href='#dss_core.client_keys.password'><g><title>&#10697;  password
-     * varchar(120)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      SHA-256 hash of the client plaintext password. The plaintext is never stored. Verification hashes the candidate and compares it to this value.</title><text id='dss&#95;core&#46;client&#95;keys&#46;password' x='99' y='636'>password</text></g></a>
-<text x='186' y='632' text-anchor='end' class='colType'>t</text>
-<!-- == Table 'profile_info' == -->
-<rect id='depict_dss&#95;core&#46;profile&#95;info' class='entity' style='stroke:#F9FAFC' x='285' y='618' width='152' height='228' rx='4' ry='4' />
-<rect x='285' y='618' width='152' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='285' y='622' width='152' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_core.profile_info'><g><title>Table dss_core.profile_info
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      One versioned configuration for a storage profile &#8212 links a profile to a primary provider, an optional staging provider, an upload mode, and JSON connection metadata.
-      Assigning a profile_info.id to a workspace.storage_profile (or module.storage_profile) activates that configuration for all uploads into that scope.
-      Example: profile &quot;prod-b2&quot; version 1 &#8212 mode=StageAndMove, storage_provider=B2-us-west, staging_provider=local-fs, metadata={&quot;bucket&quot;:&quot;vault-prod&quot;,...}. When a file is uploaded to any workspace pointing at this profile_info, it first lands on local-fs, then a background job moves it to the B2 bucket.</title><text id='depict&#45;dss&#95;core&#46;profile&#95;info' x='323' y='640' class='tableHeader' style='fill:#414448;'>profile&#95;info</text></g></a>
-  <use x='286' y='661' href='#nn'/><g><title>&#x1F511;  Pk pk_profile_info ( id ) </title><use x='287' y='660' href='#pk'/></g><a href='#dss_core.profile_info.id'><g><title>&#10697;  id
-     * int
- &#8601; module( storage_profile )
- &#8601; workspace( storage_profile )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Auto-increment surrogate key. This id is stored in workspace.storage_profile and module.storage_profile to activate this configuration for a workspace or module.</title><text id='dss&#95;core&#46;profile&#95;info&#46;id' x='308' y='674' onmouseover="hghl(['module_fk_module_profile_info','dss_core.module.storage_profile','workspace_fk_workspace_profile_info','dss_core.workspace.storage_profile'])" onmouseout="uhghl(['module_fk_module_profile_info','dss_core.module.storage_profile','workspace_fk_workspace_profile_info','dss_core.workspace.storage_profile'])" class='colPk'>id</text></g></a>
-<a href='#dss_core.profile_info.id'><g><title>&#x1F517;  Referred by module ( storage_profile -&gt; id ) 
-Referred by workspace ( storage_profile -&gt; id ) </title><use x='423' y='660' href='#ref'/></g></a>
-  <use x='286' y='680' href='#nn'/><g><title>&#x1F50D;  Unq unq_profile_config ( profile, version ) </title><use x='287' y='679' href='#unq'/></g><a href='#dss_core.profile_info.profile'><g><title>&#10697;  profile
-     * int
- &#8599; profile( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK to profile.id. Groups this versioned configuration under a named profile.</title><text id='dss&#95;core&#46;profile&#95;info&#46;profile' x='308' y='693' onmouseover="hghl(['profile_info_fk_profile_config_profile','dss_core.profile.id'])" onmouseout="uhghl(['profile_info_fk_profile_config_profile','dss_core.profile.id'])">profile</text></g></a>
-<a href='#dss_core.profile_info.profile'><g><title>&#x1F517;  References profile ( profile -&gt; id ) </title><use x='423' y='679' href='#fk'/></g></a>
-  <use x='286' y='699' href='#nn'/><g><title>&#x1F50D;  Unq unq_profile_config ( profile, version ) </title><use x='287' y='698' href='#unq'/></g><a href='#dss_core.profile_info.version'><g><title>&#10697;  version
-     * int default 1
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Integer version of this configuration starting at 1, incremented on each change. The (profile, version) pair is unique &#8212 allows creating a new version before cutting over, supporting zero-downtime migrations.</title><text id='dss&#95;core&#46;profile&#95;info&#46;version' x='308' y='712'>version</text></g></a>
-<text x='433' y='708' text-anchor='end' class='colType'>&#35;</text>  <use x='286' y='718' href='#nn'/><a href='#dss_core.profile_info.mode'><g><title>&#10697;  mode
-     * int default 0
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Upload routing mode &#8212 determines what happens immediately after a file is received:
-      0 - DirectSave: write directly to the primary storage provider and mark the upload complete right away. Simplest and fastest; suitable when the primary provider is always available and reachable.
-      1 - StageAndMove: write to the staging provider first (flag=4, InStaging), then a background worker promotes the file to primary storage and removes the staging copy. Use this when the primary provider is slow, remote, or should receive files in bulk.
-      2 - StageAndRetainCopy: write to both staging and primary simultaneously; the staging copy is kept for redundancy or CDN acceleration.</title><text id='dss&#95;core&#46;profile&#95;info&#46;mode' x='308' y='731'>mode</text></g></a>
-<text x='433' y='727' text-anchor='end' class='colType'>&#35;</text>  <g><title>&#x1F50D;  fk_profile_info_provider ( storage_provider ) </title><use x='287' y='736' href='#idx'/></g><a href='#dss_core.profile_info.storage_provider'><g><title>&#10697;  storage_provider
-     int
- &#8599; provider( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK to provider.id. The primary permanent storage destination for uploads (e.g. Backblaze B2, AWS S3, local filesystem). NULL means use the StorageCoordinator default registered provider.</title><text id='dss&#95;core&#46;profile&#95;info&#46;storage&#95;provider' x='308' y='750' onmouseover="hghl(['profile_info_fk_profile_info_provider','dss_core.provider.id'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider','dss_core.provider.id'])">storage&#95;provider</text></g></a>
-<a href='#dss_core.profile_info.storage_provider'><g><title>&#x1F517;  References provider ( storage_provider -&gt; id ) </title><use x='423' y='736' href='#fk'/></g></a>
-  <g><title>&#x1F50D;  fk_profile_info_provider_0 ( staging_provider ) </title><use x='287' y='755' href='#idx'/></g><a href='#dss_core.profile_info.staging_provider'><g><title>&#10697;  staging_provider
-     int
- &#8599; provider( id )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK to provider.id. Temporary fast-landing zone used before promotion to primary (mode 1 or 2). Typically a local filesystem or a cheap/fast cloud bucket. NULL means no staging.</title><text id='dss&#95;core&#46;profile&#95;info&#46;staging&#95;provider' x='308' y='769' onmouseover="hghl(['profile_info_fk_profile_info_provider_0','dss_core.provider.id'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider_0','dss_core.provider.id'])">staging&#95;provider</text></g></a>
-<a href='#dss_core.profile_info.staging_provider'><g><title>&#x1F517;  References provider ( staging_provider -&gt; id ) </title><use x='423' y='755' href='#fk'/></g></a>
-  <use x='286' y='775' href='#nn'/><a href='#dss_core.profile_info.created'><g><title>&#10697;  created
-     * timestamp default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;profile&#95;info&#46;created' x='308' y='788'>created</text></g></a>
-<text x='433' y='784' text-anchor='end' class='colType'>t</text>  <use x='286' y='794' href='#nn'/><a href='#dss_core.profile_info.metadata'><g><title>&#10697;  metadata
-     * text
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      JSON blob carrying provider-specific connection configuration required to initialise the provider at runtime.
-      For cloud providers this typically includes: bucket name, region, endpoint URL, and a reference to the credential (e.g. an env-var name or secrets-manager key).
-      Example for S3: {&quot;bucket&quot;:&quot;my-vault&quot;,&quot;region&quot;:&quot;us-east-1&quot;,&quot;endpoint&quot;:&quot;https://s3.amazonaws.com&quot;,&quot;credential_ref&quot;:&quot;env:AWS_SECRET_KEY&quot;}
-      Example for B2: {&quot;bucketId&quot;:&quot;abc123&quot;,&quot;bucketName&quot;:&quot;my-vault&quot;,&quot;applicationKeyId&quot;:&quot;key001&quot;,&quot;applicationKey&quot;:&quot;env:B2_APP_KEY&quot;}
-      The StorageCoordinator reads this JSON at startup when initialising the provider connection.</title><text id='dss&#95;core&#46;profile&#95;info&#46;metadata' x='308' y='807'>metadata</text></g></a>
-<text x='433' y='803' text-anchor='end' class='colType'>t</text>  <use x='286' y='813' href='#nn'/><a href='#dss_core.profile_info.hash'><g><title>&#10697;  hash
-     * varchar(48)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Deterministric guid created from the sha256 hash of the metadata, storage key, staging key, mode which uniquely identifies if this is alreday created or not..</title><text id='dss&#95;core&#46;profile&#95;info&#46;hash' x='308' y='826'>hash</text></g></a>
-<text x='433' y='822' text-anchor='end' class='colType'>t</text>
-<!-- == Table 'provider' == -->
-<rect id='depict_dss&#95;core&#46;provider' class='entity' style='stroke:#F9FAFC' x='532' y='656' width='133' height='152' rx='4' ry='4' />
-<rect x='532' y='656' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='532' y='660' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_core.provider'><g><title>Table dss_core.provider
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      A named storage backend &#8212 the HOW of file storage, not the WHERE.
-      Examples: &quot;hfs&quot; = Haley FileSystem (default local disk provider), &quot;b2&quot; = Backblaze B2, &quot;s3-east&quot; = AWS S3 us-east-1, &quot;azure-blob&quot; = Azure Blob Storage.
-      The application registers provider implementations at startup: AddProvider(&quot;b2&quot;, new BackblazeProvider()). This table is the authoritative record of which backend names are known to the system.
-      One provider name can serve many workspaces and modules via different profile_info rows &#8212 the provider says HOW to talk to the storage service; the profile_info.metadata says WHERE (which bucket / region / path prefix).</title><text id='depict&#45;dss&#95;core&#46;provider' x='569' y='678' class='tableHeader' style='fill:#414448;'>provider</text></g></a>
-  <use x='533' y='699' href='#nn'/><g><title>&#x1F511;  Pk pk_provider ( id ) </title><use x='534' y='698' href='#pk'/></g><a href='#dss_core.provider.id'><g><title>&#10697;  id
-     * int
- &#8601; profile_info( storage_provider )
- &#8601; profile_info( staging_provider )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;provider&#46;id' x='555' y='712' onmouseover="hghl(['profile_info_fk_profile_info_provider','dss_core.profile_info.storage_provider','profile_info_fk_profile_info_provider_0','dss_core.profile_info.staging_provider'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider','dss_core.profile_info.storage_provider','profile_info_fk_profile_info_provider_0','dss_core.profile_info.staging_provider'])" class='colPk'>id</text></g></a>
-<a href='#dss_core.provider.id'><g><title>&#x1F517;  Referred by profile_info ( storage_provider -&gt; id ) 
-Referred by profile_info ( staging_provider -&gt; id ) </title><use x='651' y='698' href='#ref'/></g></a>
-  <g><title>&#x1F50D;  Unq unq_provider ( name ) </title><use x='534' y='717' href='#unq'/></g><a href='#dss_core.provider.name'><g><title>&#10697;  name
-     varchar(120)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Registration key used by the StorageCoordinator to look up this provider at runtime (e.g. &quot;hfs&quot; for the default Haley FileSystem provider, &quot;b2-prod&quot;, &quot;s3-east-1&quot;, &quot;azure-blob-tier1&quot;). Must match the key passed to AddProvider() at application startup.</title><text id='dss&#95;core&#46;provider&#46;name' x='555' y='731'>name</text></g></a>
-<text x='661' y='727' text-anchor='end' class='colType'>t</text>  <use x='533' y='737' href='#nn'/><a href='#dss_core.provider.created'><g><title>&#10697;  created
-     * timestamp default current_timestamp()
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;provider&#46;created' x='555' y='750'>created</text></g></a>
-<text x='661' y='746' text-anchor='end' class='colType'>t</text>  <a href='#dss_core.provider.description'><g><title>&#10697;  description
-     text
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Free-text description for operators (e.g. &quot;Backblaze B2 production bucket &#8212 us-west-004, 1 TB allocated, auto-delete after 7 years&quot;).</title><text id='dss&#95;core&#46;provider&#46;description' x='555' y='769'>description</text></g></a>
-<text x='661' y='765' text-anchor='end' class='colType'>t</text>  <use x='533' y='775' href='#nn'/><a href='#dss_core.provider.display_name'><g><title>&#10697;  display_name
-     * varchar(120)</title><text id='dss&#95;core&#46;provider&#46;display&#95;name' x='555' y='788'>display&#95;name</text></g></a>
-<text x='661' y='784' text-anchor='end' class='colType'>t</text>
-<!-- == Table 'profile' == -->
-<rect id='depict_dss&#95;core&#46;profile' class='entity' style='stroke:#F9FAFC' x='76' y='694' width='133' height='114' rx='4' ry='4' />
-<rect x='76' y='694' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='76' y='698' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
-<a href='#dss_core.profile'><g><title>Table dss_core.profile
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      A named storage configuration group. Each profile can have multiple versioned profile_info rows to support side-by-side configurations during migrations.
-      A profile defines WHAT to call a configuration; the actual settings (provider, mode, metadata) live in profile_info.
-      Example: a profile named &quot;prod-b2&quot; might have version 1 pointing to Backblaze B2 us-west and version 2 pointing to B2 eu-central &#8212 useful when migrating buckets without downtime.</title><text id='depict&#45;dss&#95;core&#46;profile' x='119' y='716' class='tableHeader' style='fill:#414448;'>profile</text></g></a>
-  <use x='77' y='737' href='#nn'/><g><title>&#x1F511;  Pk pk_profile ( id ) </title><use x='78' y='736' href='#pk'/></g><a href='#dss_core.profile.id'><g><title>&#10697;  id
-     * int
- &#8601; profile_info( profile )
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;profile&#46;id' x='99' y='750' onmouseover="hghl(['profile_info_fk_profile_config_profile','dss_core.profile_info.profile'])" onmouseout="uhghl(['profile_info_fk_profile_config_profile','dss_core.profile_info.profile'])" class='colPk'>id</text></g></a>
-<a href='#dss_core.profile.id'><g><title>&#x1F517;  Referred by profile_info ( profile -&gt; id ) </title><use x='195' y='736' href='#ref'/></g></a>
-  <use x='77' y='756' href='#nn'/><g><title>&#x1F50D;  Unq unq_profile ( name ) </title><use x='78' y='755' href='#unq'/></g><a href='#dss_core.profile.name'><g><title>&#10697;  name
-     * varchar(120)
- ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Human-readable name for this profile group (e.g. &quot;prod-b2&quot;, &quot;staging-fs&quot;, &quot;azure-east-tier1&quot;). Groups one or more versioned profile_info rows under a single logical label.</title><text id='dss&#95;core&#46;profile&#46;name' x='99' y='769'>name</text></g></a>
-<text x='205' y='765' text-anchor='end' class='colType'>t</text>  <use x='77' y='775' href='#nn'/><a href='#dss_core.profile.display_name'><g><title>&#10697;  display_name
-     * varchar(120)</title><text id='dss&#95;core&#46;profile&#46;display&#95;name' x='99' y='788'>display&#95;name</text></g></a>
-<text x='205' y='784' text-anchor='end' class='colType'>t</text>
+<text x='484' y='298' transform='rotate(0 484,298)' class='relName'></text>
+<!-- == Fk 'profile_info_fk_profile_config_profile' == -->
+<path id='profile_info_fk_profile_config_profile'  onmouseover="hghl(['profile_info_fk_profile_config_profile','dss_core.profile_info.profile','dss_core.profile.id'])" onmouseout="uhghl(['profile_info_fk_profile_config_profile','dss_core.profile_info.profile','dss_core.profile.id'])" transform='translate(10,0)' class='unhighlight' d='M 247,418L 219,418Q 209,418 209,428L 209,466Q 209,475 200,475L 190,475' >
+	<title>&#x1F517;  Foreign Key fk_profile_config_profile
+profile_info &#10132; profile ( profile -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#OneMore)' marker-end='url(#One)'    d='M 247,418L 219,418Q 209,418 209,428L 209,466Q 209,475 200,475L 190,475' ><title>&#x1F517;  Foreign Key fk_profile_config_profile
+profile_info &#10132; profile ( profile -&gt; id )
+</title></path>
+<text x='256' y='412' transform='rotate(0 256,412)' class='relName'></text>
+<!-- == Fk 'profile_info_fk_profile_info_provider' == -->
+<path id='profile_info_fk_profile_info_provider'  onmouseover="hghl(['profile_info_fk_profile_info_provider','dss_core.profile_info.storage_provider','dss_core.provider.id'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider','dss_core.profile_info.storage_provider','dss_core.provider.id'])" transform='translate(10,0)' class='unhighlight' d='M 418,475L 466,475Q 475,475 475,466L 475,447Q 475,437 485,437L 494,437' >
+	<title>&#x1F517;  Foreign Key fk_profile_info_provider
+profile_info &#10132; provider ( storage_provider -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#ZeroMore)' marker-end='url(#ZeroOne)'  class='dotted '  d='M 418,475L 466,475Q 475,475 475,466L 475,447Q 475,437 485,437L 494,437' ><title>&#x1F517;  Foreign Key fk_profile_info_provider
+profile_info &#10132; provider ( storage_provider -&gt; id )
+</title></path>
+<text x='427' y='469' transform='rotate(0 427,469)' class='relName'></text>
+<!-- == Fk 'profile_info_fk_profile_info_provider_0' == -->
+<path id='profile_info_fk_profile_info_provider_0'  onmouseover="hghl(['profile_info_fk_profile_info_provider_0','dss_core.profile_info.staging_provider','dss_core.provider.id'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider_0','dss_core.profile_info.staging_provider','dss_core.provider.id'])" transform='translate(10,0)' class='unhighlight' d='M 418,494L 428,494Q 437,494 437,485L 437,485Q 437,475 447,475L 456,475' >
+	<title>&#x1F517;  Foreign Key fk_profile_info_provider_0
+profile_info &#10132; provider ( staging_provider -&gt; id )
+</title>
+</path>
+<path transform='translate(10,0)' marker-start='url(#ZeroMore)'   class='dotted '  d='M 418,494L 428,494Q 437,494 437,485L 437,485Q 437,475 447,475L 456,475' ><title>&#x1F517;  Foreign Key fk_profile_info_provider_0
+profile_info &#10132; provider ( staging_provider -&gt; id )
+</title></path>
+<text x='427' y='488' transform='rotate(0 427,488)' class='relName'></text>
 <!-- == Table 'client' == -->
-<rect id='depict_dss&#95;core&#46;client' class='entity' style='stroke:#F9FAFC' x='76' y='314' width='133' height='171' rx='4' ry='4' />
-<rect x='76' y='314' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_3986C1);'/>
-<rect x='76' y='318' width='133' height='29' style='stroke-width:0;fill:url(#tbg_3986C1);'/>
+<rect id='depict_dss&#95;core&#46;client' class='entity' style='stroke:#F9FAFC' x='57' y='48' width='133' height='171' rx='4' ry='4' />
+<rect x='57' y='48' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_3986C1);'/>
+<rect x='57' y='52' width='133' height='29' style='stroke-width:0;fill:url(#tbg_3986C1);'/>
 <a href='#dss_core.client'><g><title>Table dss_core.client
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
       Top-level tenant / application that owns the entire storage hierarchy.
       Example: an application called &quot;hr_portal&quot; is registered as a client. Under it live modules such as &quot;employee_docs&quot; and &quot;avatars&quot;.
       The client name is hashed (SHA-256, compact-N GUID) at runtime to produce a CUID that drives all internal routing &#8212 no database round-trip is needed once the client is cached at startup.
-      Every file ultimately belongs to a client → module → workspace chain.</title><text id='depict&#45;dss&#95;core&#46;client' x='122' y='336' class='tableHeader' style='fill:#414448;'>client</text></g></a>
-  <use x='77' y='357' href='#nn'/><g><title>&#x1F511;  Pk pk_client ( id ) </title><use x='78' y='356' href='#pk'/></g><a href='#dss_core.client.id'><g><title>&#10697;  id
+      Every file ultimately belongs to a client → module → workspace chain.</title><text id='depict&#45;dss&#95;core&#46;client' x='103' y='70' class='tableHeader' style='fill:#414448;'>client</text></g></a>
+  <use x='58' y='91' href='#nn'/><g><title>&#x1F511;  Pk pk_client ( id ) </title><use x='59' y='90' href='#pk'/></g><a href='#dss_core.client.id'><g><title>&#10697;  id
      * int
  &#8601; client_keys( client )
  &#8601; module( parent )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;client&#46;id' x='99' y='370' onmouseover="hghl(['client_keys_fk_client_keys_client','dss_core.client_keys.client','module_fk_direcory_client','dss_core.module.parent'])" onmouseout="uhghl(['client_keys_fk_client_keys_client','dss_core.client_keys.client','module_fk_direcory_client','dss_core.module.parent'])" class='colPk'>id</text></g></a>
+      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;client&#46;id' x='80' y='104' onmouseover="hghl(['client_keys_fk_client_keys_client','dss_core.client_keys.client','module_fk_direcory_client','dss_core.module.parent'])" onmouseout="uhghl(['client_keys_fk_client_keys_client','dss_core.client_keys.client','module_fk_direcory_client','dss_core.module.parent'])" class='colPk'>id</text></g></a>
 <a href='#dss_core.client.id'><g><title>&#x1F517;  Referred by client_keys ( client -&gt; id ) 
-Referred by module ( parent -&gt; id ) </title><use x='195' y='356' href='#ref'/></g></a>
-  <use x='77' y='376' href='#nn'/><g><title>&#x1F50D;  Unq unq_client ( name ) </title><use x='78' y='375' href='#unq'/></g><a href='#dss_core.client.name'><g><title>&#10697;  name
+Referred by module ( parent -&gt; id ) </title><use x='176' y='90' href='#ref'/></g></a>
+  <use x='58' y='110' href='#nn'/><g><title>&#x1F50D;  Unq unq_client ( name ) </title><use x='59' y='109' href='#unq'/></g><a href='#dss_core.client.name'><g><title>&#10697;  name
      * varchar(100)
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Machine-usable slug; lowercase-normalized (e.g. &quot;myapp&quot;, &quot;hr_portal&quot;). Unique across all clients. Used as one input to derive the deterministic CUID and the on-disk directory name. Never changes after registration &#8212 renaming requires a full migration.</title><text id='dss&#95;core&#46;client&#46;name' x='99' y='389'>name</text></g></a>
-<text x='205' y='385' text-anchor='end' class='colType'>t</text>  <use x='77' y='395' href='#nn'/><a href='#dss_core.client.display_name'><g><title>&#10697;  display_name
+      Machine-usable slug; lowercase-normalized (e.g. &quot;myapp&quot;, &quot;hr_portal&quot;). Unique across all clients. Used as one input to derive the deterministic CUID and the on-disk directory name. Never changes after registration &#8212 renaming requires a full migration.</title><text id='dss&#95;core&#46;client&#46;name' x='80' y='123'>name</text></g></a>
+<text x='186' y='119' text-anchor='end' class='colType'>t</text>  <use x='58' y='129' href='#nn'/><a href='#dss_core.client.display_name'><g><title>&#10697;  display_name
      * varchar(100)
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Human-readable label shown in UIs and logs (e.g. &quot;HR Portal&quot;, &quot;Customer Docs Service&quot;). Has no effect on path computation or CUID derivation.</title><text id='dss&#95;core&#46;client&#46;display&#95;name' x='99' y='408'>display&#95;name</text></g></a>
-<text x='205' y='404' text-anchor='end' class='colType'>t</text>  <use x='77' y='414' href='#nn'/><g><title>&#x1F50D;  Unq unq_client_1 ( guid ) </title><use x='78' y='413' href='#unq'/></g><a href='#dss_core.client.guid'><g><title>&#10697;  guid
+      Human-readable label shown in UIs and logs (e.g. &quot;HR Portal&quot;, &quot;Customer Docs Service&quot;). Has no effect on path computation or CUID derivation.</title><text id='dss&#95;core&#46;client&#46;display&#95;name' x='80' y='142'>display&#95;name</text></g></a>
+<text x='186' y='138' text-anchor='end' class='colType'>t</text>  <use x='58' y='148' href='#nn'/><g><title>&#x1F50D;  Unq unq_client_1 ( guid ) </title><use x='59' y='147' href='#unq'/></g><a href='#dss_core.client.guid'><g><title>&#10697;  guid
      * varchar(42)
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      CUID generated from the name. Own name hash (not hierarchy aware)</title><text id='dss&#95;core&#46;client&#46;guid' x='99' y='427'>guid</text></g></a>
-<text x='205' y='423' text-anchor='end' class='colType'>t</text>  <use x='77' y='433' href='#nn'/><a href='#dss_core.client.created'><g><title>&#10697;  created
+      CUID generated from the name. Own name hash (not hierarchy aware)</title><text id='dss&#95;core&#46;client&#46;guid' x='80' y='161'>guid</text></g></a>
+<text x='186' y='157' text-anchor='end' class='colType'>t</text>  <use x='58' y='167' href='#nn'/><a href='#dss_core.client.created'><g><title>&#10697;  created
      * timestamp default current_timestamp()
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;client&#46;created' x='99' y='446'>created</text></g></a>
-<text x='205' y='442' text-anchor='end' class='colType'>t</text>  <use x='77' y='452' href='#nn'/><a href='#dss_core.client.modified'><g><title>&#10697;  modified
+      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;client&#46;created' x='80' y='180'>created</text></g></a>
+<text x='186' y='176' text-anchor='end' class='colType'>t</text>  <use x='58' y='186' href='#nn'/><a href='#dss_core.client.modified'><g><title>&#10697;  modified
      * timestamp default current_timestamp()
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Automatically updated whenever any column changes.</title><text id='dss&#95;core&#46;client&#46;modified' x='99' y='465'>modified</text></g></a>
-<text x='205' y='461' text-anchor='end' class='colType'>t</text>
+      Automatically updated whenever any column changes.</title><text id='dss&#95;core&#46;client&#46;modified' x='80' y='199'>modified</text></g></a>
+<text x='186' y='195' text-anchor='end' class='colType'>t</text>
+<!-- == Table 'client_keys' == -->
+<rect id='depict_dss&#95;core&#46;client&#95;keys' class='entity' style='stroke:#F9FAFC' x='57' y='257' width='114' height='133' rx='4' ry='4' />
+<rect x='57' y='257' width='114' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='57' y='261' width='114' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_core.client_keys'><g><title>Table dss_core.client_keys
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Security credentials for each client &#8212 hashed password plus server-generated signing and encryption keys.
+      Separated from the client table so that credential rotation (key refresh, password change) does not touch the client identity row and does not affect any downstream FKs.
+      Example: when &quot;hr_portal&quot; is registered, a random 512-char signing key and encrypt key are generated and stored here alongside the SHA-256 of the provided password.</title><text id='depict&#45;dss&#95;core&#46;client&#95;keys' x='77' y='279' class='tableHeader' style='fill:#414448;'>client&#95;keys</text></g></a>
+  <use x='58' y='300' href='#nn'/><g><title>&#x1F511;  Pk pk_client_keys ( client ) </title><use x='59' y='299' href='#pk'/></g><a href='#dss_core.client_keys.client'><g><title>&#10697;  client
+     * int
+ &#8599; client( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK to client.id. One key bundle per client &#8212 the primary key doubles as the foreign key.</title><text id='dss&#95;core&#46;client&#95;keys&#46;client' x='80' y='313' onmouseover="hghl(['client_keys_fk_client_keys_client','dss_core.client.id'])" onmouseout="uhghl(['client_keys_fk_client_keys_client','dss_core.client.id'])" class='colPk'>client</text></g></a>
+<a href='#dss_core.client_keys.client'><g><title>&#x1F517;  References client ( client -&gt; id ) </title><use x='157' y='299' href='#fk'/></g></a>
+  <use x='58' y='319' href='#nn'/><a href='#dss_core.client_keys.signing'><g><title>&#10697;  signing
+     * varchar(300)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Server-generated random 512-character string used to sign JWTs and access tokens issued to this client. Rotated by re-registering the client with a new password.</title><text id='dss&#95;core&#46;client&#95;keys&#46;signing' x='80' y='332'>signing</text></g></a>
+<text x='167' y='328' text-anchor='end' class='colType'>t</text>  <use x='58' y='338' href='#nn'/><a href='#dss_core.client_keys.encrypt'><g><title>&#10697;  encrypt
+     * varchar(300)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Server-generated random 512-character string used for symmetric encryption of payload data scoped to this client (e.g. encrypted cookie values, sealed metadata blobs).</title><text id='dss&#95;core&#46;client&#95;keys&#46;encrypt' x='80' y='351'>encrypt</text></g></a>
+<text x='167' y='347' text-anchor='end' class='colType'>t</text>  <use x='58' y='357' href='#nn'/><a href='#dss_core.client_keys.password'><g><title>&#10697;  password
+     * varchar(120)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      SHA-256 hash of the client plaintext password. The plaintext is never stored. Verification hashes the candidate and compares it to this value.</title><text id='dss&#95;core&#46;client&#95;keys&#46;password' x='80' y='370'>password</text></g></a>
+<text x='167' y='366' text-anchor='end' class='colType'>t</text>
+<!-- == Table 'module' == -->
+<rect id='depict_dss&#95;core&#46;module' class='entity' style='stroke:#F9FAFC' x='247' y='48' width='152' height='247' rx='4' ry='4' />
+<rect x='247' y='48' width='152' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='247' y='52' width='152' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_core.module'><g><title>Table dss_core.module
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      A logical feature area or application section inside a client (e.g. &quot;documents&quot;, &quot;invoices&quot;, &quot;avatars&quot;).
+      Each module gets its own isolated MariaDB schema named dss_module_&lt;cuid&gt; so file indexes for different feature areas are fully separated &#8212 a query for &quot;invoices&quot; never touches the &quot;avatars&quot; database.
+      Example: client &quot;hr_portal&quot; → module &quot;employee_docs&quot;. All files under this module are indexed in the &quot;dss_module_&lt;employee_docs_cuid&gt;&quot; database.
+      The storage_profile column points to the cloud/FS provider configuration to use for uploads at the module level. Individual workspaces may override this with their own storage_profile.</title><text id='depict&#45;dss&#95;core&#46;module' x='296' y='70' class='tableHeader' style='fill:#414448;'>module</text></g></a>
+  <use x='248' y='91' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory_01 ( parent, name ) &#x1F50D;  Unq unq_module ( parent, guid ) </title><use x='249' y='90' href='#unq'/></g><a href='#dss_core.module.parent'><g><title>&#10697;  parent
+     * int
+ &#8599; client( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK to client.id. Every module belongs to exactly one client.</title><text id='dss&#95;core&#46;module&#46;parent' x='270' y='104' onmouseover="hghl(['module_fk_direcory_client','dss_core.client.id'])" onmouseout="uhghl(['module_fk_direcory_client','dss_core.client.id'])">parent</text></g></a>
+<a href='#dss_core.module.parent'><g><title>&#x1F517;  References client ( parent -&gt; id ) </title><use x='385' y='90' href='#fk'/></g></a>
+  <use x='248' y='110' href='#nn'/><g><title>&#x1F50D;  Unq unq_module ( parent, guid ) </title><use x='249' y='109' href='#unq'/></g><a href='#dss_core.module.guid'><g><title>&#10697;  guid
+     * varchar(42)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      CUID generated from the name. Own name hash (not hierarchy aware)</title><text id='dss&#95;core&#46;module&#46;guid' x='270' y='123'>guid</text></g></a>
+<text x='395' y='119' text-anchor='end' class='colType'>t</text>  <use x='248' y='129' href='#nn'/><g><title>&#x1F50D;  Unq unq_module_0 ( cuid ) </title><use x='249' y='128' href='#unq'/></g><a href='#dss_core.module.cuid'><g><title>&#10697;  cuid
+     * varchar(48)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Deterministic compact-N GUID derived from SHA-256(client_name##module_name). Used as the per-module MariaDB schema name prefix (e.g. &quot;dss_module_&lt;cuid&gt;&quot;). Stable for as long as the client and module names do not change.</title><text id='dss&#95;core&#46;module&#46;cuid' x='270' y='142'>cuid</text></g></a>
+<text x='395' y='138' text-anchor='end' class='colType'>t</text>  <use x='248' y='148' href='#nn'/><g><title>&#x1F511;  Pk pk_module ( id ) </title><use x='249' y='147' href='#pk'/></g><a href='#dss_core.module.id'><g><title>&#10697;  id
+     * int
+ &#8601; workspace( parent )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;module&#46;id' x='270' y='161' onmouseover="hghl(['workspace_fk_workspace_module','dss_core.workspace.parent'])" onmouseout="uhghl(['workspace_fk_workspace_module','dss_core.workspace.parent'])" class='colPk'>id</text></g></a>
+<a href='#dss_core.module.id'><g><title>&#x1F517;  Referred by workspace ( parent -&gt; id ) </title><use x='385' y='147' href='#ref'/></g></a>
+  <use x='248' y='167' href='#nn'/><g><title>&#x1F50D;  Unq unq_directory_01 ( parent, name ) </title><use x='249' y='166' href='#unq'/></g><a href='#dss_core.module.name'><g><title>&#10697;  name
+     * varchar(120)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Machine-usable slug (e.g. &quot;documents&quot;, &quot;invoices&quot;, &quot;avatars&quot;). Combined with the parent client name to derive the CUID. Unique per client.</title><text id='dss&#95;core&#46;module&#46;name' x='270' y='180'>name</text></g></a>
+<text x='395' y='176' text-anchor='end' class='colType'>t</text>  <use x='248' y='186' href='#nn'/><a href='#dss_core.module.display_name'><g><title>&#10697;  display_name
+     * varchar(120)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Human-readable label (e.g. &quot;Document Archive&quot;, &quot;Invoice Store&quot;). No effect on routing or path computation.</title><text id='dss&#95;core&#46;module&#46;display&#95;name' x='270' y='199'>display&#95;name</text></g></a>
+<text x='395' y='195' text-anchor='end' class='colType'>t</text>  <use x='248' y='205' href='#nn'/><a href='#dss_core.module.active'><g><title>&#10697;  active
+     * bit default 1
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      1 = module is active and accepts new uploads. 0 = soft-disabled; existing files remain readable but new uploads are rejected.</title><text id='dss&#95;core&#46;module&#46;active' x='270' y='218'>active</text></g></a>
+<text x='395' y='214' text-anchor='end' class='colType'>b</text>  <use x='248' y='224' href='#nn'/><a href='#dss_core.module.created'><g><title>&#10697;  created
+     * datetime default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;module&#46;created' x='270' y='237'>created</text></g></a>
+<text x='395' y='233' text-anchor='end' class='colType'>t</text>  <use x='248' y='243' href='#nn'/><a href='#dss_core.module.modified'><g><title>&#10697;  modified
+     * timestamp default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Automatically updated whenever any column changes.</title><text id='dss&#95;core&#46;module&#46;modified' x='270' y='256'>modified</text></g></a>
+<text x='395' y='252' text-anchor='end' class='colType'>t</text>  <g><title>&#x1F50D;  fk_module_profile ( storage_profile ) </title><use x='249' y='261' href='#idx'/></g><a href='#dss_core.module.storage_profile'><g><title>&#10697;  storage_profile
+     int
+ &#8599; profile_info( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Optional FK to profile_info.id. When set, all workspaces under this module default to the specified provider and upload mode unless they override it with their own storage_profile. NULL means use the StorageCoordinator default (typically the local filesystem provider).</title><text id='dss&#95;core&#46;module&#46;storage&#95;profile' x='270' y='275' onmouseover="hghl(['module_fk_module_profile_info','dss_core.profile_info.id'])" onmouseout="uhghl(['module_fk_module_profile_info','dss_core.profile_info.id'])">storage&#95;profile</text></g></a>
+<a href='#dss_core.module.storage_profile'><g><title>&#x1F517;  References profile_info ( storage_profile -&gt; id ) </title><use x='385' y='261' href='#fk'/></g></a>
+
+<!-- == Table 'profile' == -->
+<rect id='depict_dss&#95;core&#46;profile' class='entity' style='stroke:#F9FAFC' x='57' y='428' width='133' height='114' rx='4' ry='4' />
+<rect x='57' y='428' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='57' y='432' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_core.profile'><g><title>Table dss_core.profile
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      A named storage configuration group. Each profile can have multiple versioned profile_info rows to support side-by-side configurations during migrations.
+      A profile defines WHAT to call a configuration; the actual settings (provider, mode, metadata) live in profile_info.
+      Example: a profile named &quot;prod-b2&quot; might have version 1 pointing to Backblaze B2 us-west and version 2 pointing to B2 eu-central &#8212 useful when migrating buckets without downtime.</title><text id='depict&#45;dss&#95;core&#46;profile' x='100' y='450' class='tableHeader' style='fill:#414448;'>profile</text></g></a>
+  <use x='58' y='471' href='#nn'/><g><title>&#x1F511;  Pk pk_profile ( id ) </title><use x='59' y='470' href='#pk'/></g><a href='#dss_core.profile.id'><g><title>&#10697;  id
+     * int
+ &#8601; profile_info( profile )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;profile&#46;id' x='80' y='484' onmouseover="hghl(['profile_info_fk_profile_config_profile','dss_core.profile_info.profile'])" onmouseout="uhghl(['profile_info_fk_profile_config_profile','dss_core.profile_info.profile'])" class='colPk'>id</text></g></a>
+<a href='#dss_core.profile.id'><g><title>&#x1F517;  Referred by profile_info ( profile -&gt; id ) </title><use x='176' y='470' href='#ref'/></g></a>
+  <use x='58' y='490' href='#nn'/><g><title>&#x1F50D;  Unq unq_profile ( name ) </title><use x='59' y='489' href='#unq'/></g><a href='#dss_core.profile.name'><g><title>&#10697;  name
+     * varchar(120)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Human-readable name for this profile group (e.g. &quot;prod-b2&quot;, &quot;staging-fs&quot;, &quot;azure-east-tier1&quot;). Groups one or more versioned profile_info rows under a single logical label.</title><text id='dss&#95;core&#46;profile&#46;name' x='80' y='503'>name</text></g></a>
+<text x='186' y='499' text-anchor='end' class='colType'>t</text>  <use x='58' y='509' href='#nn'/><a href='#dss_core.profile.display_name'><g><title>&#10697;  display_name
+     * varchar(120)</title><text id='dss&#95;core&#46;profile&#46;display&#95;name' x='80' y='522'>display&#95;name</text></g></a>
+<text x='186' y='518' text-anchor='end' class='colType'>t</text>
+<!-- == Table 'provider' == -->
+<rect id='depict_dss&#95;core&#46;provider' class='entity' style='stroke:#F9FAFC' x='513' y='390' width='133' height='152' rx='4' ry='4' />
+<rect x='513' y='390' width='133' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='513' y='394' width='133' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_core.provider'><g><title>Table dss_core.provider
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      A named storage backend &#8212 the HOW of file storage, not the WHERE.
+      Examples: &quot;hfs&quot; = Haley FileSystem (default local disk provider), &quot;b2&quot; = Backblaze B2, &quot;s3-east&quot; = AWS S3 us-east-1, &quot;azure-blob&quot; = Azure Blob Storage.
+      The application registers provider implementations at startup: AddProvider(&quot;b2&quot;, new BackblazeProvider()). This table is the authoritative record of which backend names are known to the system.
+      One provider name can serve many workspaces and modules via different profile_info rows &#8212 the provider says HOW to talk to the storage service; the profile_info.metadata says WHERE (which bucket / region / path prefix).</title><text id='depict&#45;dss&#95;core&#46;provider' x='550' y='412' class='tableHeader' style='fill:#414448;'>provider</text></g></a>
+  <use x='514' y='433' href='#nn'/><g><title>&#x1F511;  Pk pk_provider ( id ) </title><use x='515' y='432' href='#pk'/></g><a href='#dss_core.provider.id'><g><title>&#10697;  id
+     * int
+ &#8601; profile_info( storage_provider )
+ &#8601; profile_info( staging_provider )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;provider&#46;id' x='536' y='446' onmouseover="hghl(['profile_info_fk_profile_info_provider','dss_core.profile_info.storage_provider','profile_info_fk_profile_info_provider_0','dss_core.profile_info.staging_provider'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider','dss_core.profile_info.storage_provider','profile_info_fk_profile_info_provider_0','dss_core.profile_info.staging_provider'])" class='colPk'>id</text></g></a>
+<a href='#dss_core.provider.id'><g><title>&#x1F517;  Referred by profile_info ( storage_provider -&gt; id ) 
+Referred by profile_info ( staging_provider -&gt; id ) </title><use x='632' y='432' href='#ref'/></g></a>
+  <g><title>&#x1F50D;  Unq unq_provider ( name ) </title><use x='515' y='451' href='#unq'/></g><a href='#dss_core.provider.name'><g><title>&#10697;  name
+     varchar(120)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Registration key used by the StorageCoordinator to look up this provider at runtime (e.g. &quot;hfs&quot; for the default Haley FileSystem provider, &quot;b2-prod&quot;, &quot;s3-east-1&quot;, &quot;azure-blob-tier1&quot;). Must match the key passed to AddProvider() at application startup.</title><text id='dss&#95;core&#46;provider&#46;name' x='536' y='465'>name</text></g></a>
+<text x='642' y='461' text-anchor='end' class='colType'>t</text>  <use x='514' y='471' href='#nn'/><a href='#dss_core.provider.created'><g><title>&#10697;  created
+     * timestamp default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;provider&#46;created' x='536' y='484'>created</text></g></a>
+<text x='642' y='480' text-anchor='end' class='colType'>t</text>  <a href='#dss_core.provider.description'><g><title>&#10697;  description
+     text
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Free-text description for operators (e.g. &quot;Backblaze B2 production bucket &#8212 us-west-004, 1 TB allocated, auto-delete after 7 years&quot;).</title><text id='dss&#95;core&#46;provider&#46;description' x='536' y='503'>description</text></g></a>
+<text x='642' y='499' text-anchor='end' class='colType'>t</text>  <use x='514' y='509' href='#nn'/><a href='#dss_core.provider.display_name'><g><title>&#10697;  display_name
+     * varchar(120)</title><text id='dss&#95;core&#46;provider&#46;display&#95;name' x='536' y='522'>display&#95;name</text></g></a>
+<text x='642' y='518' text-anchor='end' class='colType'>t</text>
 <!-- == Table 'workspace' == -->
-<rect id='depict_dss&#95;core&#46;workspace' class='entity' style='stroke:#F9FAFC' x='513' y='314' width='171' height='285' rx='4' ry='4' />
-<rect x='513' y='314' width='171' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
-<rect x='513' y='318' width='171' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<rect id='depict_dss&#95;core&#46;workspace' class='entity' style='stroke:#F9FAFC' x='494' y='48' width='171' height='285' rx='4' ry='4' />
+<rect x='494' y='48' width='171' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='494' y='52' width='171' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
 <a href='#dss_core.workspace'><g><title>Table dss_core.workspace
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
       A named storage container inside a module &#8212 like a dedicated folder for a specific purpose, tenant, or data set.
       Example: module &quot;documents&quot; → workspace &quot;user-123-uploads&quot; (all files for a specific user) or &quot;global-templates&quot; (shared assets).
       Each workspace has its own base path/prefix, file-naming mode, and can optionally point to a different cloud provider than its parent module.
       The CUID (derived from the full client+module+workspace name chain) is the key the StorageCoordinator uses to locate the workspace in the in-memory cache and resolve the storage path with zero DB round-trips after startup.
-      The storagename_mode and storagename_parse settings are fixed at registration time and must not be changed after files exist in the workspace, as they determine how storage paths are reconstructed for reads.</title><text id='depict&#45;dss&#95;core&#46;workspace' x='562' y='336' class='tableHeader' style='fill:#414448;'>workspace</text></g></a>
-  <use x='514' y='357' href='#nn'/><g><title>&#x1F511;  Pk pk_workspace ( id ) </title><use x='515' y='356' href='#pk'/></g><a href='#dss_core.workspace.id'><g><title>&#10697;  id
+      The storagename_mode and storagename_parse settings are fixed at registration time and must not be changed after files exist in the workspace, as they determine how storage paths are reconstructed for reads.</title><text id='depict&#45;dss&#95;core&#46;workspace' x='543' y='70' class='tableHeader' style='fill:#414448;'>workspace</text></g></a>
+  <use x='495' y='91' href='#nn'/><g><title>&#x1F511;  Pk pk_workspace ( id ) </title><use x='496' y='90' href='#pk'/></g><a href='#dss_core.workspace.id'><g><title>&#10697;  id
      * int
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;workspace&#46;id' x='536' y='370' class='colPk'>id</text></g></a>
-<text x='680' y='366' text-anchor='end' class='colType'>&#35;</text>  <use x='514' y='376' href='#nn'/><g><title>&#x1F50D;  Unq unq_workspace_1 ( cuid ) </title><use x='515' y='375' href='#unq'/></g><a href='#dss_core.workspace.cuid'><g><title>&#10697;  cuid
+      Auto-increment surrogate key.</title><text id='dss&#95;core&#46;workspace&#46;id' x='517' y='104' class='colPk'>id</text></g></a>
+<text x='661' y='100' text-anchor='end' class='colType'>&#35;</text>  <use x='495' y='110' href='#nn'/><g><title>&#x1F50D;  Unq unq_workspace_1 ( cuid ) </title><use x='496' y='109' href='#unq'/></g><a href='#dss_core.workspace.cuid'><g><title>&#10697;  cuid
      * varchar(48)
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Deterministic compact-N GUID derived from SHA-256(client_name##module_name##workspace_name). The StorageCoordinator uses this as the cache key to resolve the workspace base path and provider entirely in memory, with no DB query needed per request.</title><text id='dss&#95;core&#46;workspace&#46;cuid' x='536' y='389'>cuid</text></g></a>
-<text x='680' y='385' text-anchor='end' class='colType'>t</text>  <use x='514' y='395' href='#nn'/><g><title>&#x1F50D;  Unq unq_workspace_0 ( parent, guid ) </title><use x='515' y='394' href='#unq'/></g><a href='#dss_core.workspace.guid'><g><title>&#10697;  guid
+      Deterministic compact-N GUID derived from SHA-256(client_name##module_name##workspace_name). The StorageCoordinator uses this as the cache key to resolve the workspace base path and provider entirely in memory, with no DB query needed per request.</title><text id='dss&#95;core&#46;workspace&#46;cuid' x='517' y='123'>cuid</text></g></a>
+<text x='661' y='119' text-anchor='end' class='colType'>t</text>  <use x='495' y='129' href='#nn'/><g><title>&#x1F50D;  Unq unq_workspace_0 ( parent, guid ) </title><use x='496' y='128' href='#unq'/></g><a href='#dss_core.workspace.guid'><g><title>&#10697;  guid
      * varchar(42)
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      CUID generated from the name. Own name hash (not hierarchy aware)</title><text id='dss&#95;core&#46;workspace&#46;guid' x='536' y='408'>guid</text></g></a>
-<text x='680' y='404' text-anchor='end' class='colType'>t</text>  <use x='514' y='414' href='#nn'/><g><title>&#x1F50D;  Unq unq_workspace ( parent, name ) &#x1F50D;  Unq unq_workspace_0 ( parent, guid ) </title><use x='515' y='413' href='#unq'/></g><a href='#dss_core.workspace.parent'><g><title>&#10697;  parent
+      CUID generated from the name. Own name hash (not hierarchy aware)</title><text id='dss&#95;core&#46;workspace&#46;guid' x='517' y='142'>guid</text></g></a>
+<text x='661' y='138' text-anchor='end' class='colType'>t</text>  <use x='495' y='148' href='#nn'/><g><title>&#x1F50D;  Unq unq_workspace ( parent, name ) &#x1F50D;  Unq unq_workspace_0 ( parent, guid ) </title><use x='496' y='147' href='#unq'/></g><a href='#dss_core.workspace.parent'><g><title>&#10697;  parent
      * int
  &#8599; module( id )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      FK to module.id. Every workspace belongs to exactly one module.</title><text id='dss&#95;core&#46;workspace&#46;parent' x='536' y='427' onmouseover="hghl(['workspace_fk_workspace_module','dss_core.module.id'])" onmouseout="uhghl(['workspace_fk_workspace_module','dss_core.module.id'])">parent</text></g></a>
-<a href='#dss_core.workspace.parent'><g><title>&#x1F517;  References module ( parent -&gt; id ) </title><use x='670' y='413' href='#fk'/></g></a>
-  <use x='514' y='433' href='#nn'/><g><title>&#x1F50D;  Unq unq_workspace ( parent, name ) </title><use x='515' y='432' href='#unq'/></g><a href='#dss_core.workspace.name'><g><title>&#10697;  name
+      FK to module.id. Every workspace belongs to exactly one module.</title><text id='dss&#95;core&#46;workspace&#46;parent' x='517' y='161' onmouseover="hghl(['workspace_fk_workspace_module','dss_core.module.id'])" onmouseout="uhghl(['workspace_fk_workspace_module','dss_core.module.id'])">parent</text></g></a>
+<a href='#dss_core.workspace.parent'><g><title>&#x1F517;  References module ( parent -&gt; id ) </title><use x='651' y='147' href='#fk'/></g></a>
+  <use x='495' y='167' href='#nn'/><g><title>&#x1F50D;  Unq unq_workspace ( parent, name ) </title><use x='496' y='166' href='#unq'/></g><a href='#dss_core.workspace.name'><g><title>&#10697;  name
      * varchar(120)
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Machine-usable slug (e.g. &quot;user-files&quot;, &quot;invoices-2024&quot;, &quot;global-templates&quot;). Combined with client and module names to derive the CUID. Unique per module.</title><text id='dss&#95;core&#46;workspace&#46;name' x='536' y='446'>name</text></g></a>
-<text x='680' y='442' text-anchor='end' class='colType'>t</text>  <use x='514' y='452' href='#nn'/><a href='#dss_core.workspace.display_name'><g><title>&#10697;  display_name
+      Machine-usable slug (e.g. &quot;user-files&quot;, &quot;invoices-2024&quot;, &quot;global-templates&quot;). Combined with client and module names to derive the CUID. Unique per module.</title><text id='dss&#95;core&#46;workspace&#46;name' x='517' y='180'>name</text></g></a>
+<text x='661' y='176' text-anchor='end' class='colType'>t</text>  <use x='495' y='186' href='#nn'/><a href='#dss_core.workspace.display_name'><g><title>&#10697;  display_name
      * varchar(120)
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Human-readable label shown in UIs (e.g. &quot;User File Archive&quot;, &quot;2024 Invoices&quot;). No effect on path computation or CUID derivation.</title><text id='dss&#95;core&#46;workspace&#46;display&#95;name' x='536' y='465'>display&#95;name</text></g></a>
-<text x='680' y='461' text-anchor='end' class='colType'>t</text>  <use x='514' y='471' href='#nn'/><a href='#dss_core.workspace.active'><g><title>&#10697;  active
+      Human-readable label shown in UIs (e.g. &quot;User File Archive&quot;, &quot;2024 Invoices&quot;). No effect on path computation or CUID derivation.</title><text id='dss&#95;core&#46;workspace&#46;display&#95;name' x='517' y='199'>display&#95;name</text></g></a>
+<text x='661' y='195' text-anchor='end' class='colType'>t</text>  <use x='495' y='205' href='#nn'/><a href='#dss_core.workspace.active'><g><title>&#10697;  active
      * bit default 1
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      1 = accepts uploads. 0 = soft-disabled; reads still work.</title><text id='dss&#95;core&#46;workspace&#46;active' x='536' y='484'>active</text></g></a>
-<text x='680' y='480' text-anchor='end' class='colType'>b</text>  <use x='514' y='490' href='#nn'/><a href='#dss_core.workspace.storagename_mode'><g><title>&#10697;  storagename_mode
+      1 = accepts uploads. 0 = soft-disabled; reads still work.</title><text id='dss&#95;core&#46;workspace&#46;active' x='517' y='218'>active</text></g></a>
+<text x='661' y='214' text-anchor='end' class='colType'>b</text>  <use x='495' y='224' href='#nn'/><a href='#dss_core.workspace.storagename_mode'><g><title>&#10697;  storagename_mode
      * int default 0
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
       Controls how the physical storage file name is chosen for each file uploaded into this workspace:
       0 - Number mode: the auto-increment database id is used (e.g. doc_version.id = 1234 → file saved as &quot;1234f.pdf&quot;). Compact and fast to look up.
-      1 - Guid mode: a compact-N UUID is used (e.g. &quot;a3b2c1d4e5f67890...f.pdf&quot;). Globally unique without a DB round-trip; preferred for distributed or multi-node deployments.</title><text id='dss&#95;core&#46;workspace&#46;storagename&#95;mode' x='536' y='503'>storagename&#95;mode</text></g></a>
-<text x='680' y='499' text-anchor='end' class='colType'>&#35;</text>  <use x='514' y='509' href='#nn'/><a href='#dss_core.workspace.storagename_parse'><g><title>&#10697;  storagename_parse
+      1 - Guid mode: a compact-N UUID is used (e.g. &quot;a3b2c1d4e5f67890...f.pdf&quot;). Globally unique without a DB round-trip; preferred for distributed or multi-node deployments.</title><text id='dss&#95;core&#46;workspace&#46;storagename&#95;mode' x='517' y='237'>storagename&#95;mode</text></g></a>
+<text x='661' y='233' text-anchor='end' class='colType'>&#35;</text>  <use x='495' y='243' href='#nn'/><a href='#dss_core.workspace.storagename_parse'><g><title>&#10697;  storagename_parse
      * int default 0
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
       Controls whether the system generates the storage name or parses it from the caller-provided filename:
       0 - Generate (recommended): the system generates a new id or UUID for each file. The caller filename is stored as a display label in doc_info.display_name only.
-      1 - Parse: the caller-provided filename IS the storage name. The filename must be a pure integer (Number mode) or a valid GUID (Guid mode). Used for pre-assigned IDs or migrated content.</title><text id='dss&#95;core&#46;workspace&#46;storagename&#95;parse' x='536' y='522'>storagename&#95;parse</text></g></a>
-<text x='680' y='518' text-anchor='end' class='colType'>&#35;</text>  <use x='514' y='528' href='#nn'/><a href='#dss_core.workspace.created'><g><title>&#10697;  created
+      1 - Parse: the caller-provided filename IS the storage name. The filename must be a pure integer (Number mode) or a valid GUID (Guid mode). Used for pre-assigned IDs or migrated content.</title><text id='dss&#95;core&#46;workspace&#46;storagename&#95;parse' x='517' y='256'>storagename&#95;parse</text></g></a>
+<text x='661' y='252' text-anchor='end' class='colType'>&#35;</text>  <use x='495' y='262' href='#nn'/><a href='#dss_core.workspace.created'><g><title>&#10697;  created
      * timestamp default current_timestamp()
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;workspace&#46;created' x='536' y='541'>created</text></g></a>
-<text x='680' y='537' text-anchor='end' class='colType'>t</text>  <use x='514' y='547' href='#nn'/><a href='#dss_core.workspace.modified'><g><title>&#10697;  modified
+      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;workspace&#46;created' x='517' y='275'>created</text></g></a>
+<text x='661' y='271' text-anchor='end' class='colType'>t</text>  <use x='495' y='281' href='#nn'/><a href='#dss_core.workspace.modified'><g><title>&#10697;  modified
      * timestamp default current_timestamp()
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Automatically updated whenever any column changes.</title><text id='dss&#95;core&#46;workspace&#46;modified' x='536' y='560'>modified</text></g></a>
-<text x='680' y='556' text-anchor='end' class='colType'>t</text>  <g><title>&#x1F50D;  fk_workspace_profile_info ( storage_profile ) </title><use x='515' y='565' href='#idx'/></g><a href='#dss_core.workspace.storage_profile'><g><title>&#10697;  storage_profile
+      Automatically updated whenever any column changes.</title><text id='dss&#95;core&#46;workspace&#46;modified' x='517' y='294'>modified</text></g></a>
+<text x='661' y='290' text-anchor='end' class='colType'>t</text>  <g><title>&#x1F50D;  fk_workspace_profile_info ( storage_profile ) </title><use x='496' y='299' href='#idx'/></g><a href='#dss_core.workspace.storage_profile'><g><title>&#10697;  storage_profile
      int
  &#8599; profile_info( id )
  ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-      Optional FK to profile_info.id. When set, this workspace uses its own provider and upload mode, overriding the parent module-level profile. Populated by SetWorkspaceStorageProfile() and rehydrated into the in-memory StorageWorkspace cache entry at startup via RehydrateWorkspaceProfilesAsync().</title><text id='dss&#95;core&#46;workspace&#46;storage&#95;profile' x='536' y='579' onmouseover="hghl(['workspace_fk_workspace_profile_info','dss_core.profile_info.id'])" onmouseout="uhghl(['workspace_fk_workspace_profile_info','dss_core.profile_info.id'])">storage&#95;profile</text></g></a>
-<a href='#dss_core.workspace.storage_profile'><g><title>&#x1F517;  References profile_info ( storage_profile -&gt; id ) </title><use x='670' y='565' href='#fk'/></g></a>
+      Optional FK to profile_info.id. When set, this workspace uses its own provider and upload mode, overriding the parent module-level profile. Populated by SetWorkspaceStorageProfile() and rehydrated into the in-memory StorageWorkspace cache entry at startup via RehydrateWorkspaceProfilesAsync().</title><text id='dss&#95;core&#46;workspace&#46;storage&#95;profile' x='517' y='313' onmouseover="hghl(['workspace_fk_workspace_profile_info','dss_core.profile_info.id'])" onmouseout="uhghl(['workspace_fk_workspace_profile_info','dss_core.profile_info.id'])">storage&#95;profile</text></g></a>
+<a href='#dss_core.workspace.storage_profile'><g><title>&#x1F517;  References profile_info ( storage_profile -&gt; id ) </title><use x='651' y='299' href='#fk'/></g></a>
 
-<!-- == Shape == -->
-<rect style='fill:url(#shape16711680); stroke-width:0;filter:url(#shadow);'  class='shape' x='57' y='38' width='570' height='228' rx='19' ry='19' />
-<text x='67' y='66' class='callout'>
-    <tspan x='62' dx='10' dy='21'>The concept of &#39;CONTROLLED&#39; is that it expects all the names to be in either</tspan>
-    <tspan x='62' dx='10' dy='21'>GUID or number format such that the application expects that the name related</tspan>
-    <tspan x='62' dx='10' dy='21'>information is maintained outside of the application&#46; Application or the file system</tspan>
-    <tspan x='62' dx='10' dy='21'>itself will have no knowledge about the original name&#46; It knows only the guid or </tspan>
-    <tspan x='62' dx='10' dy='21'>the number&#46;</tspan>
-    <tspan x='62' dx='10' dy='21'>If any name is provided in a format other than the guid or number&#44; the application</tspan>
-    <tspan x='62' dx='10' dy='21'>will try to generate a sha&#45;256 hash based GUID and consider it as the name&#46;</tspan>
-    <tspan x='62' dx='10' dy='21'>Taking this name&#44; the application will then try to split and create a hierarchy</tspan>
-</text>
+<!-- == Table 'profile_info' == -->
+<rect id='depict_dss&#95;core&#46;profile&#95;info' class='entity' style='stroke:#F9FAFC' x='266' y='352' width='152' height='228' rx='4' ry='4' />
+<rect x='266' y='352' width='152' height='8' rx='4' ry='4' style='stroke-width:0;fill:url(#ttl_C1D8EE);'/>
+<rect x='266' y='356' width='152' height='29' style='stroke-width:0;fill:url(#tbg_C1D8EE);'/>
+<a href='#dss_core.profile_info'><g><title>Table dss_core.profile_info
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      One versioned configuration for a storage profile &#8212 links a profile to a primary provider, an optional staging provider, an upload mode, and JSON connection metadata.
+      Assigning a profile_info.id to a workspace.storage_profile (or module.storage_profile) activates that configuration for all uploads into that scope.
+      Example: profile &quot;prod-b2&quot; version 1 &#8212 mode=StageAndMove, storage_provider=B2-us-west, staging_provider=local-fs, metadata={&quot;bucket&quot;:&quot;vault-prod&quot;,...}. When a file is uploaded to any workspace pointing at this profile_info, it first lands on local-fs, then a background job moves it to the B2 bucket.</title><text id='depict&#45;dss&#95;core&#46;profile&#95;info' x='304' y='374' class='tableHeader' style='fill:#414448;'>profile&#95;info</text></g></a>
+  <use x='267' y='395' href='#nn'/><g><title>&#x1F511;  Pk pk_profile_info ( id ) </title><use x='268' y='394' href='#pk'/></g><a href='#dss_core.profile_info.id'><g><title>&#10697;  id
+     * int
+ &#8601; module( storage_profile )
+ &#8601; workspace( storage_profile )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Auto-increment surrogate key. This id is stored in workspace.storage_profile and module.storage_profile to activate this configuration for a workspace or module.</title><text id='dss&#95;core&#46;profile&#95;info&#46;id' x='289' y='408' onmouseover="hghl(['module_fk_module_profile_info','dss_core.module.storage_profile','workspace_fk_workspace_profile_info','dss_core.workspace.storage_profile'])" onmouseout="uhghl(['module_fk_module_profile_info','dss_core.module.storage_profile','workspace_fk_workspace_profile_info','dss_core.workspace.storage_profile'])" class='colPk'>id</text></g></a>
+<a href='#dss_core.profile_info.id'><g><title>&#x1F517;  Referred by module ( storage_profile -&gt; id ) 
+Referred by workspace ( storage_profile -&gt; id ) </title><use x='404' y='394' href='#ref'/></g></a>
+  <use x='267' y='414' href='#nn'/><g><title>&#x1F50D;  Unq unq_profile_config ( profile, version ) </title><use x='268' y='413' href='#unq'/></g><a href='#dss_core.profile_info.profile'><g><title>&#10697;  profile
+     * int
+ &#8599; profile( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK to profile.id. Groups this versioned configuration under a named profile.</title><text id='dss&#95;core&#46;profile&#95;info&#46;profile' x='289' y='427' onmouseover="hghl(['profile_info_fk_profile_config_profile','dss_core.profile.id'])" onmouseout="uhghl(['profile_info_fk_profile_config_profile','dss_core.profile.id'])">profile</text></g></a>
+<a href='#dss_core.profile_info.profile'><g><title>&#x1F517;  References profile ( profile -&gt; id ) </title><use x='404' y='413' href='#fk'/></g></a>
+  <use x='267' y='433' href='#nn'/><g><title>&#x1F50D;  Unq unq_profile_config ( profile, version ) </title><use x='268' y='432' href='#unq'/></g><a href='#dss_core.profile_info.version'><g><title>&#10697;  version
+     * int default 1
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Integer version of this configuration starting at 1, incremented on each change. The (profile, version) pair is unique &#8212 allows creating a new version before cutting over, supporting zero-downtime migrations.</title><text id='dss&#95;core&#46;profile&#95;info&#46;version' x='289' y='446'>version</text></g></a>
+<text x='414' y='442' text-anchor='end' class='colType'>&#35;</text>  <use x='267' y='452' href='#nn'/><a href='#dss_core.profile_info.mode'><g><title>&#10697;  mode
+     * int default 0
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Upload routing mode &#8212 determines what happens immediately after a file is received:
+      0 - DirectSave: write directly to the primary storage provider and mark the upload complete right away. Simplest and fastest; suitable when the primary provider is always available and reachable.
+      1 - StageAndMove: write to the staging provider first (flag=4, InStaging), then a background worker promotes the file to primary storage and removes the staging copy. Use this when the primary provider is slow, remote, or should receive files in bulk.
+      2 - StageAndRetainCopy: write to both staging and primary simultaneously; the staging copy is kept for redundancy or CDN acceleration.</title><text id='dss&#95;core&#46;profile&#95;info&#46;mode' x='289' y='465'>mode</text></g></a>
+<text x='414' y='461' text-anchor='end' class='colType'>&#35;</text>  <g><title>&#x1F50D;  fk_profile_info_provider ( storage_provider ) </title><use x='268' y='470' href='#idx'/></g><a href='#dss_core.profile_info.storage_provider'><g><title>&#10697;  storage_provider
+     int
+ &#8599; provider( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK to provider.id. The primary permanent storage destination for uploads (e.g. Backblaze B2, AWS S3, local filesystem). NULL means use the StorageCoordinator default registered provider.</title><text id='dss&#95;core&#46;profile&#95;info&#46;storage&#95;provider' x='289' y='484' onmouseover="hghl(['profile_info_fk_profile_info_provider','dss_core.provider.id'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider','dss_core.provider.id'])">storage&#95;provider</text></g></a>
+<a href='#dss_core.profile_info.storage_provider'><g><title>&#x1F517;  References provider ( storage_provider -&gt; id ) </title><use x='404' y='470' href='#fk'/></g></a>
+  <g><title>&#x1F50D;  fk_profile_info_provider_0 ( staging_provider ) </title><use x='268' y='489' href='#idx'/></g><a href='#dss_core.profile_info.staging_provider'><g><title>&#10697;  staging_provider
+     int
+ &#8599; provider( id )
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      FK to provider.id. Temporary fast-landing zone used before promotion to primary (mode 1 or 2). Typically a local filesystem or a cheap/fast cloud bucket. NULL means no staging.</title><text id='dss&#95;core&#46;profile&#95;info&#46;staging&#95;provider' x='289' y='503' onmouseover="hghl(['profile_info_fk_profile_info_provider_0','dss_core.provider.id'])" onmouseout="uhghl(['profile_info_fk_profile_info_provider_0','dss_core.provider.id'])">staging&#95;provider</text></g></a>
+<a href='#dss_core.profile_info.staging_provider'><g><title>&#x1F517;  References provider ( staging_provider -&gt; id ) </title><use x='404' y='489' href='#fk'/></g></a>
+  <use x='267' y='509' href='#nn'/><a href='#dss_core.profile_info.created'><g><title>&#10697;  created
+     * timestamp default current_timestamp()
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Row creation timestamp (UTC).</title><text id='dss&#95;core&#46;profile&#95;info&#46;created' x='289' y='522'>created</text></g></a>
+<text x='414' y='518' text-anchor='end' class='colType'>t</text>  <use x='267' y='528' href='#nn'/><a href='#dss_core.profile_info.metadata'><g><title>&#10697;  metadata
+     * text
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      JSON blob carrying provider-specific connection configuration required to initialise the provider at runtime.
+      For cloud providers this typically includes: bucket name, region, endpoint URL, and a reference to the credential (e.g. an env-var name or secrets-manager key).
+      Example for S3: {&quot;bucket&quot;:&quot;my-vault&quot;,&quot;region&quot;:&quot;us-east-1&quot;,&quot;endpoint&quot;:&quot;https://s3.amazonaws.com&quot;,&quot;credential_ref&quot;:&quot;env:AWS_SECRET_KEY&quot;}
+      Example for B2: {&quot;bucketId&quot;:&quot;abc123&quot;,&quot;bucketName&quot;:&quot;my-vault&quot;,&quot;applicationKeyId&quot;:&quot;key001&quot;,&quot;applicationKey&quot;:&quot;env:B2_APP_KEY&quot;}
+      The StorageCoordinator reads this JSON at startup when initialising the provider connection.</title><text id='dss&#95;core&#46;profile&#95;info&#46;metadata' x='289' y='541'>metadata</text></g></a>
+<text x='414' y='537' text-anchor='end' class='colType'>t</text>  <use x='267' y='547' href='#nn'/><g><title>&#x1F50D;  Unq unq_profile_info_hash ( hash ) </title><use x='268' y='546' href='#unq'/></g><a href='#dss_core.profile_info.hash'><g><title>&#10697;  hash
+     * varchar(48)
+ ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+      Deterministric guid created from the sha256 hash of the metadata, storage key, staging key, mode which uniquely identifies if this is alreday created or not..</title><text id='dss&#95;core&#46;profile&#95;info&#46;hash' x='289' y='560'>hash</text></g></a>
+<text x='414' y='556' text-anchor='end' class='colType'>t</text>
 </g></svg></div>
 <script type='text/javascript'>
 var svgContainers = document.getElementsByClassName("svgContainer");
@@ -919,7 +903,7 @@ function searchSVG( searchValue) {
 <div class='card custom-card'><div class='card-body'><a name='dss_core'></a><h5 class='card-title text-center'>Schema dss_core</h5></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_core.client'  onclick="window.scrollTo(60, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table client</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_core.client'  onclick="window.scrollTo(60, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table client</h5></a>
 <p class="text-muted">Top&#45;level tenant &#47; application that owns the entire storage hierarchy&#46;<br>Example&#58; an application called &quot;hr&#95;portal&quot; is registered as a client&#46; Under it live modules such as &quot;employee&#95;docs&quot; and &quot;avatars&quot;&#46;<br>The client name is hashed &#40;SHA&#45;256&#44; compact&#45;N GUID&#41; at runtime to produce a CUID that drives all internal routing — no database round&#45;trip is needed once the client is cached at startup&#46;<br>Every file ultimately belongs to a client → module → workspace chain&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -978,12 +962,12 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_client_keys_client</td>
-		<td > id &#8601; <a href='#dss&#95;core&#46;client&#95;keys'  onclick="window.scrollTo(60, 532);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client_keys').classList.add('palpable'); return false;">&#10063; client&#95;keys</a>(client) </td>
+		<td > id &#8601; <a href='#dss&#95;core&#46;client&#95;keys'  onclick="window.scrollTo(60, 266);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client_keys').classList.add('palpable'); return false;">&#10063; client&#95;keys</a>(client) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_direcory_client</td>
-		<td > id &#8601; <a href='#dss&#95;core&#46;module'  onclick="window.scrollTo(66, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.module').classList.add('palpable'); return false;">&#10063; module</a>(parent) </td>
+		<td > id &#8601; <a href='#dss&#95;core&#46;module'  onclick="window.scrollTo(60, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.module').classList.add('palpable'); return false;">&#10063; module</a>(parent) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
@@ -992,7 +976,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_core.client_keys'  onclick="window.scrollTo(60, 532);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client_keys').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table client_keys</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_core.client_keys'  onclick="window.scrollTo(60, 266);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client_keys').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table client_keys</h5></a>
 <p class="text-muted">Security credentials for each client — hashed password plus server&#45;generated signing and encryption keys&#46;<br>Separated from the client table so that credential rotation &#40;key refresh&#44; password change&#41; does not touch the client identity row and does not affect any downstream FKs&#46;<br>Example&#58; when &quot;hr&#95;portal&quot; is registered&#44; a random 512&#45;char signing key and encrypt key are generated and stored here alongside the SHA&#45;256 of the provided password&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1031,7 +1015,7 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_client_keys_client</td>
-		<td > client &#8599; <a href='#dss&#95;core&#46;client'  onclick="window.scrollTo(60, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client').classList.add('palpable'); return false;">&#10063; client</a>(id) </td>
+		<td > client &#8599; <a href='#dss&#95;core&#46;client'  onclick="window.scrollTo(60, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client').classList.add('palpable'); return false;">&#10063; client</a>(id) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
@@ -1040,7 +1024,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_core.module'  onclick="window.scrollTo(66, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.module').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table module</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_core.module'  onclick="window.scrollTo(60, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.module').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table module</h5></a>
 <p class="text-muted">A logical feature area or application section inside a client &#40;e&#46;g&#46; &quot;documents&quot;&#44; &quot;invoices&quot;&#44; &quot;avatars&quot;&#41;&#46;<br>Each module gets its own isolated MariaDB schema named dss&#95;module&#95;&lt;cuid&gt; so file indexes for different feature areas are fully separated — a query for &quot;invoices&quot; never touches the &quot;avatars&quot; database&#46;<br>Example&#58; client &quot;hr&#95;portal&quot; → module &quot;employee&#95;docs&quot;&#46; All files under this module are indexed in the &quot;dss&#95;module&#95;&lt;employee&#95;docs&#95;cuid&gt;&quot; database&#46;<br>The storage&#95;profile column points to the cloud&#47;FS provider configuration to use for uploads at the module level&#46; Individual workspaces may override this with their own storage&#95;profile&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1131,18 +1115,18 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_direcory_client</td>
-		<td > parent &#8599; <a href='#dss&#95;core&#46;client'  onclick="window.scrollTo(60, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client').classList.add('palpable'); return false;">&#10063; client</a>(id) </td>
+		<td > parent &#8599; <a href='#dss&#95;core&#46;client'  onclick="window.scrollTo(60, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.client').classList.add('palpable'); return false;">&#10063; client</a>(id) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_module_profile_info</td>
-		<td > storage&#95;profile &#8599; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(85, 627);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(id) </td>
+		<td > storage&#95;profile &#8599; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(66, 361);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(id) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_workspace_module</td>
-		<td > id &#8601; <a href='#dss&#95;core&#46;workspace'  onclick="window.scrollTo(313, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.workspace').classList.add('palpable'); return false;">&#10063; workspace</a>(parent) </td>
+		<td > id &#8601; <a href='#dss&#95;core&#46;workspace'  onclick="window.scrollTo(294, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.workspace').classList.add('palpable'); return false;">&#10063; workspace</a>(parent) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
@@ -1151,7 +1135,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_core.profile'  onclick="window.scrollTo(60, 703);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table profile</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_core.profile'  onclick="window.scrollTo(60, 437);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table profile</h5></a>
 <p class="text-muted">A named storage configuration group&#46; Each profile can have multiple versioned profile&#95;info rows to support side&#45;by&#45;side configurations during migrations&#46;<br>A profile defines WHAT to call a configuration&#59; the actual settings &#40;provider&#44; mode&#44; metadata&#41; live in profile&#95;info&#46;<br>Example&#58; a profile named &quot;prod&#45;b2&quot; might have version 1 pointing to Backblaze B2 us&#45;west and version 2 pointing to B2 eu&#45;central — useful when migrating buckets without downtime&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1188,7 +1172,7 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_profile_config_profile</td>
-		<td > id &#8601; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(85, 627);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(profile) </td>
+		<td > id &#8601; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(66, 361);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(profile) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
@@ -1197,7 +1181,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_core.profile_info'  onclick="window.scrollTo(85, 627);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table profile_info</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_core.profile_info'  onclick="window.scrollTo(66, 361);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table profile_info</h5></a>
 <p class="text-muted">One versioned configuration for a storage profile — links a profile to a primary provider&#44; an optional staging provider&#44; an upload mode&#44; and JSON connection metadata&#46;<br>Assigning a profile&#95;info&#46;id to a workspace&#46;storage&#95;profile &#40;or module&#46;storage&#95;profile&#41; activates that configuration for all uploads into that scope&#46;<br>Example&#58; profile &quot;prod&#45;b2&quot; version 1 — mode&#61;StageAndMove&#44; storage&#95;provider&#61;B2&#45;us&#45;west&#44; staging&#95;provider&#61;local&#45;fs&#44; metadata&#61;&#123;&quot;bucket&quot;&#58;&quot;vault&#45;prod&quot;&#44;&#46;&#46;&#46;&#125;&#46; When a file is uploaded to any workspace pointing at this profile&#95;info&#44; it first lands on local&#45;fs&#44; then a background job moves it to the B2 bucket&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1253,7 +1237,7 @@ function searchSVG( searchValue) {
 		<td> JSON blob carrying provider&#45;specific connection configuration required to initialise the provider at runtime&#46;<br>For cloud providers this typically includes&#58; bucket name&#44; region&#44; endpoint URL&#44; and a reference to the credential &#40;e&#46;g&#46; an env&#45;var name or secrets&#45;manager key&#41;&#46;<br>Example for S3&#58; &#123;&quot;bucket&quot;&#58;&quot;my&#45;vault&quot;&#44;&quot;region&quot;&#58;&quot;us&#45;east&#45;1&quot;&#44;&quot;endpoint&quot;&#58;&quot;https&#58;&#47;&#47;s3&#46;amazonaws&#46;com&quot;&#44;&quot;credential&#95;ref&quot;&#58;&quot;env&#58;AWS&#95;SECRET&#95;KEY&quot;&#125;<br>Example for B2&#58; &#123;&quot;bucketId&quot;&#58;&quot;abc123&quot;&#44;&quot;bucketName&quot;&#58;&quot;my&#45;vault&quot;&#44;&quot;applicationKeyId&quot;&#58;&quot;key001&quot;&#44;&quot;applicationKey&quot;&#58;&quot;env&#58;B2&#95;APP&#95;KEY&quot;&#125;<br>The StorageCoordinator reads this JSON at startup when initialising the provider connection&#46; </td>
 	</tr>
 	<tr>
-		<td><span class='text-danger'>*</span></td>
+		<td><span class='text-danger'>*</span><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#unq'/></svg></td>
 		<td><a name='dss_core.profile_info.hash'>hash</a></td>
 		<td class='dataType'> VARCHAR&#40;48&#41;  </td>
 		<td> Deterministric guid created from the sha256 hash of the metadata&#44; storage key&#44; staging key&#44; mode which uniquely identifies if this is alreday created or not&#46;&#46; </td>
@@ -1275,31 +1259,35 @@ function searchSVG( searchValue) {
 		<td>Index ON staging&#95;provider</td>
 		<td>  </td>
 	</tr>
+	<tr>		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#unq'/></svg></td><td>unq&#95;profile&#95;info&#95;hash</td>
+		<td>Unique Key ON hash</td>
+		<td>  </td>
+	</tr>
 <tr><th colspan='4'>Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_profile_config_profile</td>
-		<td > profile &#8599; <a href='#dss&#95;core&#46;profile'  onclick="window.scrollTo(60, 703);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile').classList.add('palpable'); return false;">&#10063; profile</a>(id) </td>
+		<td > profile &#8599; <a href='#dss&#95;core&#46;profile'  onclick="window.scrollTo(60, 437);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile').classList.add('palpable'); return false;">&#10063; profile</a>(id) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_profile_info_provider</td>
-		<td > storage&#95;provider &#8599; <a href='#dss&#95;core&#46;provider'  onclick="window.scrollTo(332, 665);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.provider').classList.add('palpable'); return false;">&#10063; provider</a>(id) </td>
+		<td > storage&#95;provider &#8599; <a href='#dss&#95;core&#46;provider'  onclick="window.scrollTo(313, 399);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.provider').classList.add('palpable'); return false;">&#10063; provider</a>(id) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_profile_info_provider_0</td>
-		<td > staging&#95;provider &#8599; <a href='#dss&#95;core&#46;provider'  onclick="window.scrollTo(332, 665);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.provider').classList.add('palpable'); return false;">&#10063; provider</a>(id) </td>
+		<td > staging&#95;provider &#8599; <a href='#dss&#95;core&#46;provider'  onclick="window.scrollTo(313, 399);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.provider').classList.add('palpable'); return false;">&#10063; provider</a>(id) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_module_profile_info</td>
-		<td > id &#8601; <a href='#dss&#95;core&#46;module'  onclick="window.scrollTo(66, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.module').classList.add('palpable'); return false;">&#10063; module</a>(storage&#95;profile) </td>
+		<td > id &#8601; <a href='#dss&#95;core&#46;module'  onclick="window.scrollTo(60, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.module').classList.add('palpable'); return false;">&#10063; module</a>(storage&#95;profile) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_workspace_profile_info</td>
-		<td > id &#8601; <a href='#dss&#95;core&#46;workspace'  onclick="window.scrollTo(313, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.workspace').classList.add('palpable'); return false;">&#10063; workspace</a>(storage&#95;profile) </td>
+		<td > id &#8601; <a href='#dss&#95;core&#46;workspace'  onclick="window.scrollTo(294, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.workspace').classList.add('palpable'); return false;">&#10063; workspace</a>(storage&#95;profile) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
@@ -1308,7 +1296,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_core.provider'  onclick="window.scrollTo(332, 665);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.provider').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table provider</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_core.provider'  onclick="window.scrollTo(313, 399);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.provider').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table provider</h5></a>
 <p class="text-muted">A named storage backend — the HOW of file storage&#44; not the WHERE&#46;<br>Examples&#58; &quot;hfs&quot; &#61; Haley FileSystem &#40;default local disk provider&#41;&#44; &quot;b2&quot; &#61; Backblaze B2&#44; &quot;s3&#45;east&quot; &#61; AWS S3 us&#45;east&#45;1&#44; &quot;azure&#45;blob&quot; &#61; Azure Blob Storage&#46;<br>The application registers provider implementations at startup&#58; AddProvider&#40;&quot;b2&quot;&#44; new BackblazeProvider&#40;&#41;&#41;&#46; This table is the authoritative record of which backend names are known to the system&#46;<br>One provider name can serve many workspaces and modules via different profile&#95;info rows — the provider says HOW to talk to the storage service&#59; the profile&#95;info&#46;metadata says WHERE &#40;which bucket &#47; region &#47; path prefix&#41;&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1357,12 +1345,12 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Referring Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_profile_info_provider</td>
-		<td > id &#8601; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(85, 627);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(storage&#95;provider) </td>
+		<td > id &#8601; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(66, 361);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(storage&#95;provider) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#ref'/></svg></td><td>fk_profile_info_provider_0</td>
-		<td > id &#8601; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(85, 627);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(staging&#95;provider) </td>
+		<td > id &#8601; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(66, 361);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(staging&#95;provider) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
@@ -1371,7 +1359,7 @@ function searchSVG( searchValue) {
 </table></div></div>
 
 <br><br>
-<div class='card custom-card'><div class='card-body'><a name='dss_core.workspace'  onclick="window.scrollTo(313, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.workspace').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table workspace</h5></a>
+<div class='card custom-card'><div class='card-body'><a name='dss_core.workspace'  onclick="window.scrollTo(294, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.workspace').classList.add('palpable'); return false;" style='cursor:pointer;'><h5 class='card-title text-center'>Table workspace</h5></a>
 <p class="text-muted">A named storage container inside a module — like a dedicated folder for a specific purpose&#44; tenant&#44; or data set&#46;<br>Example&#58; module &quot;documents&quot; → workspace &quot;user&#45;123&#45;uploads&quot; &#40;all files for a specific user&#41; or &quot;global&#45;templates&quot; &#40;shared assets&#41;&#46;<br>Each workspace has its own base path&#47;prefix&#44; file&#45;naming mode&#44; and can optionally point to a different cloud provider than its parent module&#46;<br>The CUID &#40;derived from the full client&#43;module&#43;workspace name chain&#41; is the key the StorageCoordinator uses to locate the workspace in the in&#45;memory cache and resolve the storage path with zero DB round&#45;trips after startup&#46;<br>The storagename&#95;mode and storagename&#95;parse settings are fixed at registration time and must not be changed after files exist in the workspace&#44; as they determine how storage paths are reconstructed for reads&#46;</p>
 <table class='table table-sm small' style='table-layout: fixed; word-wrap: break-word;'>
 <thead>
@@ -1474,12 +1462,12 @@ function searchSVG( searchValue) {
 <tr><th colspan='4'>Foreign Key</th></tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_workspace_module</td>
-		<td > parent &#8599; <a href='#dss&#95;core&#46;module'  onclick="window.scrollTo(66, 323);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.module').classList.add('palpable'); return false;">&#10063; module</a>(id) </td>
+		<td > parent &#8599; <a href='#dss&#95;core&#46;module'  onclick="window.scrollTo(60, 57);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.module').classList.add('palpable'); return false;">&#10063; module</a>(id) </td>
 		<td>  </td>
 	</tr>
 	<tr>
 		<td><svg xmlns="http://www.w3.org/2000/svg" width='14' height='14'><use href='#fk'/></svg></td><td>fk_workspace_profile_info</td>
-		<td > storage&#95;profile &#8599; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(85, 627);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(id) </td>
+		<td > storage&#95;profile &#8599; <a href='#dss&#95;core&#46;profile&#95;info'  onclick="window.scrollTo(66, 361);var nodes = document.getElementsByClassName('palpable');for (var i = 0; i < nodes.length; i++) { nodes[i].classList.remove('palpable');}; document.getElementById('depict_dss_core.profile_info').classList.add('palpable'); return false;">&#10063; profile&#95;info</a>(id) </td>
 		<td>  </td>
 	</tr>
 <tr><th colspan='4'>Options</th></tr>
