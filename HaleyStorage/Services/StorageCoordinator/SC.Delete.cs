@@ -47,11 +47,66 @@ namespace Haley.Services {
             }
         }
 
+        async Task<IFeedback> EnsureDeletedVersionFilesAvailableForRestore(IVaultReadRequest request, DeletedDocumentInfo document, string targetVersionCuid) {
+            var feedback = new Feedback() { Status = false };
+            try {
+                var target = FindDeletedVersion(document, targetVersionCuid);
+                if (target == null)
+                    return feedback.SetMessage("Deleted version not found.");
+
+                var pendingMoves = new List<(string source, string target)>();
+                var versionsToRestore = target.SubVersionNumber == 0
+                    ? document.Versions.Where(v => v.VersionNumber == target.VersionNumber).ToList()
+                    : document.Versions.Where(v => v.VersionId == target.VersionId).ToList();
+
+                foreach (var version in versionsToRestore) {
+                    await CollectRestoreMovesForRef(request, version.ProfileInfoId ?? 0, version.StorageRef, usePrimaryProvider: true, pendingMoves);
+                    await CollectRestoreMovesForRef(request, version.ProfileInfoId ?? 0, version.StagingRef, usePrimaryProvider: false, pendingMoves);
+                }
+
+                foreach (var move in pendingMoves) {
+                    await MoveFileWithOverwrite(move.source, move.target);
+                }
+
+                return feedback.SetStatus(true);
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                return feedback.SetMessage(ex.Message);
+            }
+        }
+
         async Task MoveDeletedDocumentFilesToArchive(IVaultReadRequest request, DeletedDocumentInfo document) {
             foreach (var version in document.Versions) {
                 await MoveDeletedVersionRefToArchive(request, version.ProfileInfoId ?? 0, version.StorageRef, usePrimaryProvider: true);
                 await MoveDeletedVersionRefToArchive(request, version.ProfileInfoId ?? 0, version.StagingRef, usePrimaryProvider: false);
             }
+        }
+
+        async Task ArchiveDeletedVersionChain(IVaultReadRequest request, DeletedDocumentInfo document, string targetVersionCuid) {
+            if (document == null || string.IsNullOrWhiteSpace(targetVersionCuid)) return;
+
+            var target = FindDeletedVersion(document, targetVersionCuid);
+            if (target == null)
+                throw new InvalidOperationException("Unable to resolve the deleted version for archive finalization.");
+
+            var versionsToArchive = target.SubVersionNumber == 0
+                ? document.Versions.Where(v => v.VersionNumber == target.VersionNumber).ToList()
+                : document.Versions.Where(v => v.VersionId == target.VersionId).ToList();
+
+            foreach (var version in versionsToArchive) {
+                await MoveDeletedVersionRefToArchive(request, version.ProfileInfoId ?? 0, version.StorageRef, usePrimaryProvider: true);
+                await MoveDeletedVersionRefToArchive(request, version.ProfileInfoId ?? 0, version.StagingRef, usePrimaryProvider: false);
+            }
+
+            var finalize = await Indexer.FinalizeDeletedVersionArchive(
+                request.Scope.Module.Cuid.ToString("N"),
+                document.DocumentId,
+                target.VersionId,
+                target.VersionNumber,
+                target.SubVersionNumber);
+
+            if (finalize?.Status != true)
+                throw new InvalidOperationException(finalize?.Message ?? "Unable to finalize deleted version archive metadata.");
         }
 
         async Task MoveDeletedVersionRefToArchive(IVaultReadRequest request, long profileInfoId, string storageRef, bool usePrimaryProvider) {
@@ -111,6 +166,16 @@ namespace Haley.Services {
             var extension = Path.GetExtension(document.RestoreFileName ?? string.Empty);
             return $"__deleted__{document.DocumentCuid}{extension}";
         }
+
+        static bool SameCuid(string left, string right) {
+            if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right)) return false;
+            if (Guid.TryParse(left, out var lg) && Guid.TryParse(right, out var rg))
+                return lg == rg;
+            return left.Equals(right, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static DeletedDocumentVersionInfo FindDeletedVersion(DeletedDocumentInfo document, string targetVersionCuid)
+            => document?.Versions?.FirstOrDefault(v => SameCuid(v.VersionCuid, targetVersionCuid));
 
         static async Task MoveFileWithOverwrite(string sourcePath, string targetPath) {
             var targetDir = Path.GetDirectoryName(targetPath);

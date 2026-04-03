@@ -14,6 +14,61 @@ namespace Haley.Utils {
     /// and recursive folder delete.
     /// </summary>
     internal partial class MariaDBIndexing {
+        public async Task<IFeedback<DeletedDocumentInfo>> SoftDeleteVersion(IVaultFileReadRequest request) {
+            var fb = new Feedback<DeletedDocumentInfo>();
+            try {
+                if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.ReadOnlyMode) return fb.SetMessage("Cannot delete a version in read-only mode.");
+                if (request.Scope?.Module == null || request.Scope.Module.Cuid == Guid.Empty)
+                    return fb.SetMessage("Module CUID is mandatory.");
+                if (string.IsNullOrWhiteSpace(request.File?.Cuid))
+                    return fb.SetMessage("Version uid is mandatory for version delete.");
+
+                var moduleCuid = request.Scope.Module.Cuid.ToString("N");
+                var target = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.GET_DELETE_TARGET_BY_CUID, default, (CUID, ToDbCuid(request.File.Cuid)));
+                if (target == null || target.Count < 1)
+                    return fb.SetMessage("Unable to resolve the target active version.");
+
+                var versionId = target.GetLong("version_id");
+                var documentId = target.GetLong("document_id");
+                var versionNo = target.GetInt("version_no");
+                var subVer = target.GetInt("sub_version_no");
+                var deleteState = target.GetInt("delete_state");
+
+                if (deleteState > 0)
+                    return fb.SetMessage("Version is already deleted.");
+
+                var handler = _agw.GetTransactionHandler(moduleCuid);
+                DeletedDocumentInfo lifecycle;
+                using (handler?.Begin()) {
+                    var load = new DbExecutionLoad(default, handler);
+                    var deletedAt = DateTime.UtcNow;
+
+                    if (subVer == 0) {
+                        // Delete the content version and any thumbnails attached to the same content version.
+                        await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.SOFT_DELETE_BY_VERSION, load, (PARENT, documentId), (VERSION, versionNo), (DELETED, deletedAt));
+                    } else {
+                        // Thumbnail uid delete only hides that specific thumbnail row.
+                        await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.SOFT_DELETE_BY_ID, load, (ID, versionId), (DELETED, deletedAt));
+                    }
+
+                    lifecycle = await GetDocumentLifecycleById(moduleCuid, documentId);
+                }
+
+                if (lifecycle == null)
+                    return fb.SetMessage("Version delete could not be confirmed.");
+                if (lifecycle.IsDeleted)
+                    return fb.SetMessage("The logical document is deleted. Restore the document instead.");
+
+                return fb.SetStatus(true).SetResult(lifecycle).SetMessage(subVer == 0
+                    ? "Version deleted."
+                    : "Thumbnail version deleted.");
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                return fb.SetMessage(ex.Message);
+            }
+        }
+
         public async Task<IFeedback<DeletedDocumentInfo>> SoftDeleteDocument(IVaultFileReadRequest request) {
             var fb = new Feedback<DeletedDocumentInfo>();
             try {
@@ -41,6 +96,38 @@ namespace Haley.Utils {
                 lifecycle = await GetDocumentLifecycleById(moduleCuid, documentId);
                 if (lifecycle == null || !lifecycle.IsDeleted)
                     return fb.SetMessage("Document delete could not be confirmed.");
+                return fb.SetStatus(true).SetResult(lifecycle);
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                return fb.SetMessage(ex.Message);
+            }
+        }
+
+        public async Task<IFeedback<DeletedDocumentInfo>> GetDeletedVersion(IVaultFileReadRequest request) {
+            var fb = new Feedback<DeletedDocumentInfo>();
+            try {
+                if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.Scope?.Module == null || request.Scope.Module.Cuid == Guid.Empty)
+                    return fb.SetMessage("Module CUID is mandatory.");
+                if (string.IsNullOrWhiteSpace(request.File?.Cuid))
+                    return fb.SetMessage("Version uid is mandatory.");
+
+                var moduleCuid = request.Scope.Module.Cuid.ToString("N");
+                var target = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.GET_DELETE_TARGET_BY_CUID, default, (CUID, ToDbCuid(request.File.Cuid)));
+                if (target == null || target.Count < 1)
+                    return fb.SetMessage("Unable to resolve the target version.");
+
+                var lifecycle = await GetDocumentLifecycleById(moduleCuid, target.GetLong("document_id"));
+                if (lifecycle == null)
+                    return fb.SetMessage("Unable to load the target document lifecycle.");
+
+                var version = lifecycle.Versions.FirstOrDefault(v => SameCuid(v.VersionCuid, request.File.Cuid));
+                if (version == null || !version.IsDeleted)
+                    return fb.SetMessage("Deleted version not found.");
+
+                if (lifecycle.IsDeleted)
+                    return fb.SetMessage("The logical document is deleted. Restore the document instead.");
+
                 return fb.SetStatus(true).SetResult(lifecycle);
             } catch (Exception ex) {
                 _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
@@ -135,6 +222,31 @@ namespace Haley.Utils {
             }
         }
 
+        public async Task<IFeedback> FinalizeDeletedVersionArchive(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo) {
+            var fb = new Feedback();
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid) || documentId < 1 || versionId < 1 || versionNo < 1)
+                    return fb.SetMessage("moduleCuid, documentId, versionId, and versionNo are required.");
+                if (!_agw.ContainsKey(moduleCuid))
+                    return fb.SetMessage($"No adapter found for key {moduleCuid}.");
+
+                var handler = _agw.GetTransactionHandler(moduleCuid);
+                using (handler?.Begin()) {
+                    var load = new DbExecutionLoad(default, handler);
+                    if (subVersionNo == 0) {
+                        await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.ARCHIVE_BY_VERSION, load, (PARENT, documentId), (VERSION, versionNo));
+                    } else {
+                        await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.ARCHIVE_BY_ID, load, (ID, versionId));
+                    }
+                }
+
+                return fb.SetStatus(true).SetMessage("Deleted version archive metadata updated.");
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                return fb.SetMessage(ex.Message);
+            }
+        }
+
         public async Task<IFeedback> RestoreDeletedDocument(string moduleCuid, long documentId) {
             var fb = new Feedback();
             try {
@@ -165,6 +277,39 @@ namespace Haley.Utils {
                 }
 
                 return fb.SetStatus(true).SetMessage("Document restored.");
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                return fb.SetMessage(ex.Message);
+            }
+        }
+
+        public async Task<IFeedback> RestoreDeletedVersion(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo) {
+            var fb = new Feedback();
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid) || documentId < 1 || versionId < 1 || versionNo < 1)
+                    return fb.SetMessage("moduleCuid, documentId, versionId, and versionNo are required.");
+                if (!_agw.ContainsKey(moduleCuid))
+                    return fb.SetMessage($"No adapter found for key {moduleCuid}.");
+
+                var lifecycle = await GetDocumentLifecycleById(moduleCuid, documentId);
+                if (lifecycle == null)
+                    return fb.SetMessage("Target document not found.");
+                if (lifecycle.IsDeleted)
+                    return fb.SetMessage("The logical document is deleted. Restore the document instead.");
+
+                var handler = _agw.GetTransactionHandler(moduleCuid);
+                using (handler?.Begin()) {
+                    var load = new DbExecutionLoad(default, handler);
+                    if (subVersionNo == 0) {
+                        await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.RESTORE_BY_VERSION, load, (PARENT, documentId), (VERSION, versionNo));
+                    } else {
+                        await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.RESTORE_BY_ID, load, (ID, versionId));
+                    }
+                }
+
+                return fb.SetStatus(true).SetMessage(subVersionNo == 0
+                    ? "Version restored."
+                    : "Thumbnail version restored.");
             } catch (Exception ex) {
                 _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
                 return fb.SetMessage(ex.Message);
@@ -288,6 +433,13 @@ namespace Haley.Utils {
             }
 
             return result;
+        }
+
+        static bool SameCuid(string left, string right) {
+            if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right)) return false;
+            if (Guid.TryParse(left, out var lg) && Guid.TryParse(right, out var rg))
+                return lg == rg;
+            return left.Equals(right, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

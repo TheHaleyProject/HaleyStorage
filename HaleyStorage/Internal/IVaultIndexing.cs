@@ -41,10 +41,14 @@ namespace Haley.Services {
         /// </summary>
         Task<IFeedback<VaultFolderBrowseResponse>> SearchItems(IVaultReadRequest request, string searchTerm, VaultSearchMode searchMode, string extension = null, bool recursive = false, int page = 1, int pageSize = 50, bool includeAll = false);
         Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest request);
+        Task<IFeedback<DeletedDocumentInfo>> SoftDeleteVersion(IVaultFileReadRequest request);
         Task<IFeedback<DeletedDocumentInfo>> SoftDeleteDocument(IVaultFileReadRequest request);
+        Task<IFeedback<DeletedDocumentInfo>> GetDeletedVersion(IVaultFileReadRequest request);
         Task<IFeedback<DeletedDocumentInfo>> GetDeletedDocument(IVaultFileReadRequest request);
         Task<IFeedback<DeletedDocumentInfo>> GetDeletedDocumentByName(IVaultReadRequest request, string fileName);
         Task<IFeedback> FinalizeDeletedDocumentArchive(string moduleCuid, long documentId, string tombstoneFileName);
+        Task<IFeedback> FinalizeDeletedVersionArchive(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo);
+        Task<IFeedback> RestoreDeletedVersion(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo);
         Task<IFeedback> RestoreDeletedDocument(string moduleCuid, long documentId);
         Task<IFeedback> SoftDeleteDirectory(IVaultReadRequest request, bool recursive);
         Task EnsureValidation();

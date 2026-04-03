@@ -234,11 +234,18 @@ namespace Haley.Internal {
                 public const string COUNT_BY_DIRECTORY = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT} and doc.delete_state = 0;";
                 public const string COUNT_BY_DIRECTORY_ALL = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT};";
                 public const string GET_DETAILS_BY_ID =
-                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.actor as directory_actor_id, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name, di.metadata as doc_metadata, di.actor as document_actor_id
+                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, d.delete_state, d.deleted, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.actor as directory_actor_id, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name, di.metadata as doc_metadata, di.actor as document_actor_id
                        from document as d
                        left join doc_info as di on di.file = d.id
                        inner join directory as dir on dir.id = d.parent and dir.delete_state = 0
                        where d.id = {ID} and d.delete_state = 0
+                       limit 1;";
+                public const string GET_DETAILS_BY_ID_ALL =
+                    $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, d.delete_state, d.deleted, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.actor as directory_actor_id, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name, di.metadata as doc_metadata, di.actor as document_actor_id
+                       from document as d
+                       left join doc_info as di on di.file = d.id
+                       left join directory as dir on dir.id = d.parent
+                       where d.id = {ID}
                        limit 1;";
                 public const string GET_LIFECYCLE_BY_ID =
                     $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, d.parent as directory_id, d.name as current_name_id, d.original_name as original_name_id, d.delete_state, d.deleted, concat(cv.name, case when cext.name = 'default' then '' else concat('.', cext.name) end) as current_file_name, concat(coalesce(ov.name, cv.name), case when coalesce(oext.name, cext.name) = 'default' then '' else concat('.', coalesce(oext.name, cext.name)) end) as restore_file_name
@@ -372,14 +379,32 @@ namespace Haley.Internal {
                        left join version_info as vi on vi.id = dv.id
                        where dv.parent = {PARENT} and dv.sub_ver = 0 and dv.delete_state = 0
                        order by dv.ver desc;";
+                public const string GET_ALL_CONTENT_BY_PARENT_ALL =
+                    $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.actor as actor_id, dv.delete_state, dv.deleted, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata
+                       from doc_version as dv
+                       left join version_info as vi on vi.id = dv.id
+                       where dv.parent = {PARENT} and dv.sub_ver = 0
+                       order by dv.ver desc;";
                 public const string GET_ALL_BY_PARENT_ALL =
                     $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.sub_ver as sub_version_no, dv.actor as actor_id, dv.delete_state, dv.deleted, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata, vi.profile_info_id
                        from doc_version as dv
                        left join version_info as vi on vi.id = dv.id
                        where dv.parent = {PARENT}
                        order by dv.ver desc, dv.sub_ver desc;";
+                public const string GET_DELETE_TARGET_BY_CUID =
+                    $@"select dv.id as version_id, dv.parent as document_id, dv.ver as version_no, dv.sub_ver as sub_version_no, dv.delete_state
+                       from doc_version as dv
+                       inner join document as d on d.id = dv.parent
+                       where dv.cuid = {CUID}
+                       limit 1;";
                 public const string SOFT_DELETE_BY_PARENT = $@"update doc_version set delete_state = 1, deleted = {DELETED} where parent = {PARENT};";
+                public const string SOFT_DELETE_BY_VERSION = $@"update doc_version set delete_state = 1, deleted = {DELETED} where parent = {PARENT} and ver = {VERSION} and delete_state = 0;";
+                public const string SOFT_DELETE_BY_ID = $@"update doc_version set delete_state = 1, deleted = {DELETED} where id = {ID} and delete_state = 0;";
+                public const string ARCHIVE_BY_VERSION = $@"update doc_version set delete_state = 2 where parent = {PARENT} and ver = {VERSION} and delete_state > 0;";
+                public const string ARCHIVE_BY_ID = $@"update doc_version set delete_state = 2 where id = {ID} and delete_state > 0;";
                 public const string ARCHIVE_BY_PARENT = $@"update doc_version set delete_state = 2 where parent = {PARENT} and delete_state > 0;";
+                public const string RESTORE_BY_VERSION = $@"update doc_version set delete_state = 0, deleted = null where parent = {PARENT} and ver = {VERSION} and delete_state > 0;";
+                public const string RESTORE_BY_ID = $@"update doc_version set delete_state = 0, deleted = null where id = {ID} and delete_state > 0;";
                 public const string RESTORE_BY_PARENT = $@"update doc_version set delete_state = 0, deleted = null where parent = {PARENT};";
 
                 // ── Thumbnail queries ─────────────────────────────────────────────────

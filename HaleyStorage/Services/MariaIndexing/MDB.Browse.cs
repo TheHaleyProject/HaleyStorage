@@ -63,18 +63,19 @@ namespace Haley.Utils {
                 var moduleCuid = request.Scope.Module.Cuid.ToString("N");
                 if (!_agw.ContainsKey(moduleCuid)) return fb.SetMessage($@"No adapter found for the key {moduleCuid}");
 
-                var documentId = await ResolveDocumentId(moduleCuid, request);
+                var documentId = await ResolveDocumentId(moduleCuid, request, includeAll: true);
                 if (documentId < 1) return fb.SetMessage("Unable to resolve the target file.");
 
-                var docRow = await _agw.RowAsync(moduleCuid, INSTANCE.DOCUMENT.GET_DETAILS_BY_ID, default, (ID, documentId));
+                var docRow = await _agw.RowAsync(moduleCuid, INSTANCE.DOCUMENT.GET_DETAILS_BY_ID_ALL, default, (ID, documentId));
                 if (docRow == null) return fb.SetMessage("Unable to fetch document details.");
 
-                var versionRows = await _agw.RowsAsync(moduleCuid, INSTANCE.DOCVERSION.GET_ALL_BY_PARENT, default, (PARENT, documentId));
+                var versionRows = await _agw.RowsAsync(moduleCuid, INSTANCE.DOCVERSION.GET_ALL_CONTENT_BY_PARENT_ALL, default, (PARENT, documentId));
 
                 // Check if the latest content version has a thumbnail sub-version.
                 bool hasThumb = false;
-                if (versionRows.Count > 0) {
-                    var latestVer = versionRows[0].GetInt("version_no");
+                var latestActiveVersion = versionRows.FirstOrDefault(r => r.GetInt("delete_state") == 0);
+                if (latestActiveVersion != null) {
+                    var latestVer = latestActiveVersion.GetInt("version_no");
                     if (latestVer > 0) {
                         var latestSubVer = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_LATEST_SUB_VER, default,
                             (PARENT, documentId), (VERSION, latestVer));
@@ -82,10 +83,12 @@ namespace Haley.Utils {
                     }
                 }
 
-                var response = new VaultFileDetailsResponse { DocumentId = docRow.GetLong("document_id"), DocumentCuid = docRow.GetString("document_cuid") ?? string.Empty, DisplayName = docRow.GetString("display_name") ?? string.Empty, DocumentActorId = docRow.GetLong("document_actor_id"), WorkspaceId = docRow.GetLong("workspace_id"), WorkspaceCuid = request.Scope?.Workspace?.Cuid.ToString("N") ?? string.Empty, DirectoryId = docRow.GetLong("directory_id"), DirectoryCuid = docRow.GetString("directory_cuid") ?? string.Empty, DirectoryName = docRow.GetString("directory_name") ?? string.Empty, DirectoryActorId = docRow.GetLong("directory_actor_id"), DirectoryParentId = docRow.GetLong("directory_parent_id"), VersionCount = versionRows.Count, DocumentMetadata = docRow.GetString("doc_metadata") ?? string.Empty, HasThumbnail = hasThumb };
+                var deleteState = docRow.GetInt("delete_state");
+                var response = new VaultFileDetailsResponse { DocumentId = docRow.GetLong("document_id"), DocumentCuid = docRow.GetString("document_cuid") ?? string.Empty, DisplayName = docRow.GetString("display_name") ?? string.Empty, DocumentActorId = docRow.GetLong("document_actor_id"), WorkspaceId = docRow.GetLong("workspace_id"), WorkspaceCuid = request.Scope?.Workspace?.Cuid.ToString("N") ?? string.Empty, DirectoryId = docRow.GetLong("directory_id"), DirectoryCuid = docRow.GetString("directory_cuid") ?? string.Empty, DirectoryName = docRow.GetString("directory_name") ?? string.Empty, DirectoryActorId = docRow.GetLong("directory_actor_id"), DirectoryParentId = docRow.GetLong("directory_parent_id"), DeleteState = deleteState, IsDeleted = deleteState > 0, Deleted = docRow.GetDateTime("deleted"), VersionCount = versionRows.Count, DocumentMetadata = docRow.GetString("doc_metadata") ?? string.Empty, HasThumbnail = hasThumb };
 
                 foreach (var row in versionRows) {
-                    response.Versions.Add(new VaultFileVersionInfo { VersionId = row.GetLong("version_id"), VersionCuid = row.GetString("version_cuid") ?? string.Empty, VersionNumber = row.GetInt("version_no"), ActorId = row.GetLong("actor_id"), Created = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, Flags = row.GetInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at"), Metadata = row.GetString("metadata") ?? string.Empty });
+                    var versionDeleteState = row.GetInt("delete_state");
+                    response.Versions.Add(new VaultFileVersionInfo { VersionId = row.GetLong("version_id"), VersionCuid = row.GetString("version_cuid") ?? string.Empty, VersionNumber = row.GetInt("version_no"), ActorId = row.GetLong("actor_id"), DeleteState = versionDeleteState, IsDeleted = versionDeleteState > 0, Deleted = row.GetDateTime("deleted"), Created = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, Flags = row.GetInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at"), Metadata = row.GetString("metadata") ?? string.Empty });
                 }
 
                 return fb.SetStatus(true).SetResult(response);
@@ -122,13 +125,18 @@ namespace Haley.Utils {
             return (true, string.Empty, false, row.GetLong("id"), row.GetString("uid") ?? string.Empty, row.GetString("display_name") ?? string.Empty, row.GetLong("parent"));
         }
 
-        async Task<long> ResolveDocumentId(string moduleCuid, IVaultFileReadRequest request) {
+        async Task<long> ResolveDocumentId(string moduleCuid, IVaultFileReadRequest request, bool includeAll = false) {
             if (request?.File?.Id > 0) {
                 return await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.GET_DOCUMENT_ID_BY_VERSION_ID, default, (VALUE, request.File.Id)) ?? 0;
             }
 
             if (!string.IsNullOrWhiteSpace(request?.File?.Cuid)) {
                 return await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.GET_DOCUMENT_ID_BY_VERSION_CUID, default, (VALUE, ToDbCuid(request.File.Cuid))) ?? 0;
+            }
+
+            if (!string.IsNullOrWhiteSpace((request?.File as StorageFileRoute)?.RootCuid)) {
+                var rootCuid = ToDbCuid((request.File as StorageFileRoute).RootCuid);
+                return await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.DOCUMENT.EXISTS_BY_CUID_ALL : INSTANCE.DOCUMENT.GET_BY_CUID, default, (CUID, rootCuid)) ?? 0;
             }
 
             if (request?.Scope?.Workspace == null || request.Scope.Workspace.Cuid == Guid.Empty) return 0;

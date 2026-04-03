@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 
 namespace Haley.Models {
     /// <summary>
@@ -16,6 +17,9 @@ namespace Haley.Models {
         public string DirectoryName { get; set; } = string.Empty;
         public long DirectoryActorId { get; set; }
         public long DirectoryParentId { get; set; }
+        public int DeleteState { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? Deleted { get; set; }
         public int VersionCount { get; set; }
         /// <summary>Document-level metadata (from doc_info.metadata). Empty string if not set.</summary>
         public string DocumentMetadata { get; set; } = string.Empty;

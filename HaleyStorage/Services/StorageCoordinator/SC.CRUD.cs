@@ -217,11 +217,12 @@ namespace Haley.Services {
         // ─── Delete ───────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Soft-deletes the logical document identified by the supplied uid or ruid.
-        /// The DB row is marked deleted; physical archive movement happens later only when a
-        /// same-name reupload needs to free the active name slot.
+        /// Soft-deletes either a specific version (<c>uid</c>) or an entire logical document (<c>ruid</c>).
+        /// Version delete hides only that content version and any thumbnails attached to it.
+        /// Document delete hides the whole logical document. Physical archive movement happens later
+        /// only when a same-name reupload needs to free the active name slot.
         /// </summary>
-        public async Task<IFeedback> Delete(IVaultFileReadRequest input) {
+        public async Task<IFeedback> Delete(IVaultFileReadRequest input, bool hardDelete = false) {
             var feedback = new Feedback() { Status = false };
             if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
             if (input.ReadOnlyMode) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
@@ -229,14 +230,34 @@ namespace Haley.Services {
             if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
-            var deleteResult = await Indexer.SoftDeleteDocument(input);
-            feedback.Status = deleteResult?.Status == true;
-            feedback.Message = deleteResult?.Message ?? "Unable to delete the document.";
+
+            if (!string.IsNullOrWhiteSpace(input?.File?.Cuid)) {
+                var deleteResult = await Indexer.SoftDeleteVersion(input);
+                feedback.Status = deleteResult?.Status == true;
+                feedback.Message = deleteResult?.Message ?? "Unable to delete the version.";
+                if (feedback.Status && hardDelete && deleteResult?.Result != null) {
+                    await ArchiveDeletedVersionChain(input, deleteResult.Result, input.File.Cuid);
+                }
+                return feedback;
+            }
+
+            var docDeleteResult = await Indexer.SoftDeleteDocument(input);
+            feedback.Status = docDeleteResult?.Status == true;
+            feedback.Message = docDeleteResult?.Message ?? "Unable to delete the document.";
+            if (feedback.Status && hardDelete && docDeleteResult?.Result != null) {
+                await MoveDeletedDocumentFilesToArchive(input, docDeleteResult.Result);
+                var tombstoneFileName = BuildDeletedTombstoneFileName(docDeleteResult.Result);
+                var finalize = await Indexer.FinalizeDeletedDocumentArchive(input.Scope.Module.Cuid.ToString("N"), docDeleteResult.Result.DocumentId, tombstoneFileName);
+                if (finalize?.Status != true) {
+                    feedback.Status = false;
+                    feedback.Message = finalize?.Message ?? "Unable to finalize deleted document archive metadata.";
+                }
+            }
             return feedback;
         }
 
         /// <summary>
-        /// Restores a soft-deleted logical document identified by uid or ruid.
+        /// Restores either a soft-deleted version (<c>uid</c>) or a soft-deleted logical document (<c>ruid</c>).
         /// FileSystem-backed archived bytes are moved back before the DB flags are cleared.
         /// </summary>
         public async Task<IFeedback> Restore(IVaultFileReadRequest input) {
@@ -247,6 +268,34 @@ namespace Haley.Services {
             if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+
+            if (!string.IsNullOrWhiteSpace(input?.File?.Cuid)) {
+                var deletedVersion = await Indexer.GetDeletedVersion(input);
+                if (deletedVersion?.Status != true || deletedVersion.Result == null) {
+                    feedback.Message = deletedVersion?.Message ?? "Deleted version not found.";
+                    return feedback;
+                }
+
+                var versionReadiness = await EnsureDeletedVersionFilesAvailableForRestore(input, deletedVersion.Result, input.File.Cuid);
+                if (!versionReadiness.Status) return versionReadiness;
+
+                var target = deletedVersion.Result.Versions.FirstOrDefault(v => SameCuid(v.VersionCuid, input.File.Cuid));
+                if (target == null) {
+                    feedback.Message = "Deleted version not found.";
+                    return feedback;
+                }
+
+                var restoreVersionResult = await Indexer.RestoreDeletedVersion(
+                    input.Scope.Module.Cuid.ToString("N"),
+                    deletedVersion.Result.DocumentId,
+                    target.VersionId,
+                    target.VersionNumber,
+                    target.SubVersionNumber);
+
+                feedback.Status = restoreVersionResult?.Status == true;
+                feedback.Message = restoreVersionResult?.Message ?? "Unable to restore the version.";
+                return feedback;
+            }
 
             var deletedInfo = await Indexer.GetDeletedDocument(input);
             if (deletedInfo?.Status != true || deletedInfo.Result == null) {

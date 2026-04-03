@@ -11,6 +11,9 @@ namespace Haley.Models {
         public string VersionCuid { get; set; } = string.Empty;
         public int VersionNumber { get; set; }
         public long ActorId { get; set; }
+        public int DeleteState { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? Deleted { get; set; }
         public DateTime? Created { get; set; }
         public long? Size { get; set; }
         public string StorageName { get; set; } = string.Empty;
