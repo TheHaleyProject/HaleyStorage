@@ -124,6 +124,8 @@ namespace Haley.Utils {
                 var version = lifecycle.Versions.FirstOrDefault(v => SameCuid(v.VersionCuid, request.File.Cuid));
                 if (version == null || !version.IsDeleted)
                     return fb.SetMessage("Deleted version not found.");
+                if (version.DeleteState == 3)
+                    return fb.SetMessage("Purged versions cannot be restored.");
 
                 if (lifecycle.IsDeleted)
                     return fb.SetMessage("The logical document is deleted. Restore the document instead.");
@@ -149,6 +151,8 @@ namespace Haley.Utils {
                 var lifecycle = await GetDocumentLifecycleById(moduleCuid, documentId);
                 if (lifecycle == null || !lifecycle.IsDeleted)
                     return fb.SetMessage("Deleted document not found.");
+                if (lifecycle.DeleteState == 3)
+                    return fb.SetMessage("Purged documents cannot be restored.");
 
                 return fb.SetStatus(true).SetResult(lifecycle);
             } catch (Exception ex) {
@@ -247,7 +251,7 @@ namespace Haley.Utils {
             }
         }
 
-        public async Task<IFeedback> RestoreDeletedDocument(string moduleCuid, long documentId) {
+        public async Task<IFeedback> RestoreDeletedDocument(string moduleCuid, long documentId, bool force = false) {
             var fb = new Feedback();
             try {
                 if (string.IsNullOrWhiteSpace(moduleCuid) || documentId < 1)
@@ -257,16 +261,18 @@ namespace Haley.Utils {
 
                 var lifecycle = await GetDocumentLifecycleById(moduleCuid, documentId);
                 if (lifecycle == null || !lifecycle.IsDeleted)
-                    return fb.SetMessage("Deleted document not found.");
+                    return force
+                        ? await RestoreDocumentVersionsOnly(moduleCuid, documentId)
+                        : fb.SetMessage("Deleted document not found.");
+                if (lifecycle.DeleteState == 3)
+                    return fb.SetMessage("Purged documents cannot be restored.");
 
-                var parentDirectory = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.EXISTS_BY_ID, default, (VALUE, lifecycle.DirectoryId));
-                if (parentDirectory == null || parentDirectory.Count < 1)
-                    return fb.SetMessage("The original folder is deleted. Restore the folder first.");
+                if (!HasRestorableVersions(lifecycle))
+                    return fb.SetMessage("Deleted document has no restorable versions.");
 
-                var restoreNameId = lifecycle.OriginalNameStoreId ?? lifecycle.NameStoreId;
-                var activeConflict = await _agw.RowAsync(moduleCuid, INSTANCE.DOCUMENT.EXISTS, default, (PARENT, lifecycle.DirectoryId), (NAME, restoreNameId));
-                if (activeConflict != null && activeConflict.Count > 0)
-                    return fb.SetMessage("An active document with the same name already exists in the original folder.");
+                var restoreGuard = await EnsureDocumentRestoreCanProceed(moduleCuid, lifecycle);
+                if (!restoreGuard.Status)
+                    return fb.SetMessage(restoreGuard.Message);
 
                 var handler = _agw.GetTransactionHandler(moduleCuid);
                 using (handler?.Begin()) {
@@ -283,7 +289,7 @@ namespace Haley.Utils {
             }
         }
 
-        public async Task<IFeedback> RestoreDeletedVersion(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo) {
+        public async Task<IFeedback> RestoreDeletedVersion(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo, bool force = false) {
             var fb = new Feedback();
             try {
                 if (string.IsNullOrWhiteSpace(moduleCuid) || documentId < 1 || versionId < 1 || versionNo < 1)
@@ -296,6 +302,12 @@ namespace Haley.Utils {
                     return fb.SetMessage("Target document not found.");
                 if (lifecycle.IsDeleted)
                     return fb.SetMessage("The logical document is deleted. Restore the document instead.");
+
+                var target = lifecycle.Versions.FirstOrDefault(v => v.VersionId == versionId);
+                if (target == null || !target.IsDeleted)
+                    return fb.SetMessage("Deleted version not found.");
+                if (target.DeleteState == 3)
+                    return fb.SetMessage("Purged versions cannot be restored.");
 
                 var handler = _agw.GetTransactionHandler(moduleCuid);
                 using (handler?.Begin()) {
@@ -378,6 +390,132 @@ namespace Haley.Utils {
             }
         }
 
+        public async Task<IFeedback> RestoreDirectory(IVaultReadRequest request, bool force) {
+            var fb = new Feedback();
+            try {
+                if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.ReadOnlyMode) return fb.SetMessage("Cannot restore a directory in read-only mode.");
+                if (request.Scope?.Module == null || request.Scope.Module.Cuid == Guid.Empty)
+                    return fb.SetMessage("Module CUID is mandatory.");
+                if (request.Scope?.Workspace == null || request.Scope.Workspace.Cuid == Guid.Empty)
+                    return fb.SetMessage("Workspace CUID is mandatory.");
+
+                var moduleCuid = request.Scope.Module.Cuid.ToString("N");
+                var wsId = await ResolveWorkspaceId(request.Scope.Workspace.Cuid.ToString("N"));
+                if (wsId < 1) return fb.SetMessage("Workspace is not registered in the core index.");
+
+                var targetDirectory = await ResolveDirectoryForRestore(moduleCuid, request, wsId);
+                if (!targetDirectory.Status) return fb.SetMessage(targetDirectory.Message);
+
+                var targetRow = targetDirectory.Result;
+                var targetDeleteState = targetRow.GetInt("delete_state");
+                if (targetDeleteState == 3)
+                    return fb.SetMessage("Purged folders cannot be restored.");
+                if (targetDeleteState == 0 && !force)
+                    return fb.SetMessage("Directory is not deleted.");
+
+                if (targetRow.GetLong("parent") > 0) {
+                    var parentRow = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.EXISTS_BY_ID, default, (VALUE, targetRow.GetLong("parent")));
+                    if (parentRow == null || parentRow.Count < 1)
+                        return fb.SetMessage("The parent folder is deleted. Restore the parent first.");
+                }
+
+                if (!force) {
+                    var handler = _agw.GetTransactionHandler(moduleCuid);
+                    using (handler?.Begin()) {
+                        var load = new DbExecutionLoad(default, handler);
+                        await _agw.ExecAsync(moduleCuid, INSTANCE.DIRECTORY.RESTORE_BY_ID, load, (ID, targetRow.GetLong("id")));
+                    }
+                    return fb.SetStatus(true).SetMessage("Directory restored.");
+                }
+
+                var directoryRows = await CollectDirectoryRestoreTree(moduleCuid, wsId, targetRow.GetLong("id"));
+                var documents = await CollectRestorableDocuments(moduleCuid, directoryRows);
+
+                foreach (var document in documents.Where(d => IsRestorableDeleteState(d.DeleteState))) {
+                    var restoreGuard = await EnsureDocumentRestoreCanProceed(moduleCuid, document);
+                    if (!restoreGuard.Status)
+                        return fb.SetMessage(restoreGuard.Message);
+                }
+
+                var txnHandler = _agw.GetTransactionHandler(moduleCuid);
+                using (txnHandler?.Begin()) {
+                    var load = new DbExecutionLoad(default, txnHandler);
+
+                    foreach (var directoryRow in directoryRows) {
+                        if (IsRestorableDeleteState(directoryRow.GetInt("delete_state")))
+                            await _agw.ExecAsync(moduleCuid, INSTANCE.DIRECTORY.RESTORE_BY_ID, load, (ID, directoryRow.GetLong("id")));
+                    }
+
+                    foreach (var document in documents) {
+                        if (IsRestorableDeleteState(document.DeleteState)) {
+                            await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.RESTORE_NAME, load, (ID, document.DocumentId));
+                            await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.RESTORE_BY_ID, load, (ID, document.DocumentId));
+                        }
+
+                        if (HasRestorableVersions(document))
+                            await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.RESTORE_BY_PARENT, load, (PARENT, document.DocumentId));
+                    }
+                }
+
+                return fb.SetStatus(true).SetMessage("Directory restored.");
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                return fb.SetMessage(ex.Message);
+            }
+        }
+
+        internal async Task<IFeedback<DeletedDocumentInfo>> GetDocumentLifecycleForRestore(IVaultFileReadRequest request) {
+            var fb = new Feedback<DeletedDocumentInfo>();
+            try {
+                if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.Scope?.Module == null || request.Scope.Module.Cuid == Guid.Empty)
+                    return fb.SetMessage("Module CUID is mandatory.");
+
+                var moduleCuid = request.Scope.Module.Cuid.ToString("N");
+                var documentId = await ResolveDocumentIdForLifecycle(moduleCuid, request, includeDeleted: true);
+                if (documentId < 1) return fb.SetMessage("Unable to resolve the target document.");
+
+                var lifecycle = await GetDocumentLifecycleById(moduleCuid, documentId);
+                if (lifecycle == null)
+                    return fb.SetMessage("Unable to load the target document lifecycle.");
+                if (lifecycle.DeleteState == 3)
+                    return fb.SetMessage("Purged documents cannot be restored.");
+
+                return fb.SetStatus(true).SetResult(lifecycle);
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                return fb.SetMessage(ex.Message);
+            }
+        }
+
+        internal async Task<IFeedback<List<DeletedDocumentInfo>>> GetRestorableDocumentsForDirectory(IVaultReadRequest request) {
+            var fb = new Feedback<List<DeletedDocumentInfo>>();
+            try {
+                if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.Scope?.Module == null || request.Scope.Module.Cuid == Guid.Empty)
+                    return fb.SetMessage("Module CUID is mandatory.");
+                if (request.Scope?.Workspace == null || request.Scope.Workspace.Cuid == Guid.Empty)
+                    return fb.SetMessage("Workspace CUID is mandatory.");
+
+                var moduleCuid = request.Scope.Module.Cuid.ToString("N");
+                var wsId = await ResolveWorkspaceId(request.Scope.Workspace.Cuid.ToString("N"));
+                if (wsId < 1) return fb.SetMessage("Workspace is not registered in the core index.");
+
+                var targetDirectory = await ResolveDirectoryForRestore(moduleCuid, request, wsId);
+                if (!targetDirectory.Status) return fb.SetMessage(targetDirectory.Message);
+                if (targetDirectory.Result.GetInt("delete_state") == 3)
+                    return fb.SetMessage("Purged folders cannot be restored.");
+
+                var directoryRows = await CollectDirectoryRestoreTree(moduleCuid, wsId, targetDirectory.Result.GetLong("id"));
+                var documents = await CollectRestorableDocuments(moduleCuid, directoryRows);
+                return fb.SetStatus(true).SetResult(documents);
+            } catch (Exception ex) {
+                _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
+                return fb.SetMessage(ex.Message);
+            }
+        }
+
         async Task<long> ResolveDocumentIdForLifecycle(string moduleCuid, IVaultFileReadRequest request, bool includeDeleted) {
             if (request?.File?.Id > 0)
                 return await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.GET_DOCUMENT_ID_BY_VERSION_ID, default, (VALUE, request.File.Id)) ?? 0;
@@ -441,5 +579,106 @@ namespace Haley.Utils {
                 return lg == rg;
             return left.Equals(right, StringComparison.OrdinalIgnoreCase);
         }
+
+        async Task<IFeedback> RestoreDocumentVersionsOnly(string moduleCuid, long documentId) {
+            var fb = new Feedback();
+            var lifecycle = await GetDocumentLifecycleById(moduleCuid, documentId);
+            if (lifecycle == null)
+                return fb.SetMessage("Target document not found.");
+            if (lifecycle.DeleteState == 3)
+                return fb.SetMessage("Purged documents cannot be restored.");
+            if (!HasRestorableVersions(lifecycle))
+                return fb.SetStatus(true).SetMessage("Document is already active. No deleted versions found.");
+
+            var handler = _agw.GetTransactionHandler(moduleCuid);
+            using (handler?.Begin()) {
+                var load = new DbExecutionLoad(default, handler);
+                await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.RESTORE_BY_PARENT, load, (PARENT, documentId));
+            }
+
+            return fb.SetStatus(true).SetMessage("Deleted versions restored.");
+        }
+
+        async Task<IFeedback> EnsureDocumentRestoreCanProceed(string moduleCuid, DeletedDocumentInfo lifecycle) {
+            var fb = new Feedback();
+            if (lifecycle == null) return fb.SetMessage("Target document not found.");
+
+            var parentDirectory = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.EXISTS_BY_ID, default, (VALUE, lifecycle.DirectoryId));
+            if (parentDirectory == null || parentDirectory.Count < 1)
+                return fb.SetMessage("The original folder is deleted. Restore the folder first.");
+
+            var restoreNameId = lifecycle.OriginalNameStoreId ?? lifecycle.NameStoreId;
+            var activeConflict = await _agw.RowAsync(moduleCuid, INSTANCE.DOCUMENT.EXISTS, default, (PARENT, lifecycle.DirectoryId), (NAME, restoreNameId));
+            if (activeConflict != null && activeConflict.Count > 0)
+                return fb.SetMessage("An active document with the same name already exists in the original folder.");
+
+            return fb.SetStatus(true);
+        }
+
+        async Task<IFeedback<DbRow>> ResolveDirectoryForRestore(string moduleCuid, IVaultReadRequest request, long workspaceId) {
+            var fb = new Feedback<DbRow>();
+            var folderInfo = await ResolveFolderInfo(moduleCuid, request, workspaceId, includeAll: true);
+            if (!folderInfo.status) return fb.SetMessage(folderInfo.message);
+            if (folderInfo.isRoot) return fb.SetMessage("A non-root folder is required.");
+
+            var row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS_BY_ID_ALL, default, (VALUE, folderInfo.id));
+            if (row == null || row.Count < 1)
+                return fb.SetMessage("Folder not found.");
+            if (row.GetLong("workspace") != workspaceId)
+                return fb.SetMessage("Folder does not belong to the requested workspace.");
+
+            return fb.SetStatus(true).SetResult(row);
+        }
+
+        async Task<List<DbRow>> CollectDirectoryRestoreTree(string moduleCuid, long workspaceId, long rootDirectoryId) {
+            var rows = new List<DbRow>();
+            var queue = new Queue<long>();
+            var seen = new HashSet<long>();
+            queue.Enqueue(rootDirectoryId);
+
+            while (queue.Count > 0) {
+                var currentId = queue.Dequeue();
+                if (!seen.Add(currentId)) continue;
+
+                var row = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.GET_DETAILS_BY_ID_ALL, default, (VALUE, currentId));
+                if (row == null || row.Count < 1 || row.GetLong("workspace") != workspaceId) continue;
+
+                rows.Add(row);
+                if (row.GetInt("delete_state") == 3) continue;
+
+                var childDirs = await _agw.RowsAsync(moduleCuid, INSTANCE.DIRECTORY.GET_CHILD_IDS_ALL, default, (PARENT, currentId));
+                foreach (var child in childDirs) {
+                    var childId = child.GetLong("id");
+                    if (childId > 0) queue.Enqueue(childId);
+                }
+            }
+
+            return rows;
+        }
+
+        async Task<List<DeletedDocumentInfo>> CollectRestorableDocuments(string moduleCuid, IEnumerable<DbRow> directoryRows) {
+            var documents = new List<DeletedDocumentInfo>();
+
+            foreach (var directoryRow in directoryRows.Where(r => r.GetInt("delete_state") != 3)) {
+                var childDocs = await _agw.RowsAsync(moduleCuid, INSTANCE.DOCUMENT.GET_IDS_BY_PARENT_ALL, default, (PARENT, directoryRow.GetLong("id")));
+                foreach (var docRow in childDocs) {
+                    var documentId = docRow.GetLong("id");
+                    if (documentId < 1) continue;
+
+                    var lifecycle = await GetDocumentLifecycleById(moduleCuid, documentId);
+                    if (lifecycle == null || lifecycle.DeleteState == 3) continue;
+                    if (IsRestorableDeleteState(lifecycle.DeleteState) || HasRestorableVersions(lifecycle))
+                        documents.Add(lifecycle);
+                }
+            }
+
+            return documents
+                .GroupBy(d => d.DocumentId)
+                .Select(g => g.First())
+                .ToList();
+        }
+
+        static bool IsRestorableDeleteState(int deleteState) => deleteState == 1 || deleteState == 2;
+        static bool HasRestorableVersions(DeletedDocumentInfo lifecycle) => lifecycle?.Versions?.Any(v => IsRestorableDeleteState(v.DeleteState)) == true;
     }
 }

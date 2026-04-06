@@ -48,9 +48,10 @@ namespace Haley.Services {
         Task<IFeedback<DeletedDocumentInfo>> GetDeletedDocumentByName(IVaultReadRequest request, string fileName);
         Task<IFeedback> FinalizeDeletedDocumentArchive(string moduleCuid, long documentId, string tombstoneFileName);
         Task<IFeedback> FinalizeDeletedVersionArchive(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo);
-        Task<IFeedback> RestoreDeletedVersion(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo);
-        Task<IFeedback> RestoreDeletedDocument(string moduleCuid, long documentId);
+        Task<IFeedback> RestoreDeletedVersion(string moduleCuid, long documentId, long versionId, int versionNo, int subVersionNo, bool force = false);
+        Task<IFeedback> RestoreDeletedDocument(string moduleCuid, long documentId, bool force = false);
         Task<IFeedback> SoftDeleteDirectory(IVaultReadRequest request, bool recursive);
+        Task<IFeedback> RestoreDirectory(IVaultReadRequest request, bool force);
         Task EnsureValidation();
         bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
         bool TryAddInfo(IVaultObject dirInfo, bool replace = false);

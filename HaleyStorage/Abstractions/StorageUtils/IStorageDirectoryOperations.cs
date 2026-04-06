@@ -19,6 +19,7 @@ namespace Haley.Abstractions {
         Task<IFeedback<VaultFileDetailsResponse>> GetFileDetails(IVaultFileReadRequest input);
         Task<IVaultResponse> CreateDirectory(IVaultReadRequest input, string rawname);
         Task<IFeedback> DeleteDirectory(IVaultReadRequest input, bool recursive);
+        Task<IFeedback> RestoreDirectory(IVaultReadRequest input, bool force = false);
     
     }
 }

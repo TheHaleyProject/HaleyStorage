@@ -4,6 +4,7 @@ using Haley.Models;
 using Haley.Utils;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 
 namespace Haley.Services {
 
@@ -260,7 +261,7 @@ namespace Haley.Services {
         /// Restores either a soft-deleted version (<c>uid</c>) or a soft-deleted logical document (<c>ruid</c>).
         /// FileSystem-backed archived bytes are moved back before the DB flags are cleared.
         /// </summary>
-        public async Task<IFeedback> Restore(IVaultFileReadRequest input) {
+        public async Task<IFeedback> Restore(IVaultFileReadRequest input, bool force = false) {
             var feedback = new Feedback() { Status = false };
             if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
             if (input?.ReadOnlyMode == true) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
@@ -290,23 +291,28 @@ namespace Haley.Services {
                     deletedVersion.Result.DocumentId,
                     target.VersionId,
                     target.VersionNumber,
-                    target.SubVersionNumber);
+                    target.SubVersionNumber,
+                    force);
 
                 feedback.Status = restoreVersionResult?.Status == true;
                 feedback.Message = restoreVersionResult?.Message ?? "Unable to restore the version.";
                 return feedback;
             }
 
-            var deletedInfo = await Indexer.GetDeletedDocument(input);
-            if (deletedInfo?.Status != true || deletedInfo.Result == null) {
-                feedback.Message = deletedInfo?.Message ?? "Deleted document not found.";
+            IFeedback<DeletedDocumentInfo> documentInfo = await Indexer.GetDeletedDocument(input);
+            if ((documentInfo?.Status != true || documentInfo.Result == null) && force && Indexer is MariaDBIndexing mdIndexer) {
+                documentInfo = await mdIndexer.GetDocumentLifecycleForRestore(input);
+            }
+
+            if (documentInfo?.Status != true || documentInfo.Result == null) {
+                feedback.Message = documentInfo?.Message ?? "Deleted document not found.";
                 return feedback;
             }
 
-            var readiness = await EnsureDeletedDocumentFilesAvailableForRestore(input, deletedInfo.Result);
+            var readiness = await EnsureDeletedDocumentFilesAvailableForRestore(input, documentInfo.Result);
             if (!readiness.Status) return readiness;
 
-            var restoreResult = await Indexer.RestoreDeletedDocument(input.Scope.Module.Cuid.ToString("N"), deletedInfo.Result.DocumentId);
+            var restoreResult = await Indexer.RestoreDeletedDocument(input.Scope.Module.Cuid.ToString("N"), documentInfo.Result.DocumentId, force);
             feedback.Status = restoreResult?.Status == true;
             feedback.Message = restoreResult?.Message ?? "Unable to restore the document.";
             return feedback;
@@ -397,6 +403,40 @@ namespace Haley.Services {
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
             return await Indexer.SoftDeleteDirectory(input, recursive);
+        }
+
+        /// <summary>
+        /// Restores a virtual directory. With <paramref name="force"/> enabled, recursively restores
+        /// child directories and all restorable documents/versions under the subtree.
+        /// </summary>
+        public async Task<IFeedback> RestoreDirectory(IVaultReadRequest input, bool force = false) {
+            var feedback = new Feedback() { Status = false };
+            if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
+            if (input?.ReadOnlyMode == true) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
+            if (Indexer == null) { feedback.Message = "RestoreDirectory requires an indexer."; return feedback; }
+            if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
+
+            input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+
+            if (force) {
+                if (Indexer is not MariaDBIndexing mdIndexer) {
+                    feedback.Message = "Force restore requires a MariaDB-backed indexer.";
+                    return feedback;
+                }
+
+                var plan = await mdIndexer.GetRestorableDocumentsForDirectory(input);
+                if (plan?.Status != true) {
+                    feedback.Message = plan?.Message ?? "Unable to prepare the directory restore plan.";
+                    return feedback;
+                }
+
+                foreach (var document in plan.Result ?? Enumerable.Empty<DeletedDocumentInfo>()) {
+                    var readiness = await EnsureDeletedDocumentFilesAvailableForRestore(input, document);
+                    if (!readiness.Status) return readiness;
+                }
+            }
+
+            return await Indexer.RestoreDirectory(input, force);
         }
 
         // ─── Revision backup helper ───────────────────────────────────────────

@@ -31,7 +31,7 @@ namespace Haley.Services {
             try {
                 var pendingMoves = new List<(string source, string target)>();
 
-                foreach (var version in document.Versions) {
+                foreach (var version in GetRestorableVersions(document.Versions)) {
                     await CollectRestoreMovesForRef(request, version.ProfileInfoId ?? 0, version.StorageRef, usePrimaryProvider: true, pendingMoves);
                     await CollectRestoreMovesForRef(request, version.ProfileInfoId ?? 0, version.StagingRef, usePrimaryProvider: false, pendingMoves);
                 }
@@ -53,11 +53,15 @@ namespace Haley.Services {
                 var target = FindDeletedVersion(document, targetVersionCuid);
                 if (target == null)
                     return feedback.SetMessage("Deleted version not found.");
+                if (!IsRestorableDeleteState(target.DeleteState))
+                    return feedback.SetMessage(target.DeleteState == 3
+                        ? "Purged versions cannot be restored."
+                        : "Deleted version not found.");
 
                 var pendingMoves = new List<(string source, string target)>();
                 var versionsToRestore = target.SubVersionNumber == 0
-                    ? document.Versions.Where(v => v.VersionNumber == target.VersionNumber).ToList()
-                    : document.Versions.Where(v => v.VersionId == target.VersionId).ToList();
+                    ? GetRestorableVersions(document.Versions).Where(v => v.VersionNumber == target.VersionNumber).ToList()
+                    : GetRestorableVersions(document.Versions).Where(v => v.VersionId == target.VersionId).ToList();
 
                 foreach (var version in versionsToRestore) {
                     await CollectRestoreMovesForRef(request, version.ProfileInfoId ?? 0, version.StorageRef, usePrimaryProvider: true, pendingMoves);
@@ -176,6 +180,11 @@ namespace Haley.Services {
 
         static DeletedDocumentVersionInfo FindDeletedVersion(DeletedDocumentInfo document, string targetVersionCuid)
             => document?.Versions?.FirstOrDefault(v => SameCuid(v.VersionCuid, targetVersionCuid));
+
+        static bool IsRestorableDeleteState(int deleteState) => deleteState == 1 || deleteState == 2;
+
+        static IEnumerable<DeletedDocumentVersionInfo> GetRestorableVersions(IEnumerable<DeletedDocumentVersionInfo> versions)
+            => versions?.Where(v => IsRestorableDeleteState(v.DeleteState)) ?? Enumerable.Empty<DeletedDocumentVersionInfo>();
 
         static async Task MoveFileWithOverwrite(string sourcePath, string targetPath) {
             var targetDir = Path.GetDirectoryName(targetPath);

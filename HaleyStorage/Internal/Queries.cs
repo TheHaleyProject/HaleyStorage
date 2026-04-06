@@ -195,6 +195,7 @@ namespace Haley.Internal {
                        limit {LIMIT_ROWS} offset {OFFSET_ROWS};";
                 public const string GET_CHILD_IDS_ALL = $@"select dir.id from directory as dir where dir.parent = {PARENT};";
                 public const string SOFT_DELETE_BY_ID = $@"update directory set delete_state = 1, deleted = {DELETED} where id = {ID};";
+                public const string RESTORE_BY_ID = $@"update directory set delete_state = 0, deleted = null where id = {ID} and delete_state in (1,2);";
 
                 public const string GET_BY_DOC_VERSION_CUID =
                     $@"select dir.display_name, dir.cuid, dir.name
@@ -291,9 +292,9 @@ namespace Haley.Internal {
                          where dv.delete_state = 0;";
                 public const string GET_IDS_BY_PARENT_ALL = $@"select doc.id from document as doc where doc.parent = {PARENT};";
                 public const string SOFT_DELETE_BY_ID = $@"update document set delete_state = 1, deleted = {DELETED} where id = {ID};";
-                public const string RESTORE_BY_ID = $@"update document set delete_state = 0, deleted = null where id = {ID};";
+                public const string RESTORE_BY_ID = $@"update document set delete_state = 0, deleted = null where id = {ID} and delete_state in (1,2);";
                 public const string ARCHIVE_RENAME = $@"update document set name = {NAME}, original_name = case when original_name is null then {ORIGINAL_NAME} else original_name end, delete_state = 2 where id = {ID} and delete_state > 0;";
-                public const string RESTORE_NAME = $@"update document set name = coalesce(original_name, name), original_name = null where id = {ID} and delete_state > 0;";
+                public const string RESTORE_NAME = $@"update document set name = coalesce(original_name, name), original_name = null where id = {ID} and delete_state in (1,2);";
             }
             
             public class DOCVERSION {
@@ -403,9 +404,9 @@ namespace Haley.Internal {
                 public const string ARCHIVE_BY_VERSION = $@"update doc_version set delete_state = 2 where parent = {PARENT} and ver = {VERSION} and delete_state > 0;";
                 public const string ARCHIVE_BY_ID = $@"update doc_version set delete_state = 2 where id = {ID} and delete_state > 0;";
                 public const string ARCHIVE_BY_PARENT = $@"update doc_version set delete_state = 2 where parent = {PARENT} and delete_state > 0;";
-                public const string RESTORE_BY_VERSION = $@"update doc_version set delete_state = 0, deleted = null where parent = {PARENT} and ver = {VERSION} and delete_state > 0;";
-                public const string RESTORE_BY_ID = $@"update doc_version set delete_state = 0, deleted = null where id = {ID} and delete_state > 0;";
-                public const string RESTORE_BY_PARENT = $@"update doc_version set delete_state = 0, deleted = null where parent = {PARENT};";
+                public const string RESTORE_BY_VERSION = $@"update doc_version set delete_state = 0, deleted = null where parent = {PARENT} and ver = {VERSION} and delete_state in (1,2);";
+                public const string RESTORE_BY_ID = $@"update doc_version set delete_state = 0, deleted = null where id = {ID} and delete_state in (1,2);";
+                public const string RESTORE_BY_PARENT = $@"update doc_version set delete_state = 0, deleted = null where parent = {PARENT} and delete_state in (1,2);";
 
                 // ── Thumbnail queries ─────────────────────────────────────────────────
 
