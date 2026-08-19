@@ -15,10 +15,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
--- Dumping database structure for dss_core
-CREATE DATABASE IF NOT EXISTS `dss_core` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
-USE `dss_core`;
-
 -- Dumping structure for table dss_core.client
 CREATE TABLE IF NOT EXISTS `client` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Auto-increment surrogate key.',
@@ -47,6 +43,7 @@ CREATE TABLE IF NOT EXISTS `client_keys` (
 -- Data exporting was unselected.
 
 -- Dumping structure for procedure dss_core.DropDatabasesWithPrefix
+DROP PROCEDURE IF EXISTS `DropDatabasesWithPrefix`;
 DELIMITER //
 CREATE PROCEDURE `DropDatabasesWithPrefix`(IN prefix VARCHAR(100))
 BEGIN
@@ -82,6 +79,7 @@ END//
 DELIMITER ;
 
 -- Dumping structure for procedure dss_core.FixCollationsWithPrefix
+DROP PROCEDURE IF EXISTS `FixCollationsWithPrefix`;
 DELIMITER //
 CREATE PROCEDURE `FixCollationsWithPrefix`(IN prefix VARCHAR(100))
 BEGIN

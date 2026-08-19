@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <HaleyStorageDatabaseRoot Condition="'$(HaleyStorageDatabaseRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\_RESOURCES'))</HaleyStorageDatabaseRoot>
+    <HaleyStorageDatabaseSource>$(HaleyStorageDatabaseRoot)</HaleyStorageDatabaseSource>
+  </PropertyGroup>
+
+  <Target Name="ValidateHaleyStorageDatabaseSource" BeforeTargets="BeforeBuild" Condition="'$(DesignTimeBuild)' != 'true'">
+    <Error Condition="!Exists('$(HaleyStorageDatabaseSource)\dsscore.sql')" Text="Haley.Storage core database source was not found at '$(HaleyStorageDatabaseSource)\dsscore.sql'. Restore HaleyStorage/_RESOURCES or set HaleyStorageDatabaseRoot." />
+    <Error Condition="!Exists('$(HaleyStorageDatabaseSource)\dssclient.sql')" Text="Haley.Storage client database source was not found at '$(HaleyStorageDatabaseSource)\dssclient.sql'. Restore HaleyStorage/_RESOURCES or set HaleyStorageDatabaseRoot." />
+  </Target>
+
+  <ItemGroup Condition="Exists('$(HaleyStorageDatabaseSource)\dsscore.sql') And Exists('$(HaleyStorageDatabaseSource)\dssclient.sql')">
+    <EmbeddedResource Include="$(HaleyStorageDatabaseSource)\dsscore.sql" Link="Scripts\dsscore.sql" LogicalName="Haley.Scripts.dsscore.sql" />
+    <EmbeddedResource Include="$(HaleyStorageDatabaseSource)\dssclient.sql" Link="Scripts\dssclient.sql" LogicalName="Haley.Scripts.dssclient.sql" />
+  </ItemGroup>
+</Project>

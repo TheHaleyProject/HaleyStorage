@@ -15,10 +15,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
--- Dumping database structure for dss_client
-CREATE DATABASE IF NOT EXISTS `dss_client` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */;
-USE `dss_client`;
-
 -- Dumping structure for table dss_client.chunked_files
 CREATE TABLE IF NOT EXISTS `chunked_files` (
   `id` bigint(20) NOT NULL COMMENT 'FK → doc_version.id. Identifies which upload session this chunk belongs to. Part of the composite PK.',

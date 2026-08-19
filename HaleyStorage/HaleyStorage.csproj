@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\..\HaleyProject\HaleyVersion.Props" />
+  <Import Project="Database\Database.Source.props" />
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -27,12 +28,10 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
-    <EmbeddedResource Include="..\_RESOURCES\dssclient.sql" Link="Scripts\dssclient.sql" />
-    <EmbeddedResource Include="..\_RESOURCES\dsscore.sql" Link="Scripts\dsscore.sql" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="9.0.9" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.10" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -74,6 +73,21 @@
     <Otherwise>
       <ItemGroup>
         <PackageReference Include="Haley.Helpers" Version="$(HaleyHelpersVersion)" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+  <Choose>
+    <When Condition="Exists($(HaleyHelpersDB))">
+      <ItemGroup>
+        <ProjectReference Include="$(HaleyHelpersDB)\HaleyHelpersDB.csproj">
+          <Name>HaleyHelpersDB</Name>
+        </ProjectReference>
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PackageReference Include="Haley.Helpers.DB" Version="$(HaleyHelpersDBVersion)" />
       </ItemGroup>
     </Otherwise>
   </Choose>

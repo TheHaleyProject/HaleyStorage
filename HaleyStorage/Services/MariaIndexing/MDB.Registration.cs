@@ -170,13 +170,12 @@ namespace Haley.Utils {
         /// </summary>
         async Task<IFeedback> CreateCoreDB() {
             //var toReplace = new Dictionary<string, string> { ["lifecycle_state"] = }
-               return await _agw.CreateDatabase(new DbCreationArgs(_key) {
+               return await _agw.BootstrapDatabaseAsync(new DatabaseBootstrapArgs(_key) {
                    ContentProcessor = (content, dbname) => {
                        return content.Replace(DB_CORE_SEARCH_TERM, dbname);
                    },
-                   FallBackDBName = DB_CORE_FALLBACK_NAME,
-                   SQLContent = Encoding.UTF8.GetString(ResourceUtils.GetEmbeddedResource(EMBEDDED_DBCORE_FILE))
-                   //SQLPath = Path.Combine(AssemblyUtils.GetBaseDirectory(), DB_SQL_FILE_LOCATION, DB_CORE_SQL_FILE) 
+                   FallbackDatabaseName = DB_CORE_FALLBACK_NAME,
+                   SqlContent = Encoding.UTF8.GetString(ResourceUtils.GetEmbeddedResource(EMBEDDED_DBCORE_FILE))
                });
         }
 
@@ -190,14 +189,16 @@ namespace Haley.Utils {
             if (string.IsNullOrWhiteSpace(info.DatabaseName)) info.DatabaseName = $@"{DB_MODULE_NAME_PREFIX}{info.Cuid.ToString("N")}";
             //So, when we create the module, we use the cuid as the database name.
             //TODO : IF A CUID IS CHANGED, THEN WE NEED TO UPDATE THE DATABASE NAME IN THE DB.
-            await _agw.CreateDatabase(new DbCreationArgs(info.Cuid.ToString("N")) { 
+            var result = await _agw.BootstrapDatabaseAsync(new DatabaseBootstrapArgs(info.Cuid.ToString("N")) {
                 ContentProcessor = (content, dbname) => {
                     return content.Replace(DB_CLIENT_SEARCH_TERM, dbname); },
-                FallBackDBName = info.DatabaseName, 
-                DBName = info.DatabaseName,
-                SQLContent = Encoding.UTF8.GetString(ResourceUtils.GetEmbeddedResource(EMBEDDED_DBCLIENT_FILE)),
-                //SQLPath = Path.Combine(AssemblyUtils.GetBaseDirectory(), DB_SQL_FILE_LOCATION, DB_CLIENT_SQL_FILE), 
-                CloningAdapterKey = _key });
+                FallbackDatabaseName = info.DatabaseName,
+                DatabaseName = info.DatabaseName,
+                SqlContent = Encoding.UTF8.GetString(ResourceUtils.GetEmbeddedResource(EMBEDDED_DBCLIENT_FILE)),
+                CloningAdapterKey = _key }).ConfigureAwait(false);
+            if (result is null || !result.Status)
+                throw new InvalidOperationException(
+                    result?.Message ?? $"Unable to initialize module database '{info.DatabaseName}'.");
         }
     }
 }
