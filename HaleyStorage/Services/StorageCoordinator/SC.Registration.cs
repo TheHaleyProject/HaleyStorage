@@ -45,9 +45,15 @@ namespace Haley.Services {
             var result = new Feedback(true, $"Client {client.DisplayName} is registered");
             if (Indexer == null || !WriteMode) return result;
             var idxResult = await Indexer.RegisterClient(clientInfo);
+            if (idxResult?.Status != true)
+                return result.SetStatus(false).SetMessage(idxResult?.Message ?? $"Unable to register client {client.DisplayName}.");
             result.Result = idxResult.Result;
 
-            if (addDefaultModule) await RegisterModule(client_name: client.DisplayName);
+            if (addDefaultModule) {
+                var moduleResult = await RegisterModule(client_name: client.DisplayName);
+                if (moduleResult?.Status != true)
+                    return result.SetStatus(false).SetMessage(moduleResult?.Message ?? "Unable to register the default module.");
+            }
 
             return result;
         }
@@ -65,7 +71,29 @@ namespace Haley.Services {
             var result = new Feedback(true, $"Module {module.DisplayName} is registered");
             if (Indexer == null || !WriteMode) return result;
             var idxResult = await Indexer.RegisterModule(moduleInfo);
+            if (idxResult?.Status != true)
+                return result.SetStatus(false).SetMessage(idxResult?.Message ?? $"Unable to register module {module.DisplayName}.");
             result.Result = idxResult.Result;
+
+            // Modules registered at runtime must inherit the persisted default provider profile.
+            await EnsureModulesHaveDefaultProfileAsync();
+
+            // A missing w always maps to the virtual default workspace. Ensure it exists without
+            // updating an existing workspace's immutable naming or routing configuration.
+            var defaultWorkspaceCuid = StorageUtils.GenerateCuid(client.Name, module.Name, VaultConstants.DEFAULT_NAME);
+            var hasDefaultWorkspace = Indexer.TryGetComponentInfo<VaultWorkSpace>(defaultWorkspaceCuid, out _)
+                || await Indexer.HydrateWorkspaceAsync(defaultWorkspaceCuid);
+            if (!hasDefaultWorkspace) {
+                var workspaceResult = await RegisterWorkSpace(
+                    VaultConstants.DEFAULT_NAME,
+                    client.DisplayName,
+                    module.DisplayName,
+                    VaultNameMode.Number,
+                    VaultNameParseMode.Generate,
+                    is_virtual: true);
+                if (workspaceResult?.Status != true)
+                    return result.SetStatus(false).SetMessage(workspaceResult?.Message ?? "Unable to register the default workspace.");
+            }
 
             return result;
         }
@@ -125,6 +153,8 @@ namespace Haley.Services {
 
             if (Indexer == null || !WriteMode || !result.Status) return result;
             var idxResult = await Indexer.RegisterWorkspace(wsInfo);
+            if (idxResult?.Status != true)
+                return result.SetStatus(false).SetMessage(idxResult?.Message ?? $"Unable to register workspace {wspace.DisplayName}.");
             result.Result = idxResult.Result;
             return result;
         }
@@ -149,38 +179,55 @@ namespace Haley.Services {
                 var clients = new List<string>();
                 var modules = new List<string>();
                 var wspaces = new List<string>();
+                var failures = new List<string>();
 
                 foreach (var source in sourceList) {
                     if (string.IsNullOrWhiteSpace(source.Client)) continue;
                     var cliKey = source.Client.ToDBName();
                     if (!clients.Contains(cliKey)) {
-                        if (!(await RegisterClient(source.Client, source.Password)).Status) continue;
+                        var clientResult = await RegisterClient(source.Client, source.Password);
+                        if (clientResult?.Status != true) {
+                            failures.Add(clientResult?.Message ?? $"Unable to register client '{source.Client}'.");
+                            continue;
+                        }
                         clients.Add(cliKey);
                     }
 
                     if (string.IsNullOrWhiteSpace(source.Module)) continue;
                     var modKey = $"{cliKey}_{source.Module.ToDBName()}";
                     if (!modules.Contains(modKey)) {
-                        if (!(await RegisterModule(source.Module, source.Client)).Status) continue;
+                        var moduleResult = await RegisterModule(source.Module, source.Client);
+                        if (moduleResult?.Status != true) {
+                            failures.Add(moduleResult?.Message ?? $"Unable to register module '{source.Module}'.");
+                            continue;
+                        }
                         modules.Add(modKey);
                     }
 
                     if (string.IsNullOrWhiteSpace(source.Workspace)) {
-                       await RegisterWorkSpace(null, source.Client, source.Module, source.Control,source.Parse,providerKey:source.ProviderKey, caseSensitive: source.CaseSensitive);
+                        var workspaceResult = await RegisterWorkSpace(null, source.Client, source.Module, source.Control, source.Parse, providerKey: source.ProviderKey, caseSensitive: source.CaseSensitive);
+                        if (workspaceResult?.Status != true)
+                            failures.Add(workspaceResult?.Message ?? $"Unable to register the default workspace for '{source.Client}/{source.Module}'.");
                         continue;
                     }
                     var wsKey = $"{modKey}_{source.Workspace.ToDBName()}";
                     if (!wspaces.Contains(wsKey)) {
-                        if (!(await RegisterWorkSpace(source.Workspace, source.Client, source.Module, source.Control, source.Parse, source.IsVirtual, source.ProviderKey, source.CaseSensitive)).Status) continue;
+                        var workspaceResult = await RegisterWorkSpace(source.Workspace, source.Client, source.Module, source.Control, source.Parse, source.IsVirtual, source.ProviderKey, source.CaseSensitive);
+                        if (workspaceResult?.Status != true) {
+                            failures.Add(workspaceResult?.Message ?? $"Unable to register workspace '{source.Workspace}'.");
+                            continue;
+                        }
                         wspaces.Add(wsKey);
                     }
                 }
 
                 await InitializePersistedRegistryState();
 
+                if (failures.Count > 0)
+                    return result.SetStatus(false).SetMessage(string.Join(Environment.NewLine, failures.Distinct()));
                 return result.SetStatus(true).SetMessage("Successfully registered.");
             } catch (Exception ex) {
-                return new Feedback().SetMessage(ex.StackTrace);
+                return new Feedback(false, ex.Message);
             }
         }
 

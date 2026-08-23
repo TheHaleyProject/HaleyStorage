@@ -53,10 +53,10 @@ namespace Haley.Models {
             return true;
         }
 
-        /// <summary>Derives the <see cref="VaultObject.Cuid"/> from <see cref="DisplayName"/> alone (single-component hash).</summary>
+        /// <summary>Derives the <see cref="VaultObject.Cuid"/> from the normalized <see cref="Name"/> alone.</summary>
         protected virtual void GenerateCuid() {
-            if (!string.IsNullOrWhiteSpace(DisplayName)) {
-                var cuidStr = StorageUtils.GenerateCuid(DisplayName);
+            if (!string.IsNullOrWhiteSpace(Name)) {
+                var cuidStr = StorageUtils.GenerateCuid(Name);
                 if (System.Guid.TryParse(cuidStr, out var g)) Cuid = g;
             }
         }

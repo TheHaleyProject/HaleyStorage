@@ -162,7 +162,19 @@ namespace Haley.Utils {
                 wsId = await _agw.ScalarAsync<long?>(_key, WORKSPACE.EXISTS_BY_CUID, default, (CUID, wsCuid));
                 if (wsId == null || !wsId.HasValue) throw new ArgumentException($@"Workspace {info.Name} with CUID {wsCuid} was not created. Please check..");
             }
-            return await ValidateAndCache(WORKSPACE.EXISTS_BY_CUID, "Workspace", info, null, (CUID, wsCuid));
+            var result = await ValidateAndCache(WORKSPACE.EXISTS_BY_CUID, "Workspace", info, null, (CUID, wsCuid));
+            if (result.Status) {
+                // Registration can update structural workspace settings. Refresh those values immediately,
+                // while retaining any independently configured storage profile already held in memory.
+                if (TryGetComponentInfo<VaultWorkSpace>(wsCuid, out var cached)) {
+                    info.StorageProviderKey = cached.StorageProviderKey;
+                    info.StagingProviderKey = cached.StagingProviderKey;
+                    info.ProfileMode = cached.ProfileMode;
+                    info.ProfileInfoId = cached.ProfileInfoId;
+                }
+                TryAddInfo(info, replace: true);
+            }
+            return result;
         }
         /// <summary>
         /// Creates the core <c>dss_core</c> schema from the <c>dsscore.sql</c> template if it does not already exist.

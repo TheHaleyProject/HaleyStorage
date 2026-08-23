@@ -17,17 +17,17 @@ namespace Haley.Models {
         [ConfigurationKeyName("splitnum")]
         public int SplitLengthNumber { get; set; } = 2;
 
-        /// <summary>Maximum sharding depth for numeric IDs; 0 means a single flat level (default 0). JSON: <c>depthnum</c></summary>
+        /// <summary>Maximum sharding depth for numeric IDs; 0 consumes the complete ID in split-length segments (default 0). JSON: <c>depthnum</c></summary>
         [ConfigurationKeyName("depthnum")]
         public int DepthNumber { get; set; } = 0;
 
-        /// <summary>Number of characters taken from a hash/GUID for each sharding level (default 2). JSON: <c>splithash</c></summary>
+        /// <summary>Number of characters taken from a hash/GUID for each sharding level (default 1). JSON: <c>splithash</c></summary>
         [ConfigurationKeyName("splithash")]
-        public int SplitLengthHash { get; set; } = 2;
+        public int SplitLengthHash { get; set; } = 1;
 
-        /// <summary>Maximum sharding depth for hash/GUID IDs (default 7). JSON: <c>depthhash</c></summary>
+        /// <summary>Maximum sharding depth for hash/GUID IDs (default 8). JSON: <c>depthhash</c></summary>
         [ConfigurationKeyName("depthhash")]
-        public int DepthHash { get; set; } = 7;
+        public int DepthHash { get; set; } = 8;
 
         /// <summary>
         /// Number of revision backup copies to keep when a FileSystem file is overwritten.
