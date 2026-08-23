@@ -11,6 +11,7 @@ namespace Haley.Abstractions {
         Task<IFeedback> RegisterClient(string client_name = null, string password = null, bool addDefaultModule = false);
         Task<IFeedback> RegisterModule(string module_name = null, string client_name = null); //If a client is not registered, we register it against "Default"
         Task<IFeedback> RegisterWorkSpace(string workspace_name = null, string client_name = null, string module_name = null, VaultNameMode content_control = VaultNameMode.Number, VaultNameParseMode content_pmode = VaultNameParseMode.Generate, bool? is_virtual = null, string providerKey = null, bool caseSensitive = false);
+        Task<IFeedback> ChangeWorkspaceType(string workspace_name, string client_name, string module_name, bool is_virtual, bool force = false);
         Task<IFeedback> EnsureFileSystemPaths(string client_name, string module_name);
 
         Task<IFeedback> RegisterClient(IVaultObject client, string password = null, bool addDefaultModule = false);

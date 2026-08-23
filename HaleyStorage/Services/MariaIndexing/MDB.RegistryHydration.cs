@@ -57,9 +57,9 @@ namespace Haley.Utils {
         /// Loads a workspace and its parent module from the persisted registry after a cache miss.
         /// This allows storage and admin processes to share registry changes without seed duplication.
         /// </summary>
-        public async Task<bool> HydrateWorkspaceAsync(string workspaceCuid) {
+        public async Task<bool> HydrateWorkspaceAsync(string workspaceCuid, bool forceRefresh = false) {
             if (string.IsNullOrWhiteSpace(workspaceCuid)) return false;
-            if (TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)) return true;
+            if (!forceRefresh && TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)) return true;
 
             await EnsureValidation();
             var row = await _agw.RowAsync(_key, WORKSPACE.GET_BY_CUID, default, (CUID, workspaceCuid));

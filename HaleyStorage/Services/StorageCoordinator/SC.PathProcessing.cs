@@ -5,6 +5,7 @@ using Haley.Utils;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Data.Common;
+using System.Threading;
 using System.Threading.Tasks;
 using static Haley.Internal.IndexingQueries;
 
@@ -16,6 +17,9 @@ namespace Haley.Services {
     /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
         ConcurrentDictionary<string, string> _pathCache = new ConcurrentDictionary<string, string>();
+        ConcurrentDictionary<string, DateTime> _workspaceRegistryRefresh = new ConcurrentDictionary<string, DateTime>();
+        ConcurrentDictionary<string, SemaphoreSlim> _workspaceRegistryRefreshLocks = new ConcurrentDictionary<string, SemaphoreSlim>();
+        static readonly TimeSpan WorkspaceRegistryRefreshInterval = TimeSpan.FromSeconds(5);
 
         // ─────────────────────────────────────────────────────────────────────
         // Public entry point
@@ -513,8 +517,34 @@ namespace Haley.Services {
         async Task EnsureWorkspaceContextAsync(IVaultReadRequest input) {
             if (Indexer == null || input?.Scope?.Workspace == null) return;
             var workspaceCuid = input.Scope.Workspace.Cuid.ToString("N");
-            if (Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)) return;
-            await Indexer.HydrateWorkspaceAsync(workspaceCuid);
+            var now = DateTime.UtcNow;
+            if (Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)
+                && _workspaceRegistryRefresh.TryGetValue(workspaceCuid, out var refreshed)
+                && now - refreshed < WorkspaceRegistryRefreshInterval)
+                return;
+
+            var refreshLock = _workspaceRegistryRefreshLocks.GetOrAdd(workspaceCuid, _ => new SemaphoreSlim(1, 1));
+            await refreshLock.WaitAsync();
+            try {
+                now = DateTime.UtcNow;
+                if (Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)
+                    && _workspaceRegistryRefresh.TryGetValue(workspaceCuid, out refreshed)
+                    && now - refreshed < WorkspaceRegistryRefreshInterval)
+                    return;
+
+                if (await Indexer.HydrateWorkspaceAsync(workspaceCuid, forceRefresh: true)) {
+                    _pathCache.TryRemove(workspaceCuid, out _);
+                    _workspaceRegistryRefresh.AddOrUpdate(workspaceCuid, now, (_, _) => now);
+
+                    if (WriteMode
+                        && Indexer.TryGetComponentInfo(workspaceCuid, out VaultWorkSpace workspace)
+                        && !workspace.IsVirtual
+                        && ResolveProvider(input) is FileSystemStorageProvider)
+                        Directory.CreateDirectory(GetContainedFileSystemPath(workspace.Base, workspace.StorageRef));
+                }
+            } finally {
+                refreshLock.Release();
+            }
         }
 
         bool IsVirtualWorkspace(IVaultReadRequest input) {

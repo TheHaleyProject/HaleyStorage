@@ -55,7 +55,7 @@ namespace Haley.Services {
         Task EnsureValidation();
         bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
         Task<bool> HydrateModuleAsync(string moduleCuid);
-        Task<bool> HydrateWorkspaceAsync(string workspaceCuid);
+        Task<bool> HydrateWorkspaceAsync(string workspaceCuid, bool forceRefresh = false);
         Task<IReadOnlyList<string>> GetWorkspaceCuidsAsync(string moduleCuid);
         bool TryAddInfo(IVaultObject dirInfo, bool replace = false);
         IEnumerable<T> GetAllComponents<T>() where T : IVaultObject;
