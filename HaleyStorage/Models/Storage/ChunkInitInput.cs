@@ -14,5 +14,9 @@ namespace Haley.Models {
         /// <summary>Total number of parts the file will be split into. Must be >= 1.</summary>
         [FromQuery(Name = "tp")]
         public int TotalParts { get; set; }
+
+        /// <summary>Exact file size in bytes. Required for restart-safe offset uploads.</summary>
+        [FromQuery(Name = "size")]
+        public long? TotalBytes { get; set; }
     }
 }

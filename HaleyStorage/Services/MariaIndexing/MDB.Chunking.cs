@@ -29,18 +29,18 @@ namespace Haley.Utils {
                 if (string.IsNullOrWhiteSpace(moduleCuid)) return fb.SetMessage("Module CUID is mandatory.");
                 if (!_agw.ContainsKey(moduleCuid)) return fb.SetMessage($@"No adapter found for the key {moduleCuid}");
                 if (versionId < 1) return fb.SetMessage("versionId must be > 0");
-                if (chunkSizeMb < 1) return fb.SetMessage("chunkSizeMb must be > 1");
-                if (totalParts < 2) return fb.SetMessage("totalParts must be >= 2");
+                if (chunkSizeMb < 1) return fb.SetMessage("chunkSizeMb must be >= 1");
+                if (totalParts < 1) return fb.SetMessage("totalParts must be >= 1");
                 if (string.IsNullOrWhiteSpace(chunkFolderName)) return fb.SetMessage("chunkFolderName cannot be empty");
                 if (string.IsNullOrWhiteSpace(chunkFolderPath)) return fb.SetMessage("chunkFolderPath cannot be empty");
 
                 var handler = GetTransactionHandlerCache(callId, moduleCuid);
 
                 // Ensure doc_version exists (cheap guard)
-                var dv = await _agw.Scalar( new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.EXISTS_BY_ID }.ForTransaction(handler), (ID, versionId) );
+                var dv = await _agw.Scalar( new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.EXISTS_BY_ID }.ForTransaction(handler, false), (ID, versionId) );
                 if (dv == null) return fb.SetMessage($@"doc_version {versionId} not found in {moduleCuid}");
 
-                await _agw.NonQuery(new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.INFO_UPSERT }.ForTransaction(handler), (ID, versionId), (CHUNK_SIZE, chunkSizeMb), (CHUNK_PARTS, totalParts), (CHUNK_NAME, chunkFolderName), (PATH, chunkFolderPath), (IS_COMPLETED, isCompleted ? 1 : 0));
+                await _agw.NonQuery(new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.INFO_UPSERT }.ForTransaction(handler, false), (ID, versionId), (CHUNK_SIZE, chunkSizeMb), (CHUNK_PARTS, totalParts), (CHUNK_NAME, chunkFolderName), (PATH, chunkFolderPath), (IS_COMPLETED, isCompleted ? 1 : 0));
 
                 return fb.SetStatus(true).SetMessage("chunk_info upserted.");
             } catch (Exception ex) {
@@ -68,10 +68,10 @@ namespace Haley.Utils {
                 var handler = GetTransactionHandlerCache(callId, moduleCuid);
 
                 // Ensure chunk_info exists first (FK)
-                var ck = await _agw.Scalar( new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.INFO_EXISTS }.ForTransaction(handler), (ID, versionId) );
+                var ck = await _agw.Scalar( new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.INFO_EXISTS }.ForTransaction(handler, false), (ID, versionId) );
                 if (ck == null) return fb.SetMessage($@"chunk_info not found for versionId {versionId} in {moduleCuid}");
 
-                await _agw.NonQuery( new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.FILE_UPSERT }.ForTransaction(handler), (ID, versionId), (PART, partNumber), (FILESIZE_MB, sizeMb), (HASH, string.IsNullOrWhiteSpace(hash) ? (object)DBNull.Value : hash) );
+                await _agw.NonQuery( new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.FILE_UPSERT }.ForTransaction(handler, false), (ID, versionId), (PART, partNumber), (FILESIZE_MB, sizeMb), (HASH, string.IsNullOrWhiteSpace(hash) ? (object)DBNull.Value : hash) );
 
                 return fb.SetStatus(true).SetMessage("chunked_files upserted.");
             } catch (Exception ex) {
@@ -90,9 +90,25 @@ namespace Haley.Utils {
 
                 var handler = GetTransactionHandlerCache(callId, moduleCuid);
 
-                await _agw.NonQuery( new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.MARK_COMPLETED }.ForTransaction(handler), (ID, versionId) );
+                await _agw.NonQuery( new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.MARK_COMPLETED }.ForTransaction(handler, false), (ID, versionId) );
 
                 return fb.SetStatus(true).SetMessage("Chunk marked completed.");
+            } catch (Exception ex) {
+                return fb.SetMessage(ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }
+
+        public async Task<IFeedback> AbortChunkVersion(string moduleCuid, long versionId, string callId = null) {
+            var fb = new Feedback();
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid)) return fb.SetMessage("Module CUID is mandatory.");
+                if (!_agw.ContainsKey(moduleCuid)) return fb.SetMessage($@"No adapter found for the key {moduleCuid}");
+                if (versionId < 1) return fb.SetMessage("versionId must be > 0");
+
+                var handler = GetTransactionHandlerCache(callId, moduleCuid);
+                await _agw.NonQuery(new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.ABORT_VERSION }.ForTransaction(handler, false), (ID, versionId));
+                await _agw.NonQuery(new AdapterArgs(moduleCuid) { Query = INSTANCE.CHUNK.ABORT_EMPTY_DOCUMENT }.ForTransaction(handler, false), (ID, versionId));
+                return fb.SetStatus(true).SetMessage("Incomplete chunk version soft-deleted.");
             } catch (Exception ex) {
                 return fb.SetMessage(ex.Message + Environment.NewLine + ex.StackTrace);
             }

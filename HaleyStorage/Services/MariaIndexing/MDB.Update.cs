@@ -41,7 +41,7 @@ namespace Haley.Utils {
                 if (file.TryGetProp<long>(out var piv, "ProfileInfoId", "profile_info_id") && piv > 0) profileInfoIdVal = piv;
 
                 // Core upsert: storage_name/storage_path/size/hash/synced_at/profile_info_id
-                await _agw.NonQuery( new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.INSERT_INFO }.ForTransaction(handler), (ID, file.Id), (SAVENAME, file.StorageName), (PATH, file.StorageRef), (SIZE, file.Size), (HASH, hashVal), (SYNCED_AT, syncedAtVal), (PROFILE_INFO_ID, profileInfoIdVal) );
+                await _agw.NonQuery( new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.INSERT_INFO }.ForTransaction(handler, false), (ID, file.Id), (SAVENAME, file.StorageName), (PATH, file.StorageRef), (SIZE, file.Size), (HASH, hashVal), (SYNCED_AT, syncedAtVal), (PROFILE_INFO_ID, profileInfoIdVal) );
 
                 // Optional extended update (only if caller provides these fields)
                 // This avoids forcing existing apps to suddenly send flags/metadata etc.
@@ -57,7 +57,7 @@ namespace Haley.Utils {
 
                     // Only run if at least one field is actually populated.
                     if (!(sp is DBNull) || !(md is DBNull) || !(fl is DBNull) || !(hashVal is DBNull) || !(syncedAtVal is DBNull)) {
-                        await _agw.NonQuery( new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.UPDATE_INFO_EXT }.ForTransaction(handler), (ID, file.Id), (STAGINGPATH, sp), (METADATA, md), (FLAGS, fl), (HASH, hashVal), (SYNCED_AT, syncedAtVal) );
+                        await _agw.NonQuery( new AdapterArgs(moduleCuid) { Query = INSTANCE.DOCVERSION.UPDATE_INFO_EXT }.ForTransaction(handler, false), (ID, file.Id), (STAGINGPATH, sp), (METADATA, md), (FLAGS, fl), (HASH, hashVal), (SYNCED_AT, syncedAtVal) );
                     }
                 }
 

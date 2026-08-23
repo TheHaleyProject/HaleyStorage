@@ -68,6 +68,8 @@ namespace Haley.Services {
         Task<IFeedback> UpsertChunkInfo(string moduleCuid, long versionId, long chunkSizeMb, int totalParts, string chunkFolderName, string chunkFolderPath, bool isCompleted = false, string callId = null);
         Task<IFeedback> UpsertChunkPart(string moduleCuid, long versionId, long partNumber, int sizeMb, string hash = null, string callId = null);
         Task<IFeedback> MarkChunkCompleted(string moduleCuid, long versionId, string callId = null);
+        Task<IFeedback> AbortChunkVersion(string moduleCuid, long versionId, string callId = null);
+        IFeedback BeginTransaction(string moduleCuid, string callId);
         // Storage profiles
         Task<long> UpsertProvider(string displayName, string description = null);
         Task<long> UpsertProfile(string displayName);

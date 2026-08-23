@@ -85,6 +85,29 @@ namespace Haley.Utils {
                 }
             }
         }
+
+        public IFeedback BeginTransaction(string moduleCuid, string callId) {
+            var result = new Feedback();
+            string key = null;
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid)) return result.SetMessage("Module CUID is mandatory.");
+                if (string.IsNullOrWhiteSpace(callId)) return result.SetMessage("callID is mandatory.");
+                if (!_agw.ContainsKey(moduleCuid)) return result.SetMessage($"No adapter found for the key {moduleCuid}");
+
+                key = GetHandlerKey(callId, moduleCuid);
+                if (_handlers.ContainsKey(key)) return result.SetStatus(true).SetMessage("Transaction already active.");
+                var handler = _agw.GetTransactionHandler(moduleCuid);
+                if (handler == null) return result.SetMessage($"No transaction handler is available for {moduleCuid}.");
+                if (!_handlers.TryAdd(key, (handler, DateTime.UtcNow)))
+                    return result.SetMessage("Unable to cache the transaction handler.");
+                handler.Begin();
+                return result.SetStatus(true).SetMessage("Transaction started.");
+            } catch (Exception ex) {
+                if (!string.IsNullOrWhiteSpace(key) && _handlers.TryRemove(key, out var entry))
+                    entry.handler?.Rollback();
+                return result.SetMessage(ex.Message);
+            }
+        }
         /// <summary>
         /// Rolls back and removes transaction handlers that have been open longer than 30 minutes,
         /// guarding against leaked transactions after server restarts or uncaught exceptions.
