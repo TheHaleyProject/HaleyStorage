@@ -152,12 +152,12 @@ namespace Haley.Utils {
             var wsCuid = info.Cuid.ToString("N");
             var wsId = await _agw.ScalarAsync<long?>(_key, WORKSPACE.EXISTS_BY_CUID, default, (CUID, wsCuid));
             if (wsId.HasValue) {
-                await _agw.ExecAsync(_key, WORKSPACE.UPDATE, default, (DNAME, info.DisplayName), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode), (ID, wsId.Value));
+                await _agw.ExecAsync(_key, WORKSPACE.UPDATE, default, (DNAME, info.DisplayName), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode), (STORAGE_REF, info.StorageRef), (IS_VIRTUAL, info.IsVirtual), (CASE_SENSITIVE, info.CaseSensitive), (ID, wsId.Value));
             } else {
                 var moduleCuid = StorageUtils.GenerateCuid(info.Client.Name, info.Module.Name);
                 var modId = await _agw.ScalarAsync<long?>(_key, MODULE.EXISTS_BY_CUID, default, (CUID, moduleCuid));
                 if (!modId.HasValue) throw new ArgumentException($@"Module {info.Module.Name} doesn't exist. Unable to index the module {info.DisplayName}.");
-                await _agw.ExecAsync(_key, WORKSPACE.INSERT, default, (PARENT, modId.Value), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (CUID, wsCuid), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode));
+                await _agw.ExecAsync(_key, WORKSPACE.INSERT, default, (PARENT, modId.Value), (NAME, info.Name), (DNAME, info.DisplayName), (GUID, info.Guid.ToString("N")), (CUID, wsCuid), (STORAGENAME_MODE, (int)info.NameMode), (STORAGENAME_PARSE, (int)info.ParseMode), (STORAGE_REF, info.StorageRef), (IS_VIRTUAL, info.IsVirtual), (CASE_SENSITIVE, info.CaseSensitive));
                 //Cross check
                 wsId = await _agw.ScalarAsync<long?>(_key, WORKSPACE.EXISTS_BY_CUID, default, (CUID, wsCuid));
                 if (wsId == null || !wsId.HasValue) throw new ArgumentException($@"Workspace {info.Name} with CUID {wsCuid} was not created. Please check..");

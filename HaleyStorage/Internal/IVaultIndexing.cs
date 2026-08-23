@@ -54,6 +54,9 @@ namespace Haley.Services {
         Task<IFeedback> RestoreDirectory(IVaultReadRequest request, bool force);
         Task EnsureValidation();
         bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
+        Task<bool> HydrateModuleAsync(string moduleCuid);
+        Task<bool> HydrateWorkspaceAsync(string workspaceCuid);
+        Task<IReadOnlyList<string>> GetWorkspaceCuidsAsync(string moduleCuid);
         bool TryAddInfo(IVaultObject dirInfo, bool replace = false);
         IEnumerable<T> GetAllComponents<T>() where T : IVaultObject;
         Task<IFeedback<string>> GetParentName(IVaultFileReadRequest request);

@@ -199,6 +199,9 @@ CREATE TABLE IF NOT EXISTS `workspace` (
   `active` bit(1) NOT NULL DEFAULT b'1' COMMENT '1 = accepts uploads. 0 = soft-disabled; reads still work.',
   `storagename_mode` int(11) NOT NULL DEFAULT 0 COMMENT 'Controls how the physical storage file name is chosen for each file uploaded into this workspace:\n0 - Number mode: the auto-increment database id is used (e.g. doc_version.id = 1234 → file saved as "1234f.pdf"). Compact and fast to look up.\n1 - Guid mode: a compact-N UUID is used (e.g. "a3b2c1d4e5f67890...f.pdf"). Globally unique without a DB round-trip; preferred for distributed or multi-node deployments.',
   `storagename_parse` int(11) NOT NULL DEFAULT 0 COMMENT 'Controls whether the system generates the storage name or parses it from the caller-provided filename:\n0 - Generate (recommended): the system generates a new id or UUID for each file. The caller filename is stored as a display label in doc_info.display_name only.\n1 - Parse: the caller-provided filename IS the storage name. The filename must be a pure integer (Number mode) or a valid GUID (Guid mode). Used for pre-assigned IDs or migrated content.',
+  `storage_ref` varchar(300) DEFAULT NULL COMMENT 'Physical workspace segment or object-key prefix. NULL for virtual workspaces.',
+  `is_virtual` bit(1) NOT NULL DEFAULT b'0' COMMENT '1 = workspace has no physical workspace segment; files use the client/module base directly.',
+  `case_sensitive` bit(1) NOT NULL DEFAULT b'0' COMMENT '1 = preserve client/module display-name casing when constructing the storage base path.',
   `created` timestamp NOT NULL DEFAULT current_timestamp() COMMENT 'Row creation timestamp (UTC).',
   `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT 'Automatically updated whenever any column changes.',
   `storage_profile` int(11) DEFAULT NULL COMMENT 'Optional FK to profile_info.id. When set, this workspace uses its own provider and upload mode, overriding the parent module-level profile. Populated by SetWorkspaceStorageProfile() and rehydrated into the in-memory StorageWorkspace cache entry at startup via RehydrateWorkspaceProfilesAsync().',
@@ -210,6 +213,15 @@ CREATE TABLE IF NOT EXISTS `workspace` (
   CONSTRAINT `fk_workspace_module` FOREIGN KEY (`parent`) REFERENCES `module` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `fk_workspace_profile_info` FOREIGN KEY (`storage_profile`) REFERENCES `profile_info` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
 ) ENGINE=InnoDB AUTO_INCREMENT=1923 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='A named storage container inside a module — like a dedicated folder for a specific purpose, tenant, or data set.\nExample: module "documents" → workspace "user-123-uploads" (all files for a specific user) or "global-templates" (shared assets).\nEach workspace has its own base path/prefix, file-naming mode, and can optionally point to a different cloud provider than its parent module.\nThe CUID (derived from the full client+module+workspace name chain) is the key the StorageCoordinator uses to locate the workspace in the in-memory cache and resolve the storage path with zero DB round-trips after startup.\nThe storagename_mode and storagename_parse settings are fixed at registration time and must not be changed after files exist in the workspace, as they determine how storage paths are reconstructed for reads.';
+
+ALTER TABLE `workspace`
+  ADD COLUMN IF NOT EXISTS `storage_ref` varchar(300) DEFAULT NULL COMMENT 'Physical workspace segment or object-key prefix. NULL for virtual workspaces.',
+  ADD COLUMN IF NOT EXISTS `is_virtual` bit(1) NOT NULL DEFAULT b'0' COMMENT '1 = workspace has no physical workspace segment.',
+  ADD COLUMN IF NOT EXISTS `case_sensitive` bit(1) NOT NULL DEFAULT b'0' COMMENT '1 = preserve client/module display-name casing in storage paths.';
+
+UPDATE `workspace`
+SET `is_virtual` = b'1', `storage_ref` = NULL
+WHERE `name` = 'default';
 
 -- Data exporting was unselected.
 

@@ -176,21 +176,23 @@ namespace Haley.Services {
                     }
                 }
 
-                // Restore any persisted module/workspace profile overrides from the DB so provider
-                // resolution is correct after a process restart.
-                if (Indexer != null) {
-                    await Indexer.RehydrateModuleProfilesAsync();
-                    await Indexer.RehydrateWorkspaceProfilesAsync();
-                }
-
-                // Link any module that still has no profile to the default provider profile.
-                // Must run after profile rehydration so explicit DB profiles are not overwritten.
-                await EnsureModulesHaveDefaultProfileAsync();
+                await InitializePersistedRegistryState();
 
                 return result.SetStatus(true).SetMessage("Successfully registered.");
             } catch (Exception ex) {
                 return new Feedback().SetMessage(ex.StackTrace);
             }
+        }
+
+        async Task InitializePersistedRegistryState() {
+            // Restore persisted profile overrides without requiring configured seed identities.
+            if (Indexer != null) {
+                await Indexer.RehydrateModuleProfilesAsync();
+                await Indexer.RehydrateWorkspaceProfilesAsync();
+            }
+
+            // Explicit profiles win; only modules still lacking a profile receive the default.
+            await EnsureModulesHaveDefaultProfileAsync();
         }
     }
 }

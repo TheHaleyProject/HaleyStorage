@@ -17,6 +17,7 @@ namespace Haley.Models {
         public string OverrideRef { get; set; }
         public string RequestedName { get; set; }
         public bool ReadOnlyMode { get; set; }
+        internal bool WorkspaceIsVirtual { get; private set; }
 
         /// <summary>
         /// Regenerates a fresh <see cref="StorageReadRequest.CallID"/> for this request.
@@ -58,6 +59,7 @@ namespace Haley.Models {
         /// <summary>Sets the workspace by name.</summary>
         public IVaultReadRequest SetWorkspace(string name, bool isVirtual = false) {
             Scope.Workspace = new VaultObject(name).UpdateCUID(Scope.Client?.DisplayName, Scope.Module?.DisplayName);
+            WorkspaceIsVirtual = isVirtual || Scope.Workspace.Name.Equals(VaultConstants.DEFAULT_NAME, StringComparison.OrdinalIgnoreCase);
             return this;
         }
 
@@ -70,6 +72,7 @@ namespace Haley.Models {
             Scope.Client = new VaultObject(client_name).UpdateCUID();
             Scope.Module = new VaultObject(module_name).UpdateCUID(Scope.Client.DisplayName);
             Scope.Workspace = new VaultObject(workspace_name).UpdateCUID(Scope.Client.DisplayName, Scope.Module.DisplayName);
+            WorkspaceIsVirtual = Scope.Workspace.Name.Equals(VaultConstants.DEFAULT_NAME, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

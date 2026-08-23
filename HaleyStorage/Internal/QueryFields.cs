@@ -38,6 +38,8 @@ namespace Haley.Internal {
         public const string PARSEMODE = $@"@{nameof(PARSEMODE)}";       // legacy — kept for any non-workspace callers
         // Workspace column renames (schema v2)
         public const string STORAGE_REF = $@"@{nameof(STORAGE_REF)}";           // workspace.storage_ref
+        public const string IS_VIRTUAL = $@"@{nameof(IS_VIRTUAL)}";             // workspace.is_virtual
+        public const string CASE_SENSITIVE = $@"@{nameof(CASE_SENSITIVE)}";     // workspace.case_sensitive
         public const string STORAGENAME_MODE = $@"@{nameof(STORAGENAME_MODE)}"; // workspace.storagename_mode
         public const string STORAGENAME_PARSE = $@"@{nameof(STORAGENAME_PARSE)}"; // workspace.storagename_parse
         public const string WSPACE = $@"@{nameof(WSPACE)}";

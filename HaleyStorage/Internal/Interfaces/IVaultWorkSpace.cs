@@ -18,6 +18,7 @@ namespace Haley.Abstractions {
         VaultNameMode NameMode { get; set; }
         /// <summary>Defines whether file identifiers are auto-generated or parsed from caller input. Fixed at creation.</summary>
         VaultNameParseMode ParseMode { get; set; }
+        bool CaseSensitive { get; set; }
         void Assert();
         string Base { get; set; }
     }

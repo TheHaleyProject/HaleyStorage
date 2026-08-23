@@ -27,6 +27,7 @@ namespace Haley.Services {
         /// </summary>
         public (string basePath, string targetPath) ProcessAndBuildStoragePath(IVaultReadRequest input, bool allowRootAccess = false) {
             PrepareRequestContext(input);                          // 1. Normalise CUID, mark virtual folder
+            EnsureWorkspaceContextAsync(input).GetAwaiter().GetResult();
             var provider = ResolveProvider(input);                 // 2. Resolve provider once for all steps
             var bpath = FetchWorkspaceBasePath(input, provider);   // 3. Resolve workspace base path (cached)
             if (input is IVaultFileReadRequest fileRead)
@@ -101,7 +102,7 @@ namespace Haley.Services {
 
             // Directory existence is only meaningful for the FileSystem provider.
             // Cloud providers use object keys — no directories to verify.
-            if (provider is FileSystemStorageProvider && !Directory.Exists(result)) {
+            if (provider is FileSystemStorageProvider && !IsVirtualWorkspace(request) && !Directory.Exists(result)) {
                 throw new DirectoryNotFoundException(
                     $"Workspace base path '{result}' does not exist. " +
                     $"Ensure the client/module/workspace are registered and the storage root is accessible.");
@@ -380,8 +381,9 @@ namespace Haley.Services {
         /// the document with the indexer via <c>StorageUtils.GenerateFileSystemSavePath</c>.
         /// </summary>
         public async Task ProcessFileRoute(IVaultFileReadRequest input, IStorageProvider provider = null) {
-            provider ??= ResolveProvider(input);
             if (input == null) return;
+            await EnsureWorkspaceContextAsync(input);
+            provider ??= ResolveProvider(input);
             if (!string.IsNullOrWhiteSpace(input.OverrideRef)) return;
             if (input.File != null && !string.IsNullOrWhiteSpace(input.File.StorageRef)) return;
 
@@ -475,7 +477,8 @@ namespace Haley.Services {
             if (Indexer.TryGetComponentInfo(wsCuid, out VaultWorkSpace ws)) {
                 if (ws.IsVirtual) {
                     // Virtual workspaces have no workspace segment but still need client/module dirs for isolation.
-                    if (!string.IsNullOrWhiteSpace(ws.Base)) paths.Add(ws.Base);
+                    paths.Add(!string.IsNullOrWhiteSpace(ws.Base) ? ws.Base : BuildWorkspaceParentPath(input));
+                    CacheWorkspacePath(wsCuid, paths, provider);
                     return;
                 }
                 if (!string.IsNullOrWhiteSpace(ws.StorageRef)) {
@@ -487,14 +490,10 @@ namespace Haley.Services {
                 }
             } else {
                 var seg = BuildFallbackWorkspacePath(input);
-                paths.Add(seg);
+                if (!string.IsNullOrWhiteSpace(seg)) paths.Add(seg);
             }
 
-            var joinedPath = provider is FileSystemStorageProvider
-                ? Path.Combine(paths.ToArray())
-                : string.Join("/", paths.Select(p => p.Trim('/', '\\')));
-            _pathCache.TryAdd(wsCuid, string.Empty);
-            _pathCache.TryUpdate(wsCuid, joinedPath, string.Empty);
+            CacheWorkspacePath(wsCuid, paths, provider);
         }
 
         /// <summary>
@@ -503,11 +502,43 @@ namespace Haley.Services {
         /// Always uses normalized (ToDBName) names for client and module segments.
         /// </summary>
         string BuildFallbackWorkspacePath(IVaultReadRequest input) {
+            var parentPath = BuildWorkspaceParentPath(input);
+            if (IsVirtualWorkspace(input)) return parentPath;
+
             var wsSegment = GenerateBasePath(input.Scope.Workspace, VaultObjectType.WorkSpace).path;
+            if (string.IsNullOrWhiteSpace(parentPath)) return wsSegment;
+            return Path.Combine(parentPath, wsSegment);
+        }
+
+        async Task EnsureWorkspaceContextAsync(IVaultReadRequest input) {
+            if (Indexer == null || input?.Scope?.Workspace == null) return;
+            var workspaceCuid = input.Scope.Workspace.Cuid.ToString("N");
+            if (Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)) return;
+            await Indexer.HydrateWorkspaceAsync(workspaceCuid);
+        }
+
+        bool IsVirtualWorkspace(IVaultReadRequest input) {
+            if (input?.Scope?.Workspace == null) return false;
+            var workspaceCuid = input.Scope.Workspace.Cuid.ToString("N");
+            if (Indexer != null && Indexer.TryGetComponentInfo(workspaceCuid, out VaultWorkSpace workspace))
+                return workspace.IsVirtual;
+            if (input is StorageReadRequest concrete && concrete.WorkspaceIsVirtual)
+                return true;
+            return input.Scope.Workspace.Name.Equals(VaultConstants.DEFAULT_NAME, StringComparison.OrdinalIgnoreCase);
+        }
+
+        string BuildWorkspaceParentPath(IVaultReadRequest input) {
             var clientDir = input.Scope.Client?.Name?.ToDBName() ?? string.Empty;
             var moduleDir = input.Scope.Module?.Name?.ToDBName() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(clientDir)) return wsSegment;
-            return Path.Combine(clientDir, moduleDir, wsSegment);
+            if (string.IsNullOrWhiteSpace(clientDir)) return moduleDir;
+            return string.IsNullOrWhiteSpace(moduleDir) ? clientDir : Path.Combine(clientDir, moduleDir);
+        }
+
+        void CacheWorkspacePath(string workspaceCuid, List<string> paths, IStorageProvider provider) {
+            var joinedPath = provider is FileSystemStorageProvider
+                ? Path.Combine(paths.ToArray())
+                : string.Join("/", paths.Select(p => p.Trim('/', '\\')));
+            _pathCache.AddOrUpdate(workspaceCuid, joinedPath, (_, _) => joinedPath);
         }
 
         /// <summary>

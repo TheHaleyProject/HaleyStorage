@@ -5,6 +5,12 @@ namespace Haley.Internal {
         public class MODULE {
             public const string EXISTS = $@"select m.id from module as m where m.name = {NAME} and m.parent = {PARENT} LIMIT 1;";
             public const string EXISTS_BY_CUID = $@"select m.id from module as m where m.cuid = {CUID} LIMIT 1;";
+            public const string GET_BY_CUID = $@"select m.id, m.cuid, m.name, m.display_name, m.storage_profile as module_profile_id,
+                                                    c.id as client_id, c.name as client_name, c.display_name as client_display_name
+                                             from module as m
+                                             inner join client as c on c.id = m.parent
+                                             where m.cuid = {CUID}
+                                             limit 1;";
             /// <summary>Plain insert — called only after EXISTS_BY_CUID confirms the module does not yet exist. INSERT IGNORE handles the rare concurrent-race edge case without consuming an AUTO_INCREMENT id.</summary>
             public const string INSERT = $@"insert ignore into module (parent,name,display_name,guid,cuid) values ({PARENT},{NAME},{DNAME},{GUID},{CUID});";
             public const string UPDATE = $@"update module set display_name = {DNAME} where id = {ID};";

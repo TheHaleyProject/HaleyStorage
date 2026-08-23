@@ -114,6 +114,19 @@ namespace Haley.Services {
         /// Outputs the configured log-file path and response-path mode string read from <c>Seed</c> config.
         /// </param>
         public static IStorageCoordinator Create(IAdapterGateway agw, string adapter_key, out (string logpath,string respMode) data, bool throwExceptions = false) {
+            return CreateConfigured(agw, adapter_key, out data, throwExceptions, registerConfiguredSources: true);
+        }
+
+        /// <summary>
+        /// Creates a configured coordinator without registering identities from
+        /// <c>Seed:OSSSource</c>. Intended for management processes that discover the
+        /// complete hierarchy from the persisted registry.
+        /// </summary>
+        public static IStorageCoordinator CreateRuntime(IAdapterGateway agw, string adapter_key, out (string logpath,string respMode) data, bool throwExceptions = false) {
+            return CreateConfigured(agw, adapter_key, out data, throwExceptions, registerConfiguredSources: false);
+        }
+
+        static IStorageCoordinator CreateConfigured(IAdapterGateway agw, string adapter_key, out (string logpath,string respMode) data, bool throwExceptions, bool registerConfiguredSources) {
             data = (null, null);
             var cfgRoot = ResourceUtils.GenerateConfigurationRoot();
             var dirPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? VaultConstants.CONFIG_DIR_WIN : VaultConstants.CONFIG_DIR_LINUX;
@@ -130,7 +143,11 @@ namespace Haley.Services {
             var dss = new StorageCoordinator(agw, adapter_key, storagePath, writemode,throwExceptions:throwExceptions);
             var ossConfig = cfgRoot.GetSection($@"Seed:{VaultConstants.OSS_CONFIG}")?.Get<StorageRegistryConfig>();
             if (ossConfig != null) dss.SetConfig(ossConfig);
-            dss.RegisterFromSource().Wait();
+            if (registerConfiguredSources) {
+                dss.RegisterFromSource().Wait();
+            } else {
+                dss.InitializePersistedRegistryState().Wait();
+            }
 
             //FILE FORMATS HANDLING
             var allowedFormats = cfgRoot[$@"Seed:{VaultConstants.OSS_FILEFORMATS}:{VaultConstants.ALLOWED}"];
