@@ -1,5 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\HaleyProject\HaleyVersion.Props" />
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <HaleyProject Condition="'$(HaleyProject)' == ''">$(MSBuildProjectDirectory)\..\..</HaleyProject>
+  </PropertyGroup>
+  <Import Project="$(HaleyProject)\HaleyProject\Haley.Source.Props" />
+  <Import Project="$(HaleyProject)\HaleyProject\Haley.Version.Props" />
+  <Import Project="$(HaleyProject)\HaleyProject\Haley.Paths.Props" />
   <Import Project="Database\Database.Source.props" />
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -39,7 +44,6 @@
   <ItemGroup>
     <Folder Include="Scripts\" />
   </ItemGroup>
-  <Import Project="$(SolutionDir)ProjectReferences_$(SolutionName).txt" Condition="Exists('$(SolutionDir)ProjectReferences_$(SolutionName).txt')" />
 
   <!-- Standalone-build fallback: if the solution-level import did not define $(HaleyAbstractions)
        but the sibling project folder exists on disk, resolve via relative path so developer-machine
@@ -49,9 +53,9 @@
   </PropertyGroup>
 
   <!--<Choose>
-    <When Condition="Exists($(HaleyAbstractions))">
+    <When Condition="Exists('$(HaleyAbstractionsProj)')">
       <ItemGroup>
-        <ProjectReference Include="$(HaleyAbstractions)\HaleyAbstractions.csproj">
+        <ProjectReference Include="$(HaleyAbstractionsProj)">
           <Name>HaleyAbstractions</Name>
         </ProjectReference>
       </ItemGroup>
@@ -63,9 +67,9 @@
     </Otherwise>
   </Choose>-->
   <Choose>
-    <When Condition="Exists($(HaleyHelpers))">
+    <When Condition="Exists('$(HaleyHelpersProj)')">
       <ItemGroup>
-        <ProjectReference Include="$(HaleyHelpers)\HaleyHelpers.csproj">
+        <ProjectReference Include="$(HaleyHelpersProj)">
           <Name>HaleyHelpers</Name>
         </ProjectReference>
       </ItemGroup>
@@ -78,9 +82,9 @@
   </Choose>
 
   <Choose>
-    <When Condition="Exists($(HaleyHelpersDB))">
+    <When Condition="Exists('$(HaleyHelpersDBProj)')">
       <ItemGroup>
-        <ProjectReference Include="$(HaleyHelpersDB)\HaleyHelpersDB.csproj">
+        <ProjectReference Include="$(HaleyHelpersDBProj)">
           <Name>HaleyHelpersDB</Name>
         </ProjectReference>
       </ItemGroup>
