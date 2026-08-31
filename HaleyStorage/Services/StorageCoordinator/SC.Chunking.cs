@@ -130,6 +130,156 @@ namespace Haley.Services {
             }
         }
 
+        public async Task<IFeedback<ChunkUploadSessionInfo>> InitiateChunkedUploadForPlaceholder(
+            IVaultReadRequest request,
+            string versionCuid,
+            long chunkSizeMb,
+            int totalParts,
+            long? totalBytes = null,
+            CancellationToken cancellationToken = default) {
+
+            var fb = new Feedback<ChunkUploadSessionInfo>();
+            try {
+                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
+                if (request == null) return fb.SetMessage("Request cannot be null.");
+                if (request.ReadOnlyMode) return fb.SetMessage("Request is in Read-Only mode.");
+                if (Indexer == null) return fb.SetMessage("An indexer is required to create a chunk session.");
+                if (!Guid.TryParse(versionCuid, out var parsedCuid))
+                    return fb.SetMessage("A valid placeholder version CUID is required.");
+                if (chunkSizeMb < 1) return fb.SetMessage("ChunkSizeMb must be >= 1.");
+                if (totalParts < 1) return fb.SetMessage("TotalParts must be >= 1.");
+                if (totalBytes.HasValue && totalBytes.Value < 1)
+                    return fb.SetMessage("TotalBytes must be greater than zero when supplied.");
+
+                var chunkSizeBytes = checked(chunkSizeMb * 1024L * 1024L);
+                if (totalBytes.HasValue) {
+                    var expectedParts = checked((int)(((totalBytes.Value - 1) / chunkSizeBytes) + 1));
+                    if (expectedParts != totalParts)
+                        return fb.SetMessage($"TotalParts must be {expectedParts} for {totalBytes.Value} bytes at {chunkSizeMb} MB per part.");
+                }
+
+                PrepareRequestContext(request);
+                var moduleCuid = StorageUtils.GenerateCuid(request, VaultObjectType.Module);
+                var normalizedCuid = parsedCuid.ToString("N");
+                var existing = await Indexer.GetDocVersionInfo(moduleCuid, normalizedCuid).ConfigureAwait(false);
+                if (existing?.Status != true || existing.Result is not Dictionary<string, object> dic || dic.Count < 1)
+                    return fb.SetMessage($"Placeholder version {versionCuid} was not found.");
+
+                long ReadLong(string key) => dic.TryGetValue(key, out var value) && long.TryParse(value?.ToString(), out var parsed) ? parsed : 0L;
+                int ReadInt(string key) => dic.TryGetValue(key, out var value) && int.TryParse(value?.ToString(), out var parsed) ? parsed : 0;
+                string ReadString(string key) => dic.TryGetValue(key, out var value) ? value?.ToString() ?? string.Empty : string.Empty;
+
+                var versionId = ReadLong("id");
+                var flags = ReadInt("flags");
+                if (versionId < 1)
+                    return fb.SetMessage($"Unable to resolve placeholder version id for {versionCuid}.");
+                if ((flags & (int)VersionFlags.Placeholder) == 0)
+                    return fb.SetMessage($"Ticket {versionCuid} is not an open placeholder.");
+
+                var storagePath = ReadString("path");
+                if (string.IsNullOrWhiteSpace(storagePath))
+                    return fb.SetMessage($"Placeholder {versionCuid} does not have a storage path.");
+
+                var file = new StorageFileRoute(ReadString("saveas_name"), storagePath) {
+                    Id = versionId,
+                    StorageName = ReadString("saveas_name"),
+                    StorageRef = storagePath,
+                    StagingRef = ReadString("staging_path"),
+                    Flags = flags,
+                    ProfileInfoId = ReadLong("profile_info_id"),
+                    RootCuid = ReadString("ruid")
+                };
+                file.SetCuid(normalizedCuid);
+
+                var fileRequest = new StorageReadFileRequest {
+                    Scope = request.Scope,
+                    Actor = request.Actor,
+                    ReadOnlyMode = request.ReadOnlyMode
+                };
+                fileRequest.SetFile(file);
+
+                var provider = ResolveProvider(fileRequest);
+                if (provider is not FileSystemStorageProvider)
+                    return fb.SetMessage("Chunked placeholder uploads currently support only FileSystemStorageProvider.");
+                if (ResolveProfileMode(fileRequest) != VaultProfileMode.DirectSave)
+                    return fb.SetMessage("Chunked placeholder uploads currently support only DirectSave profiles.");
+
+                var finalPath = Path.IsPathRooted(storagePath)
+                    ? Path.GetFullPath(storagePath)
+                    : Path.GetFullPath(Path.Combine(FetchWorkspaceBasePath(fileRequest, provider), storagePath));
+                if (!IsWithinStorageRoot(finalPath))
+                    return fb.SetMessage("The placeholder chunk destination is outside the storage root.");
+
+                var chunkDir = Path.Combine(ChunkRoot, normalizedCuid);
+                if (Directory.Exists(chunkDir)) {
+                    var existingSession = await TryRehydrateChunkSession(normalizedCuid, cancellationToken).ConfigureAwait(false);
+                    if (existingSession != null && string.Equals(existingSession.State, "active", StringComparison.OrdinalIgnoreCase))
+                        return fb.SetStatus(true).SetResult(new ChunkUploadSessionInfo {
+                            VersionId = existingSession.VersionId,
+                            VersionCuid = existingSession.VersionCuid,
+                            RootCuid = file.RootCuid ?? string.Empty,
+                            ChunkSizeBytes = chunkSizeBytes,
+                            TotalParts = existingSession.TotalParts,
+                            TotalBytes = existingSession.TotalBytes ?? 0
+                        });
+
+                    if (Directory.EnumerateFileSystemEntries(chunkDir).Any())
+                        return fb.SetMessage($"Chunk directory already exists for placeholder {versionCuid}.");
+                }
+
+                Directory.CreateDirectory(chunkDir);
+
+                var now = DateTimeOffset.UtcNow;
+                var meta = new ChunkSessionMeta {
+                    VersionId = versionId,
+                    VersionCuid = normalizedCuid,
+                    RootCuid = file.RootCuid ?? string.Empty,
+                    FinalPath = finalPath,
+                    StorageRef = file.StorageRef ?? string.Empty,
+                    StorageName = file.StorageName ?? string.Empty,
+                    ModuleCuid = moduleCuid,
+                    ProfileInfoId = file.ProfileInfoId,
+                    ChunkSizeMb = chunkSizeMb,
+                    TotalParts = totalParts,
+                    TotalLength = totalBytes ?? checked(chunkSizeBytes * totalParts),
+                    HasExactLength = totalBytes.HasValue,
+                    CreatedUtc = now,
+                    LastActivityUtc = now,
+                    Lifecycle = "active"
+                };
+
+                var chunkResult = await Indexer.UpsertChunkInfo(
+                    meta.ModuleCuid,
+                    meta.VersionId,
+                    chunkSizeMb,
+                    totalParts,
+                    normalizedCuid,
+                    chunkDir,
+                    isCompleted: false,
+                    callId: Guid.NewGuid().ToString("N")).ConfigureAwait(false);
+
+                if (!chunkResult.Status) {
+                    TryDeleteDirectory(chunkDir);
+                    return fb.SetMessage($"Failed to create chunk session in DB: {chunkResult.Message}");
+                }
+
+                try {
+                    await WriteMetadataAsync(chunkDir, meta, cancellationToken).ConfigureAwait(false);
+                } catch {
+                    TryDeleteDirectory(chunkDir);
+                    throw;
+                }
+
+                var session = new ChunkSessionCache(chunkDir, meta);
+                _chunkSessions[meta.VersionId] = session;
+                _chunkSessionsByCuid[meta.VersionCuid] = meta.VersionId;
+
+                return fb.SetStatus(true).SetResult(ToSessionInfo(meta));
+            } catch (Exception ex) {
+                return fb.SetMessage(ex.Message);
+            }
+        }
+
         public async Task<IFeedback<ChunkPartResult>> UploadChunkPart(
             long versionId,
             int partNumber,

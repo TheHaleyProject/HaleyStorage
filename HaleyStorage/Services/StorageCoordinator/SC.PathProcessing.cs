@@ -654,6 +654,12 @@ namespace Haley.Services {
             // Prefer the promoted storage path; fall back to staging path if file is still in staging.
             input.File.StorageRef = !string.IsNullOrWhiteSpace(storagePath) ? storagePath : stagingPath;
 
+            if (long.TryParse(dic.TryGetValue("id", out var idObj) ? idObj?.ToString() : null, out var id) && id > 0)
+                input.File.SetId(id);
+            if (string.IsNullOrWhiteSpace(input.File.Cuid)
+                && dic.TryGetValue("uid", out var uidObj)
+                && !string.IsNullOrWhiteSpace(uidObj?.ToString()))
+                input.File.SetCuid(uidObj.ToString());
             if (long.TryParse(dic["size"]?.ToString(), out var size)) input.File.Size = size;
             if (int.TryParse(dic["ver"]?.ToString(), out var version)) input.File.Version = version;
             if (input.File is StorageRoute route && long.TryParse(dic.TryGetValue("actor", out var actorObj) ? actorObj?.ToString() : null, out var actor))

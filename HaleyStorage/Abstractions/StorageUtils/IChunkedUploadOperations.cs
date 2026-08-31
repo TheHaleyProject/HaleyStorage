@@ -12,6 +12,12 @@ namespace Haley.Abstractions {
         /// </summary>
         Task<IFeedback<ChunkUploadSessionInfo>> InitiateChunkedUpload(IVaultFileWriteRequest request, long chunkSizeMb, int totalParts, long? totalBytes = null, CancellationToken cancellationToken = default);
 
+        /// <summary>
+        /// Creates a chunk session for an existing placeholder version. No new document or
+        /// version row is created; completion publishes the placeholder version itself.
+        /// </summary>
+        Task<IFeedback<ChunkUploadSessionInfo>> InitiateChunkedUploadForPlaceholder(IVaultReadRequest request, string versionCuid, long chunkSizeMb, int totalParts, long? totalBytes = null, CancellationToken cancellationToken = default);
+
         /// <summary>Writes one chunk part to the temp directory and records it in DB.</summary>
         Task<IFeedback<ChunkPartResult>> UploadChunkPart(long versionId, int partNumber, Stream chunkStream, string hash = null, CancellationToken cancellationToken = default);
 
