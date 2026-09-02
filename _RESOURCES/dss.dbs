@@ -24,6 +24,35 @@
 			</index>
 			<options><![CDATA[ENGINE=InnoDB AUTO_INCREMENT=1998 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
 		</table>
+		<table name="rule_filter" spec="" >
+			<column name="rule_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="client" type="VARCHAR" length="120" />
+			<column name="module" type="VARCHAR" length="120" />
+			<column name="workspace" type="VARCHAR" length="120" />
+			<column name="folder_ref" type="VARCHAR" length="180" />
+			<column name="actor" type="BIGINT" length="20" />
+			<column name="file_pattern" type="VARCHAR" length="255" />
+			<column name="upload_uid" type="CHAR" length="36" />
+			<index name="pk_rule_filter" unique="PRIMARY_KEY" >
+				<column name="rule_id" />
+			</index>
+			<index name="ix_rule_filter_scope_actor" unique="NORMAL" >
+				<column name="client" />
+				<column name="module" />
+				<column name="workspace" />
+				<column name="actor" />
+			</index>
+			<index name="ix_rule_filter_upload_uid" unique="NORMAL" >
+				<column name="upload_uid" />
+			</index>
+			<index name="ix_rule_filter_file_pattern" unique="NORMAL" >
+				<column name="file_pattern" />
+			</index>
+			<fk name="fk_rule_filter_info" to_schema="dss_admin" to_table="rule_info" delete_action="cascade" >
+				<fk_column name="rule_id" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
 		<table name="rule_info" spec="" >
 			<column name="id" type="BIGINT" length="20" mandatory="y" >
 				<identity><![CDATA[AUTO_INCREMENT]]></identity>
@@ -37,15 +66,6 @@
 			</column>
 			<column name="scope_type" type="VARCHAR" length="24" mandatory="y" />
 			<column name="scope_value" type="VARCHAR" length="255" />
-			<column name="client" type="VARCHAR" length="120" />
-			<column name="module" type="VARCHAR" length="120" />
-			<column name="workspace" type="VARCHAR" length="120" />
-			<column name="folder_ref" type="VARCHAR" length="180" />
-			<column name="actor" type="BIGINT" length="20" />
-			<column name="file_pattern" type="VARCHAR" length="255" />
-			<column name="upload_uid" type="CHAR" length="36" />
-			<column name="max_bps" type="BIGINT" length="20" />
-			<column name="max_concurrent" type="INT" length="11" />
 			<column name="priority" type="INT" length="11" mandatory="y" >
 				<defo><![CDATA[100]]></defo>
 			</column>
@@ -70,24 +90,27 @@
 				<column name="scope_type" />
 				<column name="scope_value" />
 			</index>
-			<index name="ix_rule_info_filter_scope" unique="NORMAL" >
-				<column name="enabled" />
-				<column name="client" />
-				<column name="module" />
-				<column name="workspace" />
-				<column name="actor" />
-			</index>
-			<index name="ix_rule_info_upload_uid" unique="NORMAL" >
-				<column name="upload_uid" />
-			</index>
-			<index name="ix_rule_info_file_pattern" unique="NORMAL" >
-				<column name="enabled" />
-				<column name="file_pattern" />
-			</index>
 			<index name="ix_rule_info_priority" unique="NORMAL" >
 				<column name="priority" />
 			</index>
+			<index name="ix_rule_info_effective" unique="NORMAL" >
+				<column name="enabled" />
+				<column name="effective_from" />
+				<column name="effective_to" />
+			</index>
 			<options><![CDATA[ENGINE=InnoDB AUTO_INCREMENT=2000 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="rule_limit" spec="" >
+			<column name="rule_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="max_bps" type="BIGINT" length="20" />
+			<column name="max_concurrent" type="INT" length="11" />
+			<index name="pk_rule_limit" unique="PRIMARY_KEY" >
+				<column name="rule_id" />
+			</index>
+			<fk name="fk_rule_limit_info" to_schema="dss_admin" to_table="rule_info" delete_action="cascade" >
+				<fk_column name="rule_id" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
 		</table>
 		<table name="tx_info" spec="" >
 			<column name="id" type="BIGINT" length="20" mandatory="y" >
@@ -102,31 +125,10 @@
 			<column name="flags" type="BIGINT" length="20" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 			</column>
-			<column name="actor" type="BIGINT" length="20" />
-			<column name="client" type="VARCHAR" length="120" />
-			<column name="module" type="VARCHAR" length="120" />
-			<column name="workspace" type="VARCHAR" length="120" />
-			<column name="folder_ref" type="VARCHAR" length="180" />
-			<column name="file_name" type="VARCHAR" length="255" />
-			<column name="version_uid" type="VARCHAR" length="64" />
-			<column name="root_uid" type="VARCHAR" length="64" />
-			<column name="total_bytes" type="BIGINT" length="20" />
-			<column name="bytes_written" type="BIGINT" length="20" mandatory="y" >
-				<defo><![CDATA[0]]></defo>
-			</column>
-			<column name="current_speed_bps" type="BIGINT" length="20" mandatory="y" >
-				<defo><![CDATA[0]]></defo>
-			</column>
-			<column name="avg_speed_bps" type="BIGINT" length="20" mandatory="y" >
-				<defo><![CDATA[0]]></defo>
-			</column>
 			<column name="started" type="DATETIME" mandatory="y" >
 				<defo><![CDATA[current_timestamp()]]></defo>
 			</column>
 			<column name="completed" type="DATETIME" />
-			<column name="last_activity" type="DATETIME" mandatory="y" >
-				<defo><![CDATA[current_timestamp()]]></defo>
-			</column>
 			<column name="server_node" type="VARCHAR" length="120" mandatory="y" >
 				<defo><![CDATA['']]></defo>
 			</column>
@@ -141,26 +143,55 @@
 				<column name="status" />
 				<column name="started" />
 			</index>
-			<index name="ix_tx_info_status_activity" unique="NORMAL" >
+			<index name="ix_tx_info_status_completed" unique="NORMAL" >
 				<column name="status" />
-				<column name="last_activity" />
-			</index>
-			<index name="ix_tx_info_actor_status" unique="NORMAL" >
-				<column name="actor" />
-				<column name="status" />
-			</index>
-			<index name="ix_tx_info_scope_status" unique="NORMAL" >
-				<column name="client" />
-				<column name="module" />
-				<column name="workspace" />
-				<column name="status" />
-			</index>
-			<index name="ix_tx_info_protocol_version" unique="NORMAL" >
-				<column name="protocol" />
-				<column name="version_uid" />
-				<column name="status" />
+				<column name="completed" />
 			</index>
 			<options><![CDATA[ENGINE=InnoDB AUTO_INCREMENT=1994 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="tx_prog" spec="" >
+			<column name="tx_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="total_bytes" type="BIGINT" length="20" />
+			<column name="bytes_written" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="current_speed_bps" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="avg_speed_bps" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="last_activity" type="DATETIME" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+			</column>
+			<index name="pk_tx_prog" unique="PRIMARY_KEY" >
+				<column name="tx_id" />
+			</index>
+			<index name="ix_tx_prog_activity" unique="NORMAL" >
+				<column name="last_activity" />
+			</index>
+			<fk name="fk_tx_prog_info" to_schema="dss_admin" to_table="tx_info" delete_action="cascade" >
+				<fk_column name="tx_id" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="tx_ref" spec="" >
+			<column name="tx_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="version_uid" type="VARCHAR" length="64" />
+			<column name="root_uid" type="VARCHAR" length="64" />
+			<index name="pk_tx_ref" unique="PRIMARY_KEY" >
+				<column name="tx_id" />
+			</index>
+			<index name="ix_tx_ref_version_uid" unique="NORMAL" >
+				<column name="version_uid" />
+			</index>
+			<index name="ix_tx_ref_root_uid" unique="NORMAL" >
+				<column name="root_uid" />
+			</index>
+			<fk name="fk_tx_ref_info" to_schema="dss_admin" to_table="tx_info" delete_action="cascade" >
+				<fk_column name="tx_id" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
 		</table>
 		<table name="tx_sample" spec="" >
 			<column name="id" type="BIGINT" length="20" mandatory="y" >
@@ -187,6 +218,34 @@
 				<fk_column name="session_id" pk="id" />
 			</fk>
 			<options><![CDATA[ENGINE=InnoDB AUTO_INCREMENT=2094 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="tx_scope" spec="" >
+			<column name="tx_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="actor" type="BIGINT" length="20" />
+			<column name="client" type="VARCHAR" length="120" />
+			<column name="module" type="VARCHAR" length="120" />
+			<column name="workspace" type="VARCHAR" length="120" />
+			<column name="folder_ref" type="VARCHAR" length="180" />
+			<column name="file_name" type="VARCHAR" length="255" />
+			<index name="pk_tx_scope" unique="PRIMARY_KEY" >
+				<column name="tx_id" />
+			</index>
+			<index name="ix_tx_scope_scope_actor" unique="NORMAL" >
+				<column name="client" />
+				<column name="module" />
+				<column name="workspace" />
+				<column name="actor" />
+			</index>
+			<index name="ix_tx_scope_actor" unique="NORMAL" >
+				<column name="actor" />
+			</index>
+			<index name="ix_tx_scope_file_name" unique="NORMAL" >
+				<column name="file_name" />
+			</index>
+			<fk name="fk_tx_scope_info" to_schema="dss_admin" to_table="tx_info" delete_action="cascade" >
+				<fk_column name="tx_id" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
 		</table>
 	</schema>
 	<schema name="dss_client" >
@@ -1239,10 +1298,15 @@ ALTER TABLE dss_core.directory ADD CONSTRAINT fk_direcory_client FOREIGN KEY ( p
 			</browser>
 		</diagram>
 		<diagram name="mssadmin" id="4005820e-6e8b-41e4-8a40-fad60b92d53d" joined_routing="y" show_relation="cascade" >
-			<entity schema="dss_admin" name="edge_apply" color="3986C1" x="57" y="57" />
-			<entity schema="dss_admin" name="rule_info" color="3986C1" x="266" y="57" />
-			<entity schema="dss_admin" name="tx_info" color="3986C1" x="513" y="57" />
-			<entity schema="dss_admin" name="tx_sample" color="3986C1" x="798" y="57" />
+			<entity schema="dss_admin" name="edge_apply" color="3986C1" x="456" y="190" />
+			<entity schema="dss_admin" name="rule_filter" color="3986C1" x="266" y="114" />
+			<entity schema="dss_admin" name="rule_info" color="3986C1" x="57" y="228" />
+			<entity schema="dss_admin" name="rule_limit" color="3986C1" x="266" y="418" />
+			<entity schema="dss_admin" name="tx_info" color="3986C1" x="627" y="152" />
+			<entity schema="dss_admin" name="tx_prog" color="3986C1" x="570" y="418" />
+			<entity schema="dss_admin" name="tx_ref" color="3986C1" x="893" y="228" />
+			<entity schema="dss_admin" name="tx_sample" color="3986C1" x="893" y="57" />
+			<entity schema="dss_admin" name="tx_scope" color="3986C1" x="874" y="380" />
 		</diagram>
 	</diagram_group>
 </project>
