@@ -7,7 +7,12 @@ namespace Haley.Utils {
     internal partial class MariaDBIndexing {
         public async Task<bool> HydrateModuleAsync(string moduleCuid) {
             if (string.IsNullOrWhiteSpace(moduleCuid)) return false;
-            if (TryGetComponentInfo<VaultModule>(moduleCuid, out _)) return true;
+            if (TryGetComponentInfo<VaultModule>(moduleCuid, out var cachedModule)) {
+                await EnsureValidation();
+                if (!_agw.ContainsKey(moduleCuid))
+                    await CreateModuleDBInstance(cachedModule);
+                return _agw.ContainsKey(moduleCuid);
+            }
 
             await EnsureValidation();
             var row = await _agw.RowAsync(_key, MODULE.GET_BY_CUID, default, (CUID, moduleCuid));
@@ -41,6 +46,9 @@ namespace Haley.Utils {
 
             return true;
         }
+
+        public bool IsModuleAdapterRegistered(string moduleCuid)
+            => !string.IsNullOrWhiteSpace(moduleCuid) && _agw.ContainsKey(moduleCuid);
 
         public async Task<IReadOnlyList<string>> GetWorkspaceCuidsAsync(string moduleCuid) {
             if (string.IsNullOrWhiteSpace(moduleCuid)) return Array.Empty<string>();
