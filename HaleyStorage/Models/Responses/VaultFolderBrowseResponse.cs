@@ -11,6 +11,7 @@ namespace Haley.Models {
         public long CurrentFolderId { get; set; }
         public string CurrentFolderCuid { get; set; } = string.Empty;
         public string CurrentFolderName { get; set; } = string.Empty;
+        public string CurrentFolderPath { get; set; } = string.Empty;
         public long CurrentFolderParentId { get; set; }
         public bool IncludeAll { get; set; }
         public int Page { get; set; }

@@ -20,8 +20,8 @@ namespace Haley.Utils {
 
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {
-                if (string.IsNullOrWhiteSpace(searchTerm))
-                    return fb.SetMessage("Search term cannot be empty.");
+                if (string.IsNullOrWhiteSpace(searchTerm) && string.IsNullOrWhiteSpace(extension))
+                    return fb.SetMessage("Search requires a term or extension.");
                 if (request?.Scope?.Module == null || request.Scope.Module.Cuid == Guid.Empty)
                     return fb.SetMessage("Module CUID is mandatory for search.");
                 if (request.Scope?.Workspace == null || request.Scope.Workspace.Cuid == Guid.Empty)
@@ -38,36 +38,43 @@ namespace Haley.Utils {
                 var wsId = await ResolveWorkspaceId(request.Scope.Workspace.Cuid.ToString("N"));
                 if (wsId < 1) return fb.SetMessage("Workspace is not registered in the core index.");
 
-                var likePattern = BuildSearchPattern(searchTerm.Trim().ToLowerInvariant(), searchMode);
-                // Pass DBNull.Value when no extension filter — lets (@EXT is null or ...) short-circuit.
-                object extParam = string.IsNullOrWhiteSpace(extension)? (object)DBNull.Value : extension.TrimStart('.').ToLowerInvariant();
+                var likePattern = string.IsNullOrWhiteSpace(searchTerm)
+                    ? "%"
+                    : BuildSearchPattern(searchTerm.Trim().ToLowerInvariant(), searchMode);
+                // Stored extensions include the leading dot (".pdf"). API callers may send "pdf" or ".pdf".
+                object extParam = BuildExtensionFilter(extension);
+
+                var folderInfo = await ResolveFolderInfo(moduleCuid, request, wsId, includeAll);
+                if (!folderInfo.status) return fb.SetMessage(folderInfo.message);
 
                 var offset = (page - 1) * pageSize;
                 long totalDirs, totalFiles;
                 IEnumerable<DbRow> rows;
 
-                var directoryId = request.Scope.Folder?.Id ?? -1;   // -1 indicates root scope (entire workspace)
+                var directoryId = folderInfo.id;
                 if (directoryId < 1) {
                     // Scope: entire workspace.
-                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_ALL_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_ALL,  default, (WSPACE, wsId), (VALUE, likePattern)) ?? 0;
+                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_ALL_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_ALL,  default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
                     totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_FILES_ALL_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_FILES_ALL, default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
                     rows       = await _agw.RowsAsync(moduleCuid, includeAll ? INSTANCE.SEARCH.ITEMS_ALL_INCLUDE_DELETED : INSTANCE.SEARCH.ITEMS_ALL, default, (WSPACE, wsId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 } else if (!recursive) {
                     // Scope: direct children of a specific directory.
-                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_IN_DIR_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_IN_DIR,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern)) ?? 0;
+                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_IN_DIR_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_IN_DIR,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
                     totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_FILES_IN_DIR_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_FILES_IN_DIR, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
                     rows       = await _agw.RowsAsync(moduleCuid, includeAll ? INSTANCE.SEARCH.ITEMS_IN_DIR_INCLUDE_DELETED : INSTANCE.SEARCH.ITEMS_IN_DIR, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 } else {
                     // Scope: recursive subtree of a directory (WITH RECURSIVE CTE).
-                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_RECURSIVE_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_RECURSIVE,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern)) ?? 0;
+                    totalDirs  = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_DIRS_RECURSIVE_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_DIRS_RECURSIVE,  default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
                     totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.SEARCH.COUNT_FILES_RECURSIVE_INCLUDE_DELETED : INSTANCE.SEARCH.COUNT_FILES_RECURSIVE, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam)) ?? 0;
                     rows       = await _agw.RowsAsync(moduleCuid, includeAll ? INSTANCE.SEARCH.ITEMS_RECURSIVE_INCLUDE_DELETED : INSTANCE.SEARCH.ITEMS_RECURSIVE, default, (WSPACE, wsId), (PARENT, directoryId), (VALUE, likePattern), (EXT, extParam), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
                 }
 
-                var response = new VaultFolderBrowseResponse { WorkspaceId    = wsId, WorkspaceCuid  = request.Scope.Workspace.Cuid.ToString("N"), IsRoot = directoryId < 1, CurrentFolderId = directoryId, IncludeAll = includeAll, Page = page, PageSize = pageSize, TotalFolders = totalDirs, TotalFiles = totalFiles, TotalItems = totalDirs + totalFiles };
+                var response = new VaultFolderBrowseResponse { WorkspaceId = wsId, WorkspaceCuid = request.Scope.Workspace.Cuid.ToString("N"), IsRoot = folderInfo.isRoot, CurrentFolderId = folderInfo.id, CurrentFolderCuid = folderInfo.cuid, CurrentFolderName = folderInfo.displayName, CurrentFolderParentId = folderInfo.parentId, IncludeAll = includeAll, Page = page, PageSize = pageSize, TotalFolders = totalDirs, TotalFiles = totalFiles, TotalItems = totalDirs + totalFiles };
 
                 foreach (var row in rows)
                     response.Items.Add(MapBrowseItem(row));
+
+                await ApplySearchPaths(moduleCuid, response, includeAll);
 
                 return fb.SetStatus(true).SetResult(response);
             } catch (Exception ex) {
@@ -83,5 +90,16 @@ namespace Haley.Utils {
             VaultSearchMode.Contains   => $"%{normalizedTerm}%",
             _                          => normalizedTerm,   // Equals — exact match, no wildcards
         };
+
+        static object BuildExtensionFilter(string extension) {
+            if (string.IsNullOrWhiteSpace(extension)) return DBNull.Value;
+
+            var normalized = extension.Trim().ToLowerInvariant();
+            if (normalized == "*") return DBNull.Value;
+            if (!normalized.StartsWith('.') && normalized != VaultConstants.DEFAULT_NAME)
+                normalized = "." + normalized;
+
+            return normalized.ToDBName();
+        }
     }
 }

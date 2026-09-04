@@ -46,13 +46,13 @@ namespace Haley.Internal {
                 public const string BROWSE_ITEMS =
                     $@"select *
                        from (
-                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.delete_state, dir.deleted, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
+                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, '' as virtual_path, dir.delete_state, dir.deleted, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
                              from directory as dir
                              where dir.workspace = {WSPACE} and dir.parent = {PARENT} and dir.delete_state = 0
 
                              union all
 
-                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.delete_state, d.deleted, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
+                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, '' as virtual_path, d.delete_state, d.deleted, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
                             from document as d
                             left join doc_info as di on di.file = d.id
                             inner join (
@@ -70,13 +70,13 @@ namespace Haley.Internal {
                 public const string BROWSE_ITEMS_ALL =
                     $@"select *
                        from (
-                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, dir.delete_state, dir.deleted, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
+                             select 0 as sort_group, 'folder' as item_type, dir.id, dir.cuid as uid, dir.display_name, dir.actor as actor_id, dir.parent as parent_id, '' as virtual_path, dir.delete_state, dir.deleted, dir.created, dir.modified, null as version_id, null as version_cuid, null as version_no, null as version_count, null as version_created, null as size, null as storage_name, null as storage_ref, null as staging_ref, null as flags, null as hash, null as synced_at
                              from directory as dir
                              where dir.workspace = {WSPACE} and dir.parent = {PARENT}
 
                              union all
 
-                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, d.delete_state, d.deleted, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
+                            select 1 as sort_group, 'file' as item_type, d.id, d.cuid as uid, coalesce(di.display_name, '') as display_name, dv.actor as actor_id, d.parent as parent_id, '' as virtual_path, d.delete_state, d.deleted, d.created, d.modified, dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, latest.version_count, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at
                             from document as d
                             left join doc_info as di on di.file = d.id
                             inner join (

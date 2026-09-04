@@ -139,7 +139,8 @@ namespace Haley.Models {
                     var fileInfo = new MultipartFileInfo() {
                         Request = reqClone,
                         DataInfo = dataInfo!,
-                        ContentDispositionKey = file.cd_key
+                        ContentDispositionKey = file.cd_key,
+                        TotalFileCount = fileSections.Count
                     };
                     saveSummary = await _fileHandler(fileInfo);
                 } catch (Exception ex) {

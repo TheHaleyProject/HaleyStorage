@@ -49,7 +49,8 @@ namespace Haley.Utils {
                     throw new ArgumentException($"No document found for version CUID '{versionCuid}'.");
 
                 // 2. Determine next content version number (sub_ver=0 only).
-                var currentMax = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_LATEST, load, (PARENT, docId.Value));
+                // Use all historical versions, not only active ones, so version numbers are never reused.
+                var currentMax = await _agw.ScalarAsync<int?>(moduleCuid, INSTANCE.DOCVERSION.FIND_MAX_CONTENT_VERSION, load, (PARENT, docId.Value));
                 int nextVersion = (currentMax ?? 0) + 1;
 
                 // 3. Insert the new content doc_version row (sub_ver defaults to 0).

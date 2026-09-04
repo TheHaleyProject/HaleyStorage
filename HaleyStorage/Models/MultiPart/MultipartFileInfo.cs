@@ -5,5 +5,6 @@ namespace Haley.Models {
         public IVaultFileWriteRequest Request { get; set; }
         public MultipartDataInfo DataInfo { get; set; }
         public string ContentDispositionKey { get; set; }
+        public int TotalFileCount { get; set; }
     }
 }

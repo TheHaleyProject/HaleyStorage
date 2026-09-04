@@ -46,6 +46,8 @@ namespace Haley.Utils {
                     response.Items.Add(MapBrowseItem(row));
                 }
 
+                await ApplyBrowsePaths(moduleCuid, response, folderInfo.id, includeAll);
+
                 return fb.SetStatus(true).SetResult(response);
             } catch (Exception ex) {
                 _logger?.LogError(ex.Message + Environment.NewLine + ex.StackTrace);
@@ -160,7 +162,7 @@ namespace Haley.Utils {
 
         static VaultBrowseItem MapBrowseItem(DbRow row) {
             var deleteState = row.GetInt("delete_state");
-            return new VaultBrowseItem { ItemType = row.GetString("item_type") ?? string.Empty, Id = row.GetLong("id"), Cuid = row.GetString("uid") ?? string.Empty, DisplayName = row.GetString("display_name") ?? string.Empty, ActorId = row.GetNullableLong("actor_id"), ParentId = row.GetLong("parent_id"), DeleteState = deleteState, IsDeleted = deleteState > 0, Deleted = row.GetDateTime("deleted"), Created = row.GetDateTime("created"), Modified = row.GetDateTime("modified"), LatestVersionId = row.GetNullableLong("version_id"), LatestVersionCuid = row.GetString("version_cuid") ?? string.Empty, LatestVersionNumber = row.GetNullableInt("version_no"), VersionCount = row.GetNullableInt("version_count"), LatestVersionCreated = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, Flags = row.GetNullableInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at") };
+            return new VaultBrowseItem { ItemType = row.GetString("item_type") ?? string.Empty, Id = row.GetLong("id"), Cuid = row.GetString("uid") ?? string.Empty, DisplayName = row.GetString("display_name") ?? string.Empty, ActorId = row.GetNullableLong("actor_id"), ParentId = row.GetLong("parent_id"), VirtualPath = row.GetString("virtual_path") ?? string.Empty, DeleteState = deleteState, IsDeleted = deleteState > 0, Deleted = row.GetDateTime("deleted"), Created = row.GetDateTime("created"), Modified = row.GetDateTime("modified"), LatestVersionId = row.GetNullableLong("version_id"), LatestVersionCuid = row.GetString("version_cuid") ?? string.Empty, LatestVersionNumber = row.GetNullableInt("version_no"), VersionCount = row.GetNullableInt("version_count"), LatestVersionCreated = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, Flags = row.GetNullableInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at") };
         }
     }
 }

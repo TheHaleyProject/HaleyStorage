@@ -10,6 +10,7 @@ namespace Haley.Internal {
                 public const string EXISTS_BY_ID = $@"select 1 from doc_version as dv where dv.id = {ID};";
                 public const string INSERT = $@"insert ignore into doc_version (parent,ver,actor) values({PARENT},{VERSION},{ACTOR});";
                 public const string FIND_LATEST = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT} and dv.sub_ver = 0 and dv.delete_state = 0;";
+                public const string FIND_MAX_CONTENT_VERSION = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT} and dv.sub_ver = 0;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_ID = $@"select dv.parent from doc_version as dv where dv.id = {VALUE} limit 1;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_CUID = $@"select dv.parent from doc_version as dv where dv.cuid = {VALUE} limit 1;";
                 /// <summary>Returns 1 if the given version CUID is the latest version of its document, 0 otherwise.</summary>
