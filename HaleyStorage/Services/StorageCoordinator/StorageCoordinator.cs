@@ -118,6 +118,13 @@ namespace Haley.Services {
         }
 
         /// <summary>
+        /// Creates a fully-configured coordinator from an explicit configuration source.
+        /// </summary>
+        public static IStorageCoordinator Create(IAdapterGateway agw, string adapter_key, IConfiguration configuration, out (string logpath, string respMode) data, bool throwExceptions = false) {
+            return CreateConfigured(agw, adapter_key, out data, throwExceptions, registerConfiguredSources: true, configuration);
+        }
+
+        /// <summary>
         /// Creates a configured coordinator without registering identities from
         /// <c>Seed:OSSSource</c>. Intended for management processes that discover the
         /// complete hierarchy from the persisted registry.
@@ -126,14 +133,25 @@ namespace Haley.Services {
             return CreateConfigured(agw, adapter_key, out data, throwExceptions, registerConfiguredSources: false);
         }
 
-        static IStorageCoordinator CreateConfigured(IAdapterGateway agw, string adapter_key, out (string logpath,string respMode) data, bool throwExceptions, bool registerConfiguredSources) {
+        /// <summary>
+        /// Creates a configured coordinator from an explicit configuration source without
+        /// registering identities from <c>Seed:OSSSource</c>.
+        /// </summary>
+        public static IStorageCoordinator CreateRuntime(IAdapterGateway agw, string adapter_key, IConfiguration configuration, out (string logpath, string respMode) data, bool throwExceptions = false) {
+            return CreateConfigured(agw, adapter_key, out data, throwExceptions, registerConfiguredSources: false, configuration);
+        }
+
+        static IStorageCoordinator CreateConfigured(IAdapterGateway agw, string adapter_key, out (string logpath,string respMode) data, bool throwExceptions, bool registerConfiguredSources, IConfiguration configuration = null) {
             data = (null, null);
-            var cfgRoot = ResourceUtils.GenerateConfigurationRoot();
+            var cfgRoot = configuration ?? ResourceUtils.GenerateConfigurationRoot();
             var dirPath = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? VaultConstants.CONFIG_DIR_WIN : VaultConstants.CONFIG_DIR_LINUX;
             var dirSection = cfgRoot[$@"Seed:{VaultConstants.CONFIG_INFO}:{dirPath}"];
             var responseMode = cfgRoot[$@"Seed:{VaultConstants.CONFIG_INFO}:{VaultConstants.CONFIG_DIR_RESPONSEPATHMODE}"];
             bool writemode = false;
-            bool.TryParse(ResourceUtils.FetchVariable(VaultConstants.OSS_WRITEMODE)?.Result?.ToString(), out writemode);
+            var writeModeRaw = cfgRoot[VaultConstants.OSS_WRITEMODE];
+            if (string.IsNullOrWhiteSpace(writeModeRaw))
+                writeModeRaw = ResourceUtils.FetchVariable(VaultConstants.OSS_WRITEMODE)?.Result?.ToString();
+            bool.TryParse(writeModeRaw, out writemode);
             var dirInfo = dirSection?.ToDictionarySplit();
             string logPath = null; // dirSection?["log"]
             string storagePath = string.Empty;
@@ -148,7 +166,8 @@ namespace Haley.Services {
                 if (registration?.Status != true && throwExceptions)
                     throw new InvalidOperationException(registration?.Message ?? "Storage registry initialization failed.");
             } else {
-                dss.InitializePersistedRegistryState().Wait();
+                dss.Initialize().GetAwaiter().GetResult();
+                dss.InitializePersistedRegistryState().GetAwaiter().GetResult();
             }
 
             //FILE FORMATS HANDLING

@@ -1,4 +1,5 @@
 using Haley.Abstractions;
+using Haley.Enums;
 using Haley.Models;
 using Haley.Utils;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,7 @@ namespace Haley.Utils {
     /// Partial class — DB-backed browse/explore APIs for folders and file history.
     /// </summary>
     internal partial class MariaDBIndexing {
-        public async Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50, bool includeAll = false) {
+        public async Task<IFeedback<VaultFolderBrowseResponse>> BrowseFolder(IVaultReadRequest request, int page = 1, int pageSize = 50, bool includeAll = false, VaultFolderSortMode sort = VaultFolderSortMode.Id, VaultSortDirection direction = VaultSortDirection.Asc, VaultFolderItemKind kind = VaultFolderItemKind.Both) {
             var fb = new Feedback<VaultFolderBrowseResponse>();
             try {
                 if (request == null) return fb.SetMessage("Input request cannot be empty.");
@@ -34,11 +35,16 @@ namespace Haley.Utils {
                 var folderInfo = await ResolveFolderInfo(moduleCuid, request, wsId, includeAll);
                 if (!folderInfo.status) return fb.SetMessage(folderInfo.message);
 
-                var totalFolders = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.DIRECTORY.COUNT_CHILDREN_ALL : INSTANCE.DIRECTORY.COUNT_CHILDREN, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
-                var totalFiles = await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.DOCUMENT.COUNT_BY_DIRECTORY_ALL : INSTANCE.DOCUMENT.COUNT_BY_DIRECTORY, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
+                var totalFolders = kind == VaultFolderItemKind.Files
+                    ? 0
+                    : await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.DIRECTORY.COUNT_CHILDREN_ALL : INSTANCE.DIRECTORY.COUNT_CHILDREN, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
+                var totalFiles = kind == VaultFolderItemKind.Folders
+                    ? 0
+                    : await _agw.ScalarAsync<long?>(moduleCuid, includeAll ? INSTANCE.DOCUMENT.COUNT_BY_DIRECTORY_ALL : INSTANCE.DOCUMENT.COUNT_BY_DIRECTORY, default, (WSPACE, wsId), (PARENT, folderInfo.id)) ?? 0;
                 var offset = (page - 1) * pageSize;
 
-                var rows = await _agw.RowsAsync(moduleCuid, includeAll ? INSTANCE.DIRECTORY.BROWSE_ITEMS_ALL : INSTANCE.DIRECTORY.BROWSE_ITEMS, default, (WSPACE, wsId), (PARENT, folderInfo.id), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
+                var query = ApplyFolderListingOptions(includeAll ? INSTANCE.DIRECTORY.BROWSE_ITEMS_ALL : INSTANCE.DIRECTORY.BROWSE_ITEMS, "browse_items", sort, direction, kind);
+                var rows = await _agw.RowsAsync(moduleCuid, query, default, (WSPACE, wsId), (PARENT, folderInfo.id), (LIMIT_ROWS, pageSize), (OFFSET_ROWS, offset));
 
                 var response = new VaultFolderBrowseResponse { WorkspaceId = wsId, WorkspaceCuid = request.Scope.Workspace.Cuid.ToString("N"), IsRoot = folderInfo.isRoot, CurrentFolderId = folderInfo.id, CurrentFolderCuid = folderInfo.cuid, CurrentFolderName = folderInfo.displayName, CurrentFolderParentId = folderInfo.parentId, IncludeAll = includeAll, Page = page, PageSize = pageSize, TotalFolders = totalFolders, TotalFiles = totalFiles, TotalItems = totalFolders + totalFiles };
 
@@ -163,6 +169,33 @@ namespace Haley.Utils {
         static VaultBrowseItem MapBrowseItem(DbRow row) {
             var deleteState = row.GetInt("delete_state");
             return new VaultBrowseItem { ItemType = row.GetString("item_type") ?? string.Empty, Id = row.GetLong("id"), Cuid = row.GetString("uid") ?? string.Empty, DisplayName = row.GetString("display_name") ?? string.Empty, ActorId = row.GetNullableLong("actor_id"), ParentId = row.GetLong("parent_id"), VirtualPath = row.GetString("virtual_path") ?? string.Empty, DeleteState = deleteState, IsDeleted = deleteState > 0, Deleted = row.GetDateTime("deleted"), Created = row.GetDateTime("created"), Modified = row.GetDateTime("modified"), LatestVersionId = row.GetNullableLong("version_id"), LatestVersionCuid = row.GetString("version_cuid") ?? string.Empty, LatestVersionNumber = row.GetNullableInt("version_no"), VersionCount = row.GetNullableInt("version_count"), LatestVersionCreated = row.GetDateTime("version_created"), Size = row.GetNullableLong("size"), StorageName = row.GetString("storage_name") ?? string.Empty, StagingRef = row.GetString("staging_ref") ?? string.Empty, StorageRef = row.GetString("storage_ref") ?? string.Empty, Flags = row.GetNullableInt("flags"), Hash = row.GetString("hash") ?? string.Empty, SyncedAt = row.GetDateTime("synced_at") };
+        }
+
+        static string ApplyFolderListingOptions(string sql, string alias, VaultFolderSortMode sort, VaultSortDirection direction, VaultFolderItemKind kind) {
+            var currentOrder = $"order by {alias}.sort_group asc, {alias}.display_name asc, {alias}.id asc";
+            var itemFilter = kind switch {
+                VaultFolderItemKind.Folders => $"where {alias}.sort_group = 0",
+                VaultFolderItemKind.Files   => $"where {alias}.sort_group = 1",
+                _                           => string.Empty
+            };
+            var replacement = string.IsNullOrWhiteSpace(itemFilter)
+                ? BuildFolderOrderClause(alias, sort, direction)
+                : $"{itemFilter}{Environment.NewLine}                       {BuildFolderOrderClause(alias, sort, direction)}";
+            return sql.Replace(currentOrder, replacement, StringComparison.Ordinal);
+        }
+
+        static string BuildFolderOrderClause(string alias, VaultFolderSortMode sort, VaultSortDirection direction) {
+            var dir = direction == VaultSortDirection.Desc ? "desc" : "asc";
+            return sort switch {
+                VaultFolderSortMode.Name =>
+                    $"order by {alias}.sort_group asc, {alias}.display_name {dir}, {alias}.id asc",
+                VaultFolderSortMode.Created =>
+                    $"order by {alias}.sort_group asc, ({alias}.created is null) asc, {alias}.created {dir}, {alias}.id asc",
+                VaultFolderSortMode.Modified =>
+                    $"order by {alias}.sort_group asc, (coalesce({alias}.modified, {alias}.created) is null) asc, coalesce({alias}.modified, {alias}.created) {dir}, {alias}.id asc",
+                _ =>
+                    $"order by {alias}.sort_group asc, {alias}.id {dir}"
+            };
         }
     }
 }
