@@ -237,6 +237,7 @@ namespace Haley.Services {
                 feedback.Status = deleteResult?.Status == true;
                 feedback.Message = deleteResult?.Message ?? "Unable to delete the version.";
                 if (feedback.Status && hardDelete && deleteResult?.Result != null) {
+                    await EnsureWorkspaceContextAsync(input, forceRefresh: true);
                     await ArchiveDeletedVersionChain(input, deleteResult.Result, input.File.Cuid);
                 }
                 return feedback;
@@ -246,6 +247,7 @@ namespace Haley.Services {
             feedback.Status = docDeleteResult?.Status == true;
             feedback.Message = docDeleteResult?.Message ?? "Unable to delete the document.";
             if (feedback.Status && hardDelete && docDeleteResult?.Result != null) {
+                await EnsureWorkspaceContextAsync(input, forceRefresh: true);
                 await MoveDeletedDocumentFilesToArchive(input, docDeleteResult.Result);
                 var tombstoneFileName = BuildDeletedTombstoneFileName(docDeleteResult.Result);
                 var finalize = await Indexer.FinalizeDeletedDocumentArchive(input.Scope.Module.Cuid.ToString("N"), docDeleteResult.Result.DocumentId, tombstoneFileName);
@@ -269,6 +271,7 @@ namespace Haley.Services {
             if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+            await EnsureWorkspaceContextAsync(input, forceRefresh: true);
 
             if (!string.IsNullOrWhiteSpace(input?.File?.Cuid)) {
                 var deletedVersion = await Indexer.GetDeletedVersion(input);
@@ -417,6 +420,7 @@ namespace Haley.Services {
             if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
+            await EnsureWorkspaceContextAsync(input, forceRefresh: true);
 
             if (force) {
                 if (Indexer is not MariaDBIndexing mdIndexer) {

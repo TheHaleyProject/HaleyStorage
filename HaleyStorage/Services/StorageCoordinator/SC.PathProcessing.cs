@@ -519,11 +519,12 @@ namespace Haley.Services {
             return Path.Combine(parentPath, wsSegment);
         }
 
-        async Task EnsureWorkspaceContextAsync(IVaultReadRequest input) {
+        async Task EnsureWorkspaceContextAsync(IVaultReadRequest input, bool forceRefresh = false) {
             if (Indexer == null || input?.Scope?.Workspace == null) return;
             var workspaceCuid = input.Scope.Workspace.Cuid.ToString("N");
             var now = DateTime.UtcNow;
-            if (Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)
+            if (!forceRefresh
+                && Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)
                 && _workspaceRegistryRefresh.TryGetValue(workspaceCuid, out var refreshed)
                 && now - refreshed < WorkspaceRegistryRefreshInterval)
                 return;
@@ -532,7 +533,8 @@ namespace Haley.Services {
             await refreshLock.WaitAsync();
             try {
                 now = DateTime.UtcNow;
-                if (Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)
+                if (!forceRefresh
+                    && Indexer.TryGetComponentInfo<VaultWorkSpace>(workspaceCuid, out _)
                     && _workspaceRegistryRefresh.TryGetValue(workspaceCuid, out refreshed)
                     && now - refreshed < WorkspaceRegistryRefreshInterval)
                     return;
