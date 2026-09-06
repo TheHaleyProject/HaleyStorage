@@ -355,6 +355,7 @@ namespace Haley.Services {
                 var buffer = new byte[CopyBufferSize];
 
                 while (remaining > 0) {
+                    long pendingLength;
                     await using (var pending = new FileStream(
                         pendingPath,
                         FileMode.OpenOrCreate,
@@ -364,35 +365,30 @@ namespace Haley.Services {
                         FileOptions.Asynchronous | FileOptions.SequentialScan)) {
 
                         pending.Position = pending.Length;
-                        var room = session.ChunkSizeBytes - pending.Length;
-                        var toRead = (int)Math.Min(Math.Min(buffer.Length, remaining), room);
-                        var read = await dataStream.ReadAsync(buffer.AsMemory(0, toRead), linked.Token).ConfigureAwait(false);
-                        if (read == 0) {
-                            await TouchSessionAsync(session, CancellationToken.None).ConfigureAwait(false);
-                            return fb.SetMessage($"Request body ended with {remaining} byte(s) still expected.");
+                        while (remaining > 0 && pending.Position < session.ChunkSizeBytes) {
+                            var room = session.ChunkSizeBytes - pending.Position;
+                            var toRead = (int)Math.Min(Math.Min(buffer.Length, remaining), room);
+                            var read = await dataStream.ReadAsync(buffer.AsMemory(0, toRead), linked.Token).ConfigureAwait(false);
+                            if (read == 0) {
+                                await pending.FlushAsync(linked.Token).ConfigureAwait(false);
+                                await TouchSessionAsync(session, CancellationToken.None).ConfigureAwait(false);
+                                return fb.SetMessage($"Request body ended with {remaining} byte(s) still expected.");
+                            }
+
+                            await pending.WriteAsync(buffer.AsMemory(0, read), linked.Token).ConfigureAwait(false);
+                            remaining -= read;
                         }
 
-                        await pending.WriteAsync(buffer.AsMemory(0, read), linked.Token).ConfigureAwait(false);
                         await pending.FlushAsync(linked.Token).ConfigureAwait(false);
-                        remaining -= read;
+                        pendingLength = pending.Length;
                     }
 
                     var offsetAfterWrite = GetSequentialOffset(session);
-                    var pendingLength = File.Exists(pendingPath) ? new FileInfo(pendingPath).Length : 0L;
                     if (pendingLength == session.ChunkSizeBytes || offsetAfterWrite == session.Meta.TotalLength) {
                         var nextPart = CountPartFiles(session.TempDir) + 1;
-                        await using (var pendingRead = new FileStream(
-                            pendingPath,
-                            FileMode.Open,
-                            FileAccess.Read,
-                            FileShare.Read,
-                            CopyBufferSize,
-                            FileOptions.Asynchronous | FileOptions.SequentialScan)) {
-                            var committed = await WritePartCoreAsync(session, nextPart, pendingRead, null, linked.Token)
-                                .ConfigureAwait(false);
-                            if (!committed.Status) return fb.SetMessage(committed.Message);
-                        }
-                        File.Delete(pendingPath);
+                        var committed = await CommitPendingPartAsync(session, nextPart, pendingPath, linked.Token)
+                            .ConfigureAwait(false);
+                        if (!committed.Status) return fb.SetMessage(committed.Message);
                     }
                 }
 
@@ -672,6 +668,52 @@ namespace Haley.Services {
             } finally {
                 if (!string.IsNullOrWhiteSpace(candidate) && File.Exists(candidate)) File.Delete(candidate);
             }
+        }
+
+        async Task<IFeedback<ChunkPartResult>> CommitPendingPartAsync(
+            ChunkSessionCache session,
+            int partNumber,
+            string pendingPath,
+            CancellationToken cancellationToken) {
+
+            var fb = new Feedback<ChunkPartResult>();
+            if (!File.Exists(pendingPath)) return fb.SetMessage("The pending TUS part is unavailable.");
+
+            var size = new FileInfo(pendingPath).Length;
+            var expectedBytes = ExpectedPartBytes(session.Meta, partNumber);
+            if (size < 1) return fb.SetMessage("Chunk part cannot be empty.");
+            if (expectedBytes.HasValue && size != expectedBytes.Value)
+                return fb.SetMessage($"Part {partNumber} must contain exactly {expectedBytes.Value} bytes; received {size}.");
+            if (!expectedBytes.HasValue && size > session.ChunkSizeBytes)
+                return fb.SetMessage($"Part {partNumber} exceeds the configured chunk size of {session.ChunkSizeBytes} bytes.");
+
+            var actualHash = await ComputeHashAsync(pendingPath, cancellationToken).ConfigureAwait(false);
+            var finalPart = PartPath(session.TempDir, partNumber);
+            var alreadyPresent = File.Exists(finalPart);
+            if (alreadyPresent) {
+                var existingSize = new FileInfo(finalPart).Length;
+                var existingHash = await ComputeHashAsync(finalPart, cancellationToken).ConfigureAwait(false);
+                if (existingSize != size || !string.Equals(existingHash, actualHash, StringComparison.OrdinalIgnoreCase))
+                    return fb.SetMessage($"Part {partNumber} already exists with different content.");
+                File.Delete(pendingPath);
+            } else {
+                File.Move(pendingPath, finalPart, false);
+            }
+
+            var persisted = await PersistPartAsync(session, partNumber, size, actualHash).ConfigureAwait(false);
+            if (!persisted.Status)
+                return fb.SetMessage($"Part is durable on disk but DB reconciliation failed: {persisted.Message}");
+
+            await TouchSessionAsync(session, cancellationToken).ConfigureAwait(false);
+            return fb.SetStatus(true)
+                .SetMessage($"Part {partNumber}/{session.Meta.TotalParts} received ({size} bytes).")
+                .SetResult(new ChunkPartResult {
+                    PartNumber = partNumber,
+                    PartBytes = size,
+                    CommittedBytes = CountCommittedBytes(session.TempDir),
+                    Hash = actualHash,
+                    AlreadyPresent = alreadyPresent
+                });
         }
 
         async Task<IFeedback> PersistPartAsync(ChunkSessionCache session, int partNumber, long size, string hash) {
