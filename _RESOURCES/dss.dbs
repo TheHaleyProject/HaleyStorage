@@ -650,6 +650,12 @@ interesting idea is one file can have multiple thumbnails and it can be used sa 
 			<column name="node_id" type="BIGINT" length="20" mandatory="y" />
 			<column name="workspace" type="BIGINT" length="20" mandatory="y" />
 			<column name="ext" type="VARCHAR" length="100" mandatory="y" />
+			<column name="active_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
 			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 			</column>
@@ -666,6 +672,12 @@ interesting idea is one file can have multiple thumbnails and it can be used sa 
 				<defo><![CDATA[0]]></defo>
 			</column>
 			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="archived_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="purged_bytes" type="BIGINT" length="20" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 			</column>
 			<column name="modified" type="TIMESTAMP" mandatory="y" >
@@ -844,6 +856,12 @@ interesting idea is one file can have multiple thumbnails and it can be used sa 
 			<column name="node_id" type="BIGINT" length="20" mandatory="y" />
 			<column name="workspace" type="BIGINT" length="20" mandatory="y" />
 			<column name="ext" type="VARCHAR" length="100" mandatory="y" />
+			<column name="active_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
 			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 			</column>
@@ -860,6 +878,12 @@ interesting idea is one file can have multiple thumbnails and it can be used sa 
 				<defo><![CDATA[0]]></defo>
 			</column>
 			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="archived_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="purged_bytes" type="BIGINT" length="20" mandatory="y" >
 				<defo><![CDATA[0]]></defo>
 			</column>
 			<column name="modified" type="TIMESTAMP" mandatory="y" >
@@ -1645,11 +1669,11 @@ END]]></string>
 			<entity schema="dss_client" name="document" color="B34D1A" x="380" y="418" />
 			<entity schema="dss_client" name="extension" color="B34D1A" x="57" y="684" />
 			<entity schema="dss_client" name="name_store" color="B34D1A" x="114" y="513" />
-			<entity schema="dss_client" name="node_ext_stat" color="336633" x="836" y="171" />
+			<entity schema="dss_client" name="node_ext_stat" color="336633" x="836" y="114" />
 			<entity schema="dss_client" name="node_stat" color="336633" x="1026" y="95" />
-			<entity schema="dss_client" name="stat_evt" color="336633" x="1425" y="190" />
-			<entity schema="dss_client" name="stat_run" color="336633" x="1026" y="494" />
-			<entity schema="dss_client" name="tree_ext_stat" color="336633" x="1197" y="532" />
+			<entity schema="dss_client" name="stat_evt" color="336633" x="1425" y="114" />
+			<entity schema="dss_client" name="stat_run" color="336633" x="1235" y="494" />
+			<entity schema="dss_client" name="tree_ext_stat" color="336633" x="1026" y="475" />
 			<entity schema="dss_client" name="tree_stat" color="336633" x="1235" y="114" />
 			<entity schema="dss_client" name="vault" color="B34D1A" x="171" y="684" />
 			<entity schema="dss_client" name="version_info" color="B34D1A" x="608" y="95" />

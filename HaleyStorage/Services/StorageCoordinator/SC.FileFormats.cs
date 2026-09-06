@@ -12,6 +12,7 @@ namespace Haley.Services {
     /// anything absent from that list is permitted.
     /// </summary>
     public partial class StorageCoordinator : IStorageCoordinator {
+        readonly object _formatPolicyLock = new();
         /// <summary>
         /// Normalises an extension or MIME type string for storage in the allow/deny lists.
         /// Extensions: lowercased, leading dots stripped, multi-extension values truncated at first dot.
@@ -79,9 +80,11 @@ namespace Haley.Services {
 
         IFileFormatPolicy ModifyFormat(string format, FormatControlMode type, bool isAdd, bool restricted) {
             if (!TrySanitizeFormat(format, out var sanitized)) return this;
-            var source = GetSource(type, restricted);
-            if (isAdd && !source.Contains(sanitized)) source.Add(sanitized);
-            if (!isAdd && source.Contains(sanitized)) source.Remove(sanitized);
+            lock (_formatPolicyLock) {
+                var source = GetSource(type, restricted);
+                if (isAdd && !source.Contains(sanitized)) source.Add(sanitized);
+                if (!isAdd && source.Contains(sanitized)) source.Remove(sanitized);
+            }
             return this;
         }
         IFileFormatPolicy ModifyFormatRange(List<string> formats, FormatControlMode type, bool isAdd, bool restricted) {
@@ -97,6 +100,30 @@ namespace Haley.Services {
         /// <summary>Removes a single sanitized extension or MIME type from the allowed or restricted list.</summary>
         public IFileFormatPolicy RemoveFormat(string format, FormatControlMode type, bool restricted = false) => ModifyFormat(format, type, false, restricted);
 
+        /// <summary>Replaces one policy list with sanitized, distinct values.</summary>
+        public IFileFormatPolicy ReplaceFormats(IEnumerable<string> formats, FormatControlMode type, bool restricted = false) {
+            var sanitized = (formats ?? Enumerable.Empty<string>())
+                .Select(format => TrySanitizeFormat(format, out var value) ? value : null)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(value => value, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            lock (_formatPolicyLock) {
+                var source = GetSource(type, restricted);
+                source.Clear();
+                source.AddRange(sanitized!);
+            }
+            return this;
+        }
+
+        /// <summary>Returns an immutable snapshot of one policy list.</summary>
+        public IReadOnlyList<string> GetFormats(FormatControlMode type, bool restricted = false) {
+            lock (_formatPolicyLock) {
+                return GetSource(type, restricted).ToArray();
+            }
+        }
+
         /// <summary>
         /// Returns <c>true</c> if the format is permitted under the current policy.
         /// Priority: allowed list (if non-empty) → restricted list → default allow all.
@@ -104,22 +131,24 @@ namespace Haley.Services {
         public bool IsFormatAllowed(string format, FormatControlMode type) {
             if (!TrySanitizeFormat(format, out var sanitized)) return false;
 
-            var allowedSource = GetSource(type, false);
-            var restrictedSource = GetSource(type, true);
+            lock (_formatPolicyLock) {
+                var allowedSource = GetSource(type, false);
+                var restrictedSource = GetSource(type, true);
 
-            //Priority 1: If Allowed Formats is present. (If present means, allowed)
-            if (allowedSource != null && allowedSource.Count > 0) return allowedSource.Contains(sanitized);
-
-            //Priority 2: If Restricted Formats is present (Should not be present means, it is allowed)
-            if (restrictedSource != null && restrictedSource.Count > 0) return !restrictedSource.Contains(sanitized);
-            return true; //In this case, there is not restriction, allow everything.
+                // An allow-list takes precedence; otherwise the deny-list is applied.
+                if (allowedSource.Count > 0) return allowedSource.Contains(sanitized);
+                if (restrictedSource.Count > 0) return !restrictedSource.Contains(sanitized);
+                return true;
+            }
         }
         /// <summary>
         /// Returns <c>true</c> if any allowed or restricted entries are registered for the given <paramref name="type"/>,
         /// meaning format checking is active for that mode.
         /// </summary>
         public bool IsFormatTypeControlled(FormatControlMode type) {
-            return GetSource(type, false)?.Count > 0 || GetSource(type, true)?.Count > 0; //If either, allowed, or restricted list is not empty, then it has some sort of control in place.
+            lock (_formatPolicyLock) {
+                return GetSource(type, false).Count > 0 || GetSource(type, true).Count > 0;
+            }
         }
     }
 }

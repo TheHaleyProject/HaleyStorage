@@ -17,6 +17,12 @@ namespace Haley.Models {
         public int DeleteState { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? Deleted { get; set; }
+        public int? DocumentDeleteState { get; set; }
+        public bool DocumentIsDeleted { get; set; }
+        public DateTime? DocumentDeleted { get; set; }
+        public int? LatestVersionDeleteState { get; set; }
+        public bool LatestVersionIsDeleted { get; set; }
+        public DateTime? LatestVersionDeleted { get; set; }
         public DateTime? Created { get; set; }
         public DateTime? Modified { get; set; }
 
