@@ -439,9 +439,13 @@ namespace Haley.Utils {
 
                 var directoryRows = await CollectDirectoryRestoreTree(moduleCuid, wsId, targetRow.GetLong("id"));
                 var documents = await CollectRestorableDocuments(moduleCuid, directoryRows);
+                var restoringDirectoryIds = directoryRows
+                    .Where(row => IsRestorableDeleteState(row.GetInt("delete_state")))
+                    .Select(row => row.GetLong("id"))
+                    .ToHashSet();
 
                 foreach (var document in documents.Where(d => IsRestorableDeleteState(d.DeleteState))) {
-                    var restoreGuard = await EnsureDocumentRestoreCanProceed(moduleCuid, document);
+                    var restoreGuard = await EnsureDocumentRestoreCanProceed(moduleCuid, document, restoringDirectoryIds);
                     if (!restoreGuard.Status)
                         return fb.SetMessage(restoreGuard.Message);
                 }
@@ -609,12 +613,13 @@ namespace Haley.Utils {
             return fb.SetStatus(true).SetMessage("Deleted versions restored.");
         }
 
-        async Task<IFeedback> EnsureDocumentRestoreCanProceed(string moduleCuid, DeletedDocumentInfo lifecycle) {
+        async Task<IFeedback> EnsureDocumentRestoreCanProceed(string moduleCuid, DeletedDocumentInfo lifecycle, ISet<long> restoringDirectoryIds = null) {
             var fb = new Feedback();
             if (lifecycle == null) return fb.SetMessage("Target document not found.");
 
             var parentDirectory = await _agw.RowAsync(moduleCuid, INSTANCE.DIRECTORY.EXISTS_BY_ID, default, (VALUE, lifecycle.DirectoryId));
-            if (parentDirectory == null || parentDirectory.Count < 1)
+            var parentWillBeRestored = restoringDirectoryIds?.Contains(lifecycle.DirectoryId) == true;
+            if ((parentDirectory == null || parentDirectory.Count < 1) && !parentWillBeRestored)
                 return fb.SetMessage("The original folder is deleted. Restore the folder first.");
 
             var restoreNameId = lifecycle.OriginalNameStoreId ?? lifecycle.NameStoreId;
