@@ -27,6 +27,7 @@ namespace Haley.Models {
     public sealed class ChunkUploadStatus {
         public long VersionId { get; set; }
         public string VersionCuid { get; set; } = string.Empty;
+        public string RootCuid { get; set; } = string.Empty;
         public int TotalParts { get; set; }
         public int ReceivedParts { get; set; }
         public int PendingParts { get; set; }

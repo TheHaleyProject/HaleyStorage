@@ -31,6 +31,7 @@ namespace Haley.Models {
         public string LatestVersionCuid { get; set; } = string.Empty;
         public int? LatestVersionNumber { get; set; }
         public int? VersionCount { get; set; }
+        public bool HasThumbnail { get; set; }
         public DateTime? LatestVersionCreated { get; set; }
         public long? Size { get; set; }
         public string StorageName { get; set; } = string.Empty;

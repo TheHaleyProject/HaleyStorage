@@ -78,6 +78,7 @@ namespace Haley.Services {
         Task<IFeedback> UpsertChunkPart(string moduleCuid, long versionId, long partNumber, int sizeMb, string hash = null, string callId = null);
         Task<IFeedback> MarkChunkCompleted(string moduleCuid, long versionId, string callId = null);
         Task<IFeedback> AbortChunkVersion(string moduleCuid, long versionId, string callId = null);
+        Task<IFeedback<ChunkUploadBrowseResponse>> ListActiveChunkUploads(string moduleCuid, int page = 1, int pageSize = 20);
         IFeedback BeginTransaction(string moduleCuid, string callId);
         // Storage profiles
         Task<long> UpsertProvider(string displayName, string description = null);

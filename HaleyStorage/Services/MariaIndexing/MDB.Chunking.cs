@@ -113,5 +113,65 @@ namespace Haley.Utils {
                 return fb.SetMessage(ex.Message + Environment.NewLine + ex.StackTrace);
             }
         }
+
+        public async Task<IFeedback<ChunkUploadBrowseResponse>> ListActiveChunkUploads(string moduleCuid, int page = 1, int pageSize = 20) {
+            var fb = new Feedback<ChunkUploadBrowseResponse>();
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid)) return fb.SetMessage("Module CUID is mandatory.");
+                if (!_agw.ContainsKey(moduleCuid)) return fb.SetMessage($@"No adapter found for the key {moduleCuid}");
+
+                page = Math.Max(1, page);
+                pageSize = Math.Clamp(pageSize, 1, 100);
+                var offset = checked((page - 1) * pageSize);
+                var total = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.CHUNK.COUNT_ACTIVE) ?? 0;
+                var rows = await _agw.RowsAsync(
+                    moduleCuid,
+                    INSTANCE.CHUNK.LIST_ACTIVE,
+                    default,
+                    (LIMIT_ROWS, pageSize),
+                    (OFFSET_ROWS, offset));
+
+                var response = new ChunkUploadBrowseResponse {
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalItems = total
+                };
+
+                foreach (var row in rows) {
+                    var created = row.GetDateTime("created");
+                    var lastActivity = row.GetDateTime("last_activity");
+                    var totalParts = row.GetInt("total_parts");
+                    var receivedParts = row.GetInt("received_parts");
+                    response.Items.Add(new ChunkUploadBrowseItem {
+                        VersionId = row.GetLong("version_id"),
+                        VersionCuid = row.GetString("version_cuid") ?? string.Empty,
+                        RootCuid = row.GetString("root_cuid") ?? string.Empty,
+                        FileName = row.GetString("file_name") ?? string.Empty,
+                        WorkspaceId = row.GetLong("workspace_id"),
+                        DirectoryId = row.GetLong("directory_id"),
+                        VersionNumber = row.GetInt("version_no"),
+                        ChunkSizeBytes = checked(row.GetLong("chunk_size_mb") * 1024L * 1024L),
+                        TotalParts = totalParts,
+                        ReceivedParts = receivedParts,
+                        PendingParts = Math.Max(0, totalParts - receivedParts),
+                        Created = ToUtcOffset(created),
+                        LastActivity = ToUtcOffset(lastActivity ?? created),
+                        State = "active"
+                    });
+                }
+
+                return fb.SetStatus(true).SetResult(response);
+            } catch (Exception ex) {
+                return fb.SetMessage(ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }
+
+        static DateTimeOffset ToUtcOffset(DateTime? value) {
+            if (!value.HasValue) return default;
+            var utc = value.Value.Kind == DateTimeKind.Utc
+                ? value.Value
+                : DateTime.SpecifyKind(value.Value, DateTimeKind.Utc);
+            return new DateTimeOffset(utc);
+        }
     }
 }

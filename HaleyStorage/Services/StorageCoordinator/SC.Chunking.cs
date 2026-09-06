@@ -480,7 +480,9 @@ namespace Haley.Services {
 
                 session.Meta.Lifecycle = "completed";
                 session.Meta.LastActivityUtc = DateTimeOffset.UtcNow;
-                await WriteMetadataAsync(session.TempDir, session.Meta, cancellationToken).ConfigureAwait(false);
+                // Once the final file and DB state are committed, a disconnected HTTP client
+                // must not leave the durable session looking incomplete.
+                await WriteMetadataAsync(session.TempDir, session.Meta, CancellationToken.None).ConfigureAwait(false);
 
                 var chunksDeleted = TryDeleteDirectory(session.TempDir);
                 if (chunksDeleted && Indexer != null && !string.IsNullOrWhiteSpace(session.Meta.ModuleCuid)) {
@@ -585,6 +587,56 @@ namespace Haley.Services {
             _chunkSessions[meta.VersionId] = session;
             _chunkSessionsByCuid[meta.VersionCuid] = meta.VersionId;
             return BuildStatus(session);
+        }
+
+        public async Task<IFeedback<ChunkUploadBrowseResponse>> ListActiveChunkUploadsAsync(
+            string client,
+            string module,
+            int page = 1,
+            int pageSize = 20,
+            CancellationToken cancellationToken = default) {
+
+            var fb = new Feedback<ChunkUploadBrowseResponse>();
+            try {
+                ArgumentException.ThrowIfNullOrWhiteSpace(client);
+                ArgumentException.ThrowIfNullOrWhiteSpace(module);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (Indexer == null) return fb.SetMessage("Chunk inspection requires an indexer.");
+
+                var moduleCuid = StorageUtils.GenerateCuid(client, module);
+                if (!Indexer.IsModuleAdapterRegistered(moduleCuid))
+                    return fb.SetMessage("The module adapter is not loaded in this Storage API process.");
+
+                var listed = await Indexer.ListActiveChunkUploads(moduleCuid, page, pageSize).ConfigureAwait(false);
+                if (!listed.Status || listed.Result == null)
+                    return fb.SetMessage(listed.Message);
+
+                foreach (var item in listed.Result.Items) {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var status = await TryRehydrateChunkSession(item.VersionCuid, cancellationToken).ConfigureAwait(false);
+                    if (status == null) {
+                        item.State = "unavailable";
+                        item.StatusAvailable = false;
+                        continue;
+                    }
+
+                    item.RootCuid = string.IsNullOrWhiteSpace(status.RootCuid) ? item.RootCuid : status.RootCuid;
+                    item.TotalParts = status.TotalParts;
+                    item.ReceivedParts = status.ReceivedParts;
+                    item.PendingParts = status.PendingParts;
+                    item.MissingParts = status.MissingParts;
+                    item.TotalBytes = status.TotalBytes;
+                    item.CommittedBytes = status.CommittedBytes;
+                    item.SequentialOffset = status.SequentialOffset;
+                    item.LastActivity = status.LastActivity;
+                    item.State = status.State;
+                    item.StatusAvailable = true;
+                }
+
+                return fb.SetStatus(true).SetResult(listed.Result);
+            } catch (Exception ex) {
+                return fb.SetMessage(ex.Message);
+            }
         }
 
         public async Task<int> CleanupExpiredChunkSessions(TimeSpan inactivity, CancellationToken cancellationToken = default) {
@@ -853,6 +905,7 @@ namespace Haley.Services {
             return new ChunkUploadStatus {
                 VersionId = session.Meta.VersionId,
                 VersionCuid = session.Meta.VersionCuid,
+                RootCuid = session.Meta.RootCuid,
                 TotalParts = session.Meta.TotalParts,
                 ReceivedParts = received.Count,
                 PendingParts = missing.Length,
@@ -868,6 +921,7 @@ namespace Haley.Services {
         static ChunkUploadStatus BuildCompletedStatus(ChunkSessionMeta meta, long size) => new() {
             VersionId = meta.VersionId,
             VersionCuid = meta.VersionCuid,
+            RootCuid = meta.RootCuid,
             TotalParts = meta.TotalParts,
             ReceivedParts = meta.TotalParts,
             PendingParts = 0,
