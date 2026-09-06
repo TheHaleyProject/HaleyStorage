@@ -25,6 +25,10 @@ namespace Haley.Services {
             });
         }
 
+        /// <summary>
+        /// Loads an existing module database adapter into this process. This remains available when
+        /// storage write mode is disabled because it does not mutate stored content or the filesystem.
+        /// </summary>
         public async Task<StorageModuleRuntimeStatus> ActivateModuleRuntimeAsync(string client, string module) {
             ArgumentException.ThrowIfNullOrWhiteSpace(client);
             ArgumentException.ThrowIfNullOrWhiteSpace(module);

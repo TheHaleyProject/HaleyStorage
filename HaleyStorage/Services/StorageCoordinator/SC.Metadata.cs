@@ -31,6 +31,7 @@ namespace Haley.Services {
         public async Task<IFeedback> SetVersionMetadata(IVaultReadRequest request, string versionCuid, string metadata) {
             var fb = new Feedback();
             try {
+                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
                 if (string.IsNullOrWhiteSpace(versionCuid)) return fb.SetMessage("Version CUID (uid) is required.");
                 var moduleCuid = StorageUtils.GenerateCuid(request, VaultObjectType.Module);
@@ -66,6 +67,7 @@ namespace Haley.Services {
         public async Task<IFeedback> SetDocumentMetadata(IVaultReadRequest request, string documentCuid, string metadata) {
             var fb = new Feedback();
             try {
+                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
                 if (string.IsNullOrWhiteSpace(documentCuid)) return fb.SetMessage("Document CUID (ruid) is required.");
                 var moduleCuid = StorageUtils.GenerateCuid(request, VaultObjectType.Module);

@@ -288,6 +288,7 @@ namespace Haley.Services {
             CancellationToken cancellationToken = default) {
 
             var fb = new Feedback<ChunkPartResult>();
+            if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return fb.SetMessage($"No active chunk session for versionId {versionId}. Rehydrate the session first.");
             if (partNumber < 1 || partNumber > session.Meta.TotalParts)
@@ -326,6 +327,7 @@ namespace Haley.Services {
             CancellationToken cancellationToken = default) {
 
             var fb = new Feedback<ChunkAppendResult>();
+            if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return fb.SetMessage($"No active chunk session for versionId {versionId}. Rehydrate the session first.");
             if (!session.Meta.HasExactLength)
@@ -507,6 +509,7 @@ namespace Haley.Services {
 
         public async Task<IFeedback> AbortChunkedUpload(long versionId, CancellationToken cancellationToken = default) {
             var fb = new Feedback();
+            if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return fb.SetStatus(true).SetMessage("No active session found; nothing to abort.");
             if (!session.TryBeginExclusive("aborting", out var writersDrained, out var stateMessage))
@@ -585,6 +588,7 @@ namespace Haley.Services {
         }
 
         public async Task<int> CleanupExpiredChunkSessions(TimeSpan inactivity, CancellationToken cancellationToken = default) {
+            if (!WriteMode) return 0;
             if (inactivity <= TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(inactivity));
             if (!Directory.Exists(ChunkRoot)) return 0;
 

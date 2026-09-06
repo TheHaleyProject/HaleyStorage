@@ -45,8 +45,6 @@ namespace Haley.Services {
             var result = new Feedback(true, $"Client {client.DisplayName} is registered");
             if (Indexer == null)
                 return result.SetStatus(false).SetMessage("Storage registry indexer is not configured; client registration cannot be persisted.");
-            if (!WriteMode)
-                return result.SetStatus(false).SetMessage("Storage write mode is disabled; client registration cannot be persisted.");
             var idxResult = await Indexer.RegisterClient(clientInfo);
             if (idxResult?.Status != true)
                 return result.SetStatus(false).SetMessage(idxResult?.Message ?? $"Unable to register client {client.DisplayName}.");
@@ -74,8 +72,6 @@ namespace Haley.Services {
             var result = new Feedback(true, $"Module {module.DisplayName} is registered");
             if (Indexer == null)
                 return result.SetStatus(false).SetMessage("Storage registry indexer is not configured; module registration cannot be persisted.");
-            if (!WriteMode)
-                return result.SetStatus(false).SetMessage("Storage write mode is disabled; module registration cannot be persisted.");
             var idxResult = await Indexer.RegisterModule(moduleInfo);
             if (idxResult?.Status != true)
                 return result.SetStatus(false).SetMessage(idxResult?.Message ?? $"Unable to register module {module.DisplayName}.");
@@ -156,9 +152,7 @@ namespace Haley.Services {
             var result = new Feedback(true, $"Workspace {wspace.DisplayName} is registered");
             if (Indexer == null)
                 return result.SetStatus(false).SetMessage("Storage registry indexer is not configured; workspace registration cannot be persisted.");
-            if (!WriteMode)
-                return result.SetStatus(false).SetMessage("Storage write mode is disabled; workspace registration cannot be persisted.");
-            if (!isVirtual && hasRealName && isFs && !Directory.Exists(Path.GetFullPath(Path.Combine(baseDir, wsSegment))))
+            if (WriteMode && !isVirtual && hasRealName && isFs && !Directory.Exists(Path.GetFullPath(Path.Combine(baseDir, wsSegment))))
                 result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
 
             if (!result.Status) return result;

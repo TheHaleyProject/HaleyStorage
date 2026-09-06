@@ -318,6 +318,11 @@ namespace Haley.Services {
                     input.File.StorageRef = provider.BuildStorageRef(logicalId, ext, SplitProvider, Config.SuffixFile);
                     return true; // DB-free — no indexer query needed
                 }
+
+                // pn is the provider's processed/logical name. For local filesystem reads,
+                // reconstruct the sharded path directly and avoid the module database.
+                if (PopulateFromSavedPath(input, forupload, wInfo, provider))
+                    return true;
             }
 
             // Attempt to resolve path without generating a new one (DB-backed).
@@ -698,8 +703,12 @@ namespace Haley.Services {
         /// </summary>
         bool PopulateFromSavedPath(IVaultFileReadRequest input, bool forupload, VaultWorkSpace wInfo, IStorageProvider provider) {
             if (forupload || string.IsNullOrWhiteSpace(input?.File?.StorageName)) return false;
-            var sname = Path.GetFileNameWithoutExtension(input.File.StorageName);
-            var extension = Path.GetExtension(input.File.StorageName);
+            var rawName = input.File.StorageName.Trim();
+            if (!string.Equals(Path.GetFileName(rawName), rawName, StringComparison.Ordinal))
+                throw new ArgumentException("StorageName must be a processed name, not a path.");
+
+            var sname = Path.GetFileNameWithoutExtension(rawName);
+            var extension = Path.GetExtension(rawName);
 
             if (wInfo.NameMode == VaultNameMode.Number && !sname.IsNumber())
                 throw new ArgumentException("StorageName must be numeric for this workspace.");

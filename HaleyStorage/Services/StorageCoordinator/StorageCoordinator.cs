@@ -42,7 +42,7 @@ namespace Haley.Services {
 
         /// <summary>Primary constructor. Registers the default <see cref="FileSystemStorageProvider"/> and calls <see cref="SetIndexer"/>.</summary>
         /// <param name="basePath">Root storage directory; falls back to assembly-relative DataStore when null or empty.</param>
-        /// <param name="write_mode">When <c>false</c>, all mutating operations are rejected.</param>
+        /// <param name="write_mode">When <c>false</c>, storage-content and filesystem mutations are rejected. Registry identities may still be persisted.</param>
         /// <param name="indexer">Optional DB-backed indexer. Pass <c>null</c> to run in file-system-only mode.</param>
         /// <param name="throwExceptions">When <c>true</c>, exceptions propagate instead of being swallowed as error messages.</param>
         internal StorageCoordinator(string basePath, bool write_mode, IVaultIndexing indexer, bool throwExceptions, ILogger logger =null) {
@@ -192,7 +192,7 @@ namespace Haley.Services {
         public bool ThrowExceptions { get; set; }
         /// <summary>Root directory under which all storage paths are resolved for the FileSystem provider.</summary>
         public string BasePath { get; }
-        /// <summary>When <c>false</c>, all mutating operations (upload, delete, register) are rejected.</summary>
+        /// <summary>When <c>false</c>, storage-content and filesystem mutations are rejected. Client, module, and workspace registry rows may still be created.</summary>
         public bool WriteMode { get; set; }
         internal IVaultIndexing Indexer;
 
