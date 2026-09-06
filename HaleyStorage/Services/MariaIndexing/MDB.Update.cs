@@ -31,6 +31,10 @@ namespace Haley.Utils {
 
                 var docvExists = await _agw.ScalarAsync<long?>(moduleCuid, INSTANCE.DOCVERSION.EXISTS_BY_ID, new DbExecutionLoad(default, handler), (ID, file.Id));
                 if (docvExists == null) return result.SetMessage($@"Unable to find any document version with cuid {file.Cuid} and id {file.Id} in DB {moduleCuid}");
+                var load = new DbExecutionLoad(default, handler);
+                var existingInfo = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.GET_INFO, load, (ID, file.Id));
+                var oldSize = existingInfo?.GetNullableLong("size") ?? 0L;
+                var oldFlags = existingInfo?.GetNullableInt("flags") ?? 0;
 
                 // Extract hash, synced_at, and profile_info_id — nullable, pass DBNull when not provided.
                 object hashVal = DBNull.Value;
@@ -61,7 +65,9 @@ namespace Haley.Utils {
                     }
                 }
 
-                var dic = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.GET_INFO, new DbExecutionLoad(default, handler), (ID, file.Id));
+                await TryQueueCompletedVersionStatsEvent(moduleCuid, file.Id, oldSize, oldFlags, load);
+
+                var dic = await _agw.RowAsync(moduleCuid, INSTANCE.DOCVERSION.GET_INFO, load, (ID, file.Id));
 
                 if (dic == null || dic.Count < 1)
                     return result.SetMessage("Unable to confirm if the document version info is properly updated or not.");

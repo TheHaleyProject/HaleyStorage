@@ -225,6 +225,96 @@ WHERE `name` = 'default';
 
 -- Data exporting was unselected.
 
+-- Dumping structure for table dss_core.cli_stat
+CREATE TABLE IF NOT EXISTS `cli_stat` (
+  `client` int(11) NOT NULL COMMENT 'FK to client.id.',
+  `active_folders` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_folders` bigint(20) NOT NULL DEFAULT 0,
+  `active_docs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_docs` bigint(20) NOT NULL DEFAULT 0,
+  `active_versions` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_versions` bigint(20) NOT NULL DEFAULT 0,
+  `active_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `active_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `archived_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `purged_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`client`),
+  CONSTRAINT `fk_cli_stat_client` FOREIGN KEY (`client`) REFERENCES `client` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Cached aggregate storage counters at client level.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_core.mod_stat
+CREATE TABLE IF NOT EXISTS `mod_stat` (
+  `module` int(11) NOT NULL COMMENT 'FK to module.id.',
+  `client` int(11) NOT NULL COMMENT 'Parent client id for quick filtering.',
+  `active_folders` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_folders` bigint(20) NOT NULL DEFAULT 0,
+  `active_docs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_docs` bigint(20) NOT NULL DEFAULT 0,
+  `active_versions` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_versions` bigint(20) NOT NULL DEFAULT 0,
+  `active_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `active_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `archived_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `purged_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`module`),
+  KEY `idx_mod_stat_client` (`client`),
+  CONSTRAINT `fk_mod_stat_module` FOREIGN KEY (`module`) REFERENCES `module` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_mod_stat_client` FOREIGN KEY (`client`) REFERENCES `client` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Cached aggregate storage counters at module level.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_core.ws_stat
+CREATE TABLE IF NOT EXISTS `ws_stat` (
+  `workspace` int(11) NOT NULL COMMENT 'FK to workspace.id.',
+  `module` int(11) NOT NULL COMMENT 'Parent module id for quick filtering.',
+  `client` int(11) NOT NULL COMMENT 'Parent client id for quick filtering.',
+  `active_folders` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_folders` bigint(20) NOT NULL DEFAULT 0,
+  `active_docs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_docs` bigint(20) NOT NULL DEFAULT 0,
+  `active_versions` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_versions` bigint(20) NOT NULL DEFAULT 0,
+  `active_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `active_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `archived_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `purged_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`workspace`),
+  KEY `idx_ws_stat_module` (`module`),
+  KEY `idx_ws_stat_client` (`client`),
+  CONSTRAINT `fk_ws_stat_workspace` FOREIGN KEY (`workspace`) REFERENCES `workspace` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_ws_stat_module` FOREIGN KEY (`module`) REFERENCES `module` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_ws_stat_client` FOREIGN KEY (`client`) REFERENCES `client` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Cached aggregate storage counters at workspace level.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_core.mod_gate
+CREATE TABLE IF NOT EXISTS `mod_gate` (
+  `module` int(11) NOT NULL COMMENT 'FK to module.id.',
+  `state` tinyint(4) NOT NULL DEFAULT 0 COMMENT '0=open, 1=draining, 2=locked.',
+  `reason` varchar(300) DEFAULT NULL,
+  `locked_until` datetime DEFAULT NULL,
+  `created` timestamp NOT NULL DEFAULT current_timestamp(),
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`module`),
+  KEY `idx_mod_gate_state` (`state`),
+  CONSTRAINT `fk_mod_gate_module` FOREIGN KEY (`module`) REFERENCES `module` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Operational write gate for a module. Used by maintenance/backfill flows.';
+
+-- Data exporting was unselected.
+
 /*!40103 SET TIME_ZONE=IFNULL(@OLD_TIME_ZONE, 'system') */;
 /*!40101 SET SQL_MODE=IFNULL(@OLD_SQL_MODE, '') */;
 /*!40014 SET FOREIGN_KEY_CHECKS=IFNULL(@OLD_FOREIGN_KEY_CHECKS, 1) */;

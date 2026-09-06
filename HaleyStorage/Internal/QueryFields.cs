@@ -79,5 +79,33 @@ namespace Haley.Internal {
 
         // THUMBNAIL
         public const string SUB_VER = $@"@{nameof(SUB_VER)}";           // doc_version.sub_ver (0=content, 1+=thumbnail)
+
+        // STATS / MOVE
+        public const string EVENT_KEY = $@"@{nameof(EVENT_KEY)}";
+        public const string EVENT_TYPE = $@"@{nameof(EVENT_TYPE)}";
+        public const string NODE_TYPE = $@"@{nameof(NODE_TYPE)}";
+        public const string NODE_ID = $@"@{nameof(NODE_ID)}";
+        public const string WORKSPACE_ID = $@"@{nameof(WORKSPACE_ID)}";
+        public const string DOCUMENT_ID = $@"@{nameof(DOCUMENT_ID)}";
+        public const string VERSION_ID = $@"@{nameof(VERSION_ID)}";
+        public const string EXT_NAME = $@"@{nameof(EXT_NAME)}";
+        public const string ACTIVE_FOLDERS_DELTA = $@"@{nameof(ACTIVE_FOLDERS_DELTA)}";
+        public const string DELETED_FOLDERS_DELTA = $@"@{nameof(DELETED_FOLDERS_DELTA)}";
+        public const string ACTIVE_DOCS_DELTA = $@"@{nameof(ACTIVE_DOCS_DELTA)}";
+        public const string DELETED_DOCS_DELTA = $@"@{nameof(DELETED_DOCS_DELTA)}";
+        public const string ACTIVE_VERSIONS_DELTA = $@"@{nameof(ACTIVE_VERSIONS_DELTA)}";
+        public const string DELETED_VERSIONS_DELTA = $@"@{nameof(DELETED_VERSIONS_DELTA)}";
+        public const string ACTIVE_THUMBS_DELTA = $@"@{nameof(ACTIVE_THUMBS_DELTA)}";
+        public const string DELETED_THUMBS_DELTA = $@"@{nameof(DELETED_THUMBS_DELTA)}";
+        public const string ACTIVE_BYTES_DELTA = $@"@{nameof(ACTIVE_BYTES_DELTA)}";
+        public const string DELETED_BYTES_DELTA = $@"@{nameof(DELETED_BYTES_DELTA)}";
+        public const string ARCHIVED_BYTES_DELTA = $@"@{nameof(ARCHIVED_BYTES_DELTA)}";
+        public const string PURGED_BYTES_DELTA = $@"@{nameof(PURGED_BYTES_DELTA)}";
+        public const string BATCH_SIZE = $@"@{nameof(BATCH_SIZE)}";
+        public const string TARGET_PARENT = $@"@{nameof(TARGET_PARENT)}";
+        public const string TARGET_WORKSPACE = $@"@{nameof(TARGET_WORKSPACE)}";
+        public const string RUN_TYPE = $@"@{nameof(RUN_TYPE)}";
+        public const string STATUS = $@"@{nameof(STATUS)}";
+        public const string MESSAGE = $@"@{nameof(MESSAGE)}";
     }
 }

@@ -49,11 +49,23 @@ namespace Haley.Utils {
 
                 var dirDbName = folderName.ToDBName();
 
-                var dirInfo = await InsertAndFetchIDRead(dbid,
-                    () => (INSTANCE.DIRECTORY.EXISTS, Consolidate((WSPACE, ws.id), (PARENT, parentId), (NAME, dirDbName))),
-                    () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws.id), (PARENT, parentId), (NAME, dirDbName), (DNAME, folderName), (ACTOR, actor))),
+                Func<(string query, (string key, object value)[] parameters)> checkDirectory =
+                    () => (INSTANCE.DIRECTORY.EXISTS, Consolidate((WSPACE, ws.id), (PARENT, parentId), (NAME, dirDbName)));
+                Func<(string query, (string key, object value)[] parameters)> insertDirectory =
+                    () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws.id), (PARENT, parentId), (NAME, dirDbName), (DNAME, folderName), (ACTOR, actor)));
+
+                var existing = await InsertAndFetchIDRead(dbid, checkDirectory, readOnly: true);
+                var wasCreated = existing.id < 1 && !request.ReadOnlyMode;
+                var dirInfo = existing.id > 0
+                    ? existing
+                    : await InsertAndFetchIDRead(dbid,
+                    checkDirectory,
+                    insertDirectory,
                     readOnly: request.ReadOnlyMode,
                     $"Unable to create directory '{folderName}' in workspace {ws.id}");
+
+                if (wasCreated && dirInfo.id > 0)
+                    await TryQueueFolderCreateStatsEvent(dbid, dirInfo.id, default);
 
                 return fb.SetStatus(true).SetResult((dirInfo.id, dirInfo.uid));
             } catch (Exception ex) {

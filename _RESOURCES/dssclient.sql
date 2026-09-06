@@ -184,6 +184,157 @@ CREATE TABLE IF NOT EXISTS `version_info` (
 
 -- Data exporting was unselected.
 
+-- Dumping structure for table dss_client.dir_path
+CREATE TABLE IF NOT EXISTS `dir_path` (
+  `ancestor` bigint(20) NOT NULL COMMENT 'Ancestor directory id. Self row has ancestor=descendant.',
+  `descendant` bigint(20) NOT NULL COMMENT 'Descendant directory id. Self row has depth=0.',
+  `depth` int(11) NOT NULL DEFAULT 0 COMMENT '0=self, 1=direct child, N=deeper descendant.',
+  PRIMARY KEY (`ancestor`,`descendant`),
+  KEY `idx_dir_path_descendant_depth` (`descendant`,`depth`),
+  CONSTRAINT `fk_dir_path_ancestor` FOREIGN KEY (`ancestor`) REFERENCES `directory` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `fk_dir_path_descendant` FOREIGN KEY (`descendant`) REFERENCES `directory` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Closure table for logical folders. Used for recursive stats and future directory move operations.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_client.node_stat
+CREATE TABLE IF NOT EXISTS `node_stat` (
+  `node_type` tinyint(4) NOT NULL COMMENT '1=workspace, 2=directory.',
+  `node_id` bigint(20) NOT NULL COMMENT 'workspace.id when node_type=1; directory.id when node_type=2.',
+  `workspace` bigint(20) NOT NULL COMMENT 'Owning workspace id for quick filtering.',
+  `active_folders` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_folders` bigint(20) NOT NULL DEFAULT 0,
+  `active_docs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_docs` bigint(20) NOT NULL DEFAULT 0,
+  `active_versions` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_versions` bigint(20) NOT NULL DEFAULT 0,
+  `active_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `active_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `archived_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `purged_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`node_type`,`node_id`),
+  KEY `idx_node_stat_workspace` (`workspace`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Direct cached counts for one workspace or directory node.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_client.tree_stat
+CREATE TABLE IF NOT EXISTS `tree_stat` (
+  `node_type` tinyint(4) NOT NULL COMMENT '1=workspace, 2=directory.',
+  `node_id` bigint(20) NOT NULL COMMENT 'workspace.id when node_type=1; directory.id when node_type=2.',
+  `workspace` bigint(20) NOT NULL COMMENT 'Owning workspace id for quick filtering.',
+  `active_folders` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_folders` bigint(20) NOT NULL DEFAULT 0,
+  `active_docs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_docs` bigint(20) NOT NULL DEFAULT 0,
+  `active_versions` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_versions` bigint(20) NOT NULL DEFAULT 0,
+  `active_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `active_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `archived_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `purged_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`node_type`,`node_id`),
+  KEY `idx_tree_stat_workspace` (`workspace`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Recursive cached counts for one workspace or directory node.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_client.node_ext_stat
+CREATE TABLE IF NOT EXISTS `node_ext_stat` (
+  `node_type` tinyint(4) NOT NULL COMMENT '1=workspace, 2=directory.',
+  `node_id` bigint(20) NOT NULL,
+  `workspace` bigint(20) NOT NULL,
+  `ext` varchar(100) NOT NULL COMMENT 'Normalized extension from storage/name metadata, including dot when present.',
+  `active_versions` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_versions` bigint(20) NOT NULL DEFAULT 0,
+  `active_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `active_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`node_type`,`node_id`,`ext`),
+  KEY `idx_node_ext_stat_workspace_ext` (`workspace`,`ext`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Direct cached extension counts for one workspace or directory node.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_client.tree_ext_stat
+CREATE TABLE IF NOT EXISTS `tree_ext_stat` (
+  `node_type` tinyint(4) NOT NULL COMMENT '1=workspace, 2=directory.',
+  `node_id` bigint(20) NOT NULL,
+  `workspace` bigint(20) NOT NULL,
+  `ext` varchar(100) NOT NULL COMMENT 'Normalized extension from storage/name metadata, including dot when present.',
+  `active_versions` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_versions` bigint(20) NOT NULL DEFAULT 0,
+  `active_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_thumbs` bigint(20) NOT NULL DEFAULT 0,
+  `active_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_bytes` bigint(20) NOT NULL DEFAULT 0,
+  `modified` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`node_type`,`node_id`,`ext`),
+  KEY `idx_tree_ext_stat_workspace_ext` (`workspace`,`ext`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Recursive cached extension counts for one workspace or directory node.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_client.stat_evt
+CREATE TABLE IF NOT EXISTS `stat_evt` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `event_key` varchar(180) NOT NULL COMMENT 'Idempotency key for this stats mutation.',
+  `event_type` tinyint(4) NOT NULL COMMENT '1=upload, 2=delete, 3=restore, 4=archive, 5=purge, 6=folder-create, 7=file-move, 8=folder-move.',
+  `node_type` tinyint(4) NOT NULL COMMENT '1=workspace, 2=directory.',
+  `node_id` bigint(20) NOT NULL COMMENT 'Direct node receiving the delta.',
+  `workspace` bigint(20) NOT NULL COMMENT 'Owning workspace id.',
+  `document` bigint(20) DEFAULT NULL,
+  `version` bigint(20) DEFAULT NULL,
+  `ext` varchar(100) DEFAULT NULL,
+  `active_folders_delta` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_folders_delta` bigint(20) NOT NULL DEFAULT 0,
+  `active_docs_delta` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_docs_delta` bigint(20) NOT NULL DEFAULT 0,
+  `active_versions_delta` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_versions_delta` bigint(20) NOT NULL DEFAULT 0,
+  `active_thumbs_delta` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_thumbs_delta` bigint(20) NOT NULL DEFAULT 0,
+  `active_bytes_delta` bigint(20) NOT NULL DEFAULT 0,
+  `deleted_bytes_delta` bigint(20) NOT NULL DEFAULT 0,
+  `archived_bytes_delta` bigint(20) NOT NULL DEFAULT 0,
+  `purged_bytes_delta` bigint(20) NOT NULL DEFAULT 0,
+  `created` timestamp NOT NULL DEFAULT current_timestamp(),
+  `processed` datetime DEFAULT NULL,
+  `message` varchar(300) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unq_stat_evt_key` (`event_key`),
+  KEY `idx_stat_evt_processed_id` (`processed`,`id`),
+  KEY `idx_stat_evt_workspace_node` (`workspace`,`node_type`,`node_id`),
+  KEY `idx_stat_evt_document` (`document`),
+  KEY `idx_stat_evt_version` (`version`),
+  KEY `idx_stat_evt_ext` (`ext`)
+) ENGINE=InnoDB AUTO_INCREMENT=1988 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Durable stats event queue. Mutations enqueue deltas in the same transaction; a worker folds them into stat tables.';
+
+-- Data exporting was unselected.
+
+-- Dumping structure for table dss_client.stat_run
+CREATE TABLE IF NOT EXISTS `stat_run` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `run_type` varchar(40) NOT NULL COMMENT 'process, rebuild, backfill.',
+  `status` varchar(30) NOT NULL COMMENT 'started, completed, failed.',
+  `started` datetime NOT NULL DEFAULT current_timestamp(),
+  `completed` datetime DEFAULT NULL,
+  `processed` bigint(20) NOT NULL DEFAULT 0,
+  `message` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_stat_run_type_status_started` (`run_type`,`status`,`started`)
+) ENGINE=InnoDB AUTO_INCREMENT=2006 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Operational history for stats processing and exact rebuilds.';
+
+-- Data exporting was unselected.
+
 -- Dumping structure for table dss_client.workspace
 CREATE TABLE IF NOT EXISTS `workspace` (
   `id` bigint(20) NOT NULL COMMENT 'Primary key — mirrors dsscore.workspace.id exactly. Set by the application at registration time; never AUTO_INCREMENT.',

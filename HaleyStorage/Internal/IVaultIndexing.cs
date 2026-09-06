@@ -52,6 +52,11 @@ namespace Haley.Services {
         Task<IFeedback> RestoreDeletedDocument(string moduleCuid, long documentId, bool force = false);
         Task<IFeedback> SoftDeleteDirectory(IVaultReadRequest request, bool recursive);
         Task<IFeedback> RestoreDirectory(IVaultReadRequest request, bool force);
+        Task<IFeedback<VaultStatsSnapshot>> GetStats(IVaultReadRequest request, string extension = null);
+        Task<IFeedback> ProcessStatsEvents(string moduleCuid, int batchSize = 1000);
+        Task<IFeedback> RebuildStats(string moduleCuid, long? workspaceId = null);
+        Task<IFeedback<VaultMoveResult>> MoveDocument(IVaultFileReadRequest source, IVaultReadRequest target, bool rename);
+        Task<IFeedback<VaultMoveResult>> MoveDirectory(IVaultReadRequest source, IVaultReadRequest target, bool rename);
         Task EnsureValidation();
         bool TryGetComponentInfo<T>(string key, out T component) where T : IVaultObject;
         Task<bool> HydrateModuleAsync(string moduleCuid);

@@ -227,6 +227,7 @@
 			<column name="workspace" type="VARCHAR" length="120" />
 			<column name="folder_ref" type="VARCHAR" length="180" />
 			<column name="file_name" type="VARCHAR" length="255" />
+			<column name="file_ext" type="VARCHAR" length="32" />
 			<index name="pk_tx_scope" unique="PRIMARY_KEY" >
 				<column name="tx_id" />
 			</index>
@@ -241,6 +242,19 @@
 			</index>
 			<index name="ix_tx_scope_file_name" unique="NORMAL" >
 				<column name="file_name" />
+			</index>
+			<index name="ix_tx_scope_file_ext" unique="NORMAL" >
+				<column name="file_ext" />
+			</index>
+			<index name="ix_tx_scope_scope_file_name" unique="NORMAL" >
+				<column name="client" />
+				<column name="module" />
+				<column name="file_name" />
+			</index>
+			<index name="ix_tx_scope_scope_file_ext" unique="NORMAL" >
+				<column name="client" />
+				<column name="module" />
+				<column name="file_ext" />
 			</index>
 			<fk name="fk_tx_scope_info" to_schema="dss_admin" to_table="tx_info" delete_action="cascade" >
 				<fk_column name="tx_id" pk="id" />
@@ -313,6 +327,28 @@
 				<fk_column name="id" pk="id" />
 			</fk>
 			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="dir_path" spec="" >
+			<column name="ancestor" type="BIGINT" length="20" mandatory="y" />
+			<column name="descendant" type="BIGINT" length="20" mandatory="y" />
+			<column name="depth" type="INT" length="11" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<index name="pk_dir_path" unique="PRIMARY_KEY" >
+				<column name="ancestor" />
+				<column name="descendant" />
+			</index>
+			<index name="idx_dir_path_descendant_depth" unique="NORMAL" >
+				<column name="descendant" />
+				<column name="depth" />
+			</index>
+			<fk name="fk_dir_path_ancestor" to_schema="dss_client" to_table="directory" >
+				<fk_column name="ancestor" pk="id" />
+			</fk>
+			<fk name="fk_dir_path_descendant" to_schema="dss_client" to_table="directory" >
+				<fk_column name="descendant" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
 		</table>
 		<table name="directory" prior="directo" >
 			<comment><![CDATA[Virtual folder hierarchy within a workspace. Directories are logical — they exist in the DB only and do not map to physical filesystem folders. Supports soft-delete, parent-child nesting (parent=0 for root), and CUID-based external referencing.]]></comment>
@@ -609,6 +645,291 @@ interesting idea is one file can have multiple thumbnails and it can be used sa 
  AUTO_INCREMENT 900  
 ]]></options>
 		</table>
+		<table name="node_ext_stat" spec="" >
+			<column name="node_type" type="TINYINT" length="4" mandatory="y" />
+			<column name="node_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="workspace" type="BIGINT" length="20" mandatory="y" />
+			<column name="ext" type="VARCHAR" length="100" mandatory="y" />
+			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="modified" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+				<column_options><![CDATA[ON UPDATE  current_timestamp()]]></column_options>
+			</column>
+			<index name="pk_node_ext_stat" unique="PRIMARY_KEY" >
+				<column name="node_type" />
+				<column name="node_id" />
+				<column name="ext" />
+			</index>
+			<index name="idx_node_ext_stat_workspace_ext" unique="NORMAL" >
+				<column name="workspace" />
+				<column name="ext" />
+			</index>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="node_stat" spec="" >
+			<column name="node_type" type="TINYINT" length="4" mandatory="y" />
+			<column name="node_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="workspace" type="BIGINT" length="20" mandatory="y" />
+			<column name="active_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="archived_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="purged_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="modified" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+				<column_options><![CDATA[ON UPDATE  current_timestamp()]]></column_options>
+			</column>
+			<index name="pk_node_stat" unique="PRIMARY_KEY" >
+				<column name="node_type" />
+				<column name="node_id" />
+			</index>
+			<index name="idx_node_stat_workspace" unique="NORMAL" >
+				<column name="workspace" />
+			</index>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="stat_evt" spec="" >
+			<column name="id" type="BIGINT" length="20" mandatory="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="event_key" type="VARCHAR" length="180" mandatory="y" />
+			<column name="event_type" type="TINYINT" length="4" mandatory="y" />
+			<column name="node_type" type="TINYINT" length="4" mandatory="y" />
+			<column name="node_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="workspace" type="BIGINT" length="20" mandatory="y" />
+			<column name="document" type="BIGINT" length="20" />
+			<column name="version" type="BIGINT" length="20" />
+			<column name="ext" type="VARCHAR" length="100" />
+			<column name="active_folders_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_folders_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_docs_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_docs_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_versions_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_versions_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_thumbs_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_thumbs_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_bytes_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_bytes_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="archived_bytes_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="purged_bytes_delta" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="created" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+			</column>
+			<column name="processed" type="DATETIME" />
+			<column name="message" type="VARCHAR" length="300" />
+			<index name="pk_stat_evt" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<index name="unq_stat_evt_key" unique="UNIQUE_KEY" >
+				<column name="event_key" />
+			</index>
+			<index name="idx_stat_evt_processed_id" unique="NORMAL" >
+				<column name="processed" />
+				<column name="id" />
+			</index>
+			<index name="idx_stat_evt_workspace_node" unique="NORMAL" >
+				<column name="workspace" />
+				<column name="node_type" />
+				<column name="node_id" />
+			</index>
+			<index name="idx_stat_evt_document" unique="NORMAL" >
+				<column name="document" />
+			</index>
+			<index name="idx_stat_evt_version" unique="NORMAL" >
+				<column name="version" />
+			</index>
+			<index name="idx_stat_evt_ext" unique="NORMAL" >
+				<column name="ext" />
+			</index>
+			<options><![CDATA[ENGINE=InnoDB AUTO_INCREMENT=1988 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="stat_run" spec="" >
+			<column name="id" type="BIGINT" length="20" mandatory="y" >
+				<identity><![CDATA[AUTO_INCREMENT]]></identity>
+			</column>
+			<column name="run_type" type="VARCHAR" length="40" mandatory="y" />
+			<column name="status" type="VARCHAR" length="30" mandatory="y" />
+			<column name="started" type="DATETIME" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+			</column>
+			<column name="completed" type="DATETIME" />
+			<column name="processed" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="message" type="VARCHAR" length="500" />
+			<index name="pk_stat_run" unique="PRIMARY_KEY" >
+				<column name="id" />
+			</index>
+			<index name="idx_stat_run_type_status_started" unique="NORMAL" >
+				<column name="run_type" />
+				<column name="status" />
+				<column name="started" />
+			</index>
+			<options><![CDATA[ENGINE=InnoDB AUTO_INCREMENT=2006 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="tree_ext_stat" spec="" >
+			<column name="node_type" type="TINYINT" length="4" mandatory="y" />
+			<column name="node_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="workspace" type="BIGINT" length="20" mandatory="y" />
+			<column name="ext" type="VARCHAR" length="100" mandatory="y" />
+			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="modified" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+				<column_options><![CDATA[ON UPDATE  current_timestamp()]]></column_options>
+			</column>
+			<index name="pk_tree_ext_stat" unique="PRIMARY_KEY" >
+				<column name="node_type" />
+				<column name="node_id" />
+				<column name="ext" />
+			</index>
+			<index name="idx_tree_ext_stat_workspace_ext" unique="NORMAL" >
+				<column name="workspace" />
+				<column name="ext" />
+			</index>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="tree_stat" spec="" >
+			<column name="node_type" type="TINYINT" length="4" mandatory="y" />
+			<column name="node_id" type="BIGINT" length="20" mandatory="y" />
+			<column name="workspace" type="BIGINT" length="20" mandatory="y" />
+			<column name="active_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="archived_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="purged_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="modified" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+				<column_options><![CDATA[ON UPDATE  current_timestamp()]]></column_options>
+			</column>
+			<index name="pk_tree_stat" unique="PRIMARY_KEY" >
+				<column name="node_type" />
+				<column name="node_id" />
+			</index>
+			<index name="idx_tree_stat_workspace" unique="NORMAL" >
+				<column name="workspace" />
+			</index>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
 		<table name="vault" prior="name_vault" >
 			<comment><![CDATA[Deduplicated table of bare filename stems (no extension). Combined with the extension table via name_store to form a complete logical filename. Avoids repeating long filename strings across millions of document rows.]]></comment>
 			<column name="id" type="BIGINT" mandatory="y" >
@@ -698,6 +1019,56 @@ interesting idea is one file can have multiple thumbnails and it can be used sa 
 		</table>
 	</schema>
 	<schema name="dss_core" >
+		<table name="cli_stat" spec="" >
+			<column name="active_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="archived_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="purged_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="modified" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+				<column_options><![CDATA[ON UPDATE  current_timestamp()]]></column_options>
+			</column>
+			<column name="client" type="INT" length="11" mandatory="y" />
+			<index name="pk_cli_stat" unique="PRIMARY_KEY" >
+				<column name="client" />
+			</index>
+			<fk name="fk_cli_stat_client" to_schema="dss_core" to_table="client" >
+				<fk_column name="client" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
 		<table name="client" spec="" >
 			<comment><![CDATA[Top-level tenant / application that owns the entire storage hierarchy.
 Example: an application called "hr_portal" is registered as a client. Under it live modules such as "employee_docs" and "avatars".
@@ -761,6 +1132,89 @@ Example: when "hr_portal" is registered, a random 512-char signing key and encry
 				<fk_column name="client" pk="id" />
 			</fk>
 			<options><![CDATA[engine=InnoDB]]></options>
+		</table>
+		<table name="mod_gate" spec="" >
+			<column name="module" type="INT" length="11" mandatory="y" />
+			<column name="state" type="TINYINT" length="4" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+				<comment><![CDATA[0=open, 1=draining, 2=locked.]]></comment>
+			</column>
+			<column name="reason" type="VARCHAR" length="300" />
+			<column name="locked_until" type="DATETIME" />
+			<column name="created" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+			</column>
+			<column name="modified" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+				<column_options><![CDATA[ON UPDATE  current_timestamp()]]></column_options>
+			</column>
+			<index name="pk_mod_gate" unique="PRIMARY_KEY" >
+				<column name="module" />
+			</index>
+			<index name="idx_mod_gate_state" unique="NORMAL" >
+				<column name="state" />
+			</index>
+			<fk name="fk_mod_gate_module" to_schema="dss_core" to_table="module" >
+				<fk_column name="module" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
+		<table name="mod_stat" spec="" >
+			<column name="active_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="archived_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="purged_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="modified" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+				<column_options><![CDATA[ON UPDATE  current_timestamp()]]></column_options>
+			</column>
+			<column name="module" type="INT" length="11" mandatory="y" />
+			<column name="client" type="INT" length="11" mandatory="y" />
+			<index name="pk_mod_stat" unique="PRIMARY_KEY" >
+				<column name="module" />
+			</index>
+			<index name="idx_mod_stat_client" unique="NORMAL" >
+				<column name="client" />
+			</index>
+			<fk name="fk_mod_stat_client" to_schema="dss_core" to_table="client" >
+				<fk_column name="client" pk="id" />
+			</fk>
+			<fk name="fk_mod_stat_module" to_schema="dss_core" to_table="module" >
+				<fk_column name="module" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
 		</table>
 		<table name="module" prior="directory" >
 			<comment><![CDATA[A logical feature area or application section inside a client (e.g. "documents", "invoices", "avatars").
@@ -1043,6 +1497,70 @@ The storagename_mode and storagename_parse settings are fixed at registration ti
  AUTO_INCREMENT 1923  
 ]]></options>
 		</table>
+		<table name="ws_stat" spec="" >
+			<column name="active_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_folders" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_docs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_versions" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_thumbs" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="active_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="deleted_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="archived_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="purged_bytes" type="BIGINT" length="20" mandatory="y" >
+				<defo><![CDATA[0]]></defo>
+			</column>
+			<column name="modified" type="TIMESTAMP" mandatory="y" >
+				<defo><![CDATA[current_timestamp()]]></defo>
+				<column_options><![CDATA[ON UPDATE  current_timestamp()]]></column_options>
+			</column>
+			<column name="workspace" type="INT" length="11" mandatory="y" />
+			<column name="module" type="INT" length="11" mandatory="y" />
+			<column name="client" type="INT" length="11" mandatory="y" />
+			<index name="pk_ws_stat" unique="PRIMARY_KEY" >
+				<column name="workspace" />
+			</index>
+			<index name="idx_ws_stat_module" unique="NORMAL" >
+				<column name="module" />
+			</index>
+			<index name="idx_ws_stat_client" unique="NORMAL" >
+				<column name="client" />
+			</index>
+			<fk name="fk_ws_stat_client" to_schema="dss_core" to_table="client" >
+				<fk_column name="client" pk="id" />
+			</fk>
+			<fk name="fk_ws_stat_module" to_schema="dss_core" to_table="module" >
+				<fk_column name="module" pk="id" />
+			</fk>
+			<fk name="fk_ws_stat_workspace" to_schema="dss_core" to_table="workspace" >
+				<fk_column name="workspace" pk="id" />
+			</fk>
+			<options><![CDATA[ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]></options>
+		</table>
 		<procedure name="DropDatabasesWithPrefix" id="803b6204-4ecc-47b3-bd57-ef29d36902b9" isSystem="false" params_known="y" >
 			<string><![CDATA[CREATE PROCEDURE ${nameWithSchemaName}(IN prefix VARCHAR(100))
 BEGIN
@@ -1118,17 +1636,46 @@ END]]></string>
 	</schema>
 	<diagram_group name="Default" id="62e7826c-e510-4c43-9b97-66a35a0a86b8" >
 		<diagram name="mssclient" id="3ffb53d2-b523-405c-b56e-4864481bd7c9" joined_routing="y" show_relation="cascade" >
-			<entity schema="dss_client" name="chunk_info" color="C1D8EE" x="95" y="57" />
-			<entity schema="dss_client" name="chunked_files" color="C1D8EE" x="95" y="266" />
-			<entity schema="dss_client" name="directory" color="C1D8EE" x="551" y="494" />
-			<entity schema="dss_client" name="doc_info" color="C1D8EE" x="551" y="342" />
-			<entity schema="dss_client" name="doc_version" color="C1D8EE" x="323" y="114" />
-			<entity schema="dss_client" name="document" color="C1D8EE" x="323" y="361" />
-			<entity schema="dss_client" name="extension" color="C1D8EE" x="57" y="646" />
-			<entity schema="dss_client" name="name_store" color="C1D8EE" x="95" y="513" />
-			<entity schema="dss_client" name="vault" color="C1D8EE" x="171" y="646" />
-			<entity schema="dss_client" name="version_info" color="C1D8EE" x="532" y="57" />
-			<entity schema="dss_client" name="workspace" color="C1D8EE" x="342" y="665" />
+			<entity schema="dss_client" name="chunk_info" color="B34D1A" x="152" y="95" />
+			<entity schema="dss_client" name="chunked_files" color="B34D1A" x="152" y="304" />
+			<entity schema="dss_client" name="dir_path" color="336633" x="836" y="551" />
+			<entity schema="dss_client" name="directory" color="B34D1A" x="627" y="551" />
+			<entity schema="dss_client" name="doc_info" color="B34D1A" x="627" y="380" />
+			<entity schema="dss_client" name="doc_version" color="B34D1A" x="380" y="171" />
+			<entity schema="dss_client" name="document" color="B34D1A" x="380" y="418" />
+			<entity schema="dss_client" name="extension" color="B34D1A" x="57" y="684" />
+			<entity schema="dss_client" name="name_store" color="B34D1A" x="114" y="513" />
+			<entity schema="dss_client" name="node_ext_stat" color="336633" x="836" y="171" />
+			<entity schema="dss_client" name="node_stat" color="336633" x="1026" y="95" />
+			<entity schema="dss_client" name="stat_evt" color="336633" x="1425" y="190" />
+			<entity schema="dss_client" name="stat_run" color="336633" x="1026" y="494" />
+			<entity schema="dss_client" name="tree_ext_stat" color="336633" x="1197" y="532" />
+			<entity schema="dss_client" name="tree_stat" color="336633" x="1235" y="114" />
+			<entity schema="dss_client" name="vault" color="B34D1A" x="171" y="684" />
+			<entity schema="dss_client" name="version_info" color="B34D1A" x="608" y="95" />
+			<entity schema="dss_client" name="workspace" color="B34D1A" x="399" y="722" />
+			<group name="Client" color="B34D1A" >
+				<entity schema="dss_client" name="chunk_info" />
+				<entity schema="dss_client" name="chunked_files" />
+				<entity schema="dss_client" name="directory" />
+				<entity schema="dss_client" name="doc_info" />
+				<entity schema="dss_client" name="doc_version" />
+				<entity schema="dss_client" name="document" />
+				<entity schema="dss_client" name="extension" />
+				<entity schema="dss_client" name="name_store" />
+				<entity schema="dss_client" name="vault" />
+				<entity schema="dss_client" name="version_info" />
+				<entity schema="dss_client" name="workspace" />
+			</group>
+			<group name="Client Stats" color="336633" >
+				<entity schema="dss_client" name="dir_path" />
+				<entity schema="dss_client" name="node_ext_stat" />
+				<entity schema="dss_client" name="node_stat" />
+				<entity schema="dss_client" name="stat_evt" />
+				<entity schema="dss_client" name="stat_run" />
+				<entity schema="dss_client" name="tree_ext_stat" />
+				<entity schema="dss_client" name="tree_stat" />
+			</group>
 			<script name="SQL_Editor" id="f44a5401-dafa-4db1-8900-c55a7e22ddcf" language="SQL" >
 				<string><![CDATA[DROP TABLE dss_client.file_name;
 
@@ -1253,13 +1800,32 @@ ALTER TABLE dss_client.document MODIFY deleted BIT  NOT NULL DEFAULT 0  COMMENT 
 			</script>
 		</diagram>
 		<diagram name="msscore" id="24f2626d-ccb2-494d-bd2e-79024c8a6535" joined_routing="y" show_relation="cascade" >
-			<entity schema="dss_core" name="client" color="3986C1" x="76" y="57" />
-			<entity schema="dss_core" name="client_keys" color="C1D8EE" x="76" y="266" />
-			<entity schema="dss_core" name="module" color="C1D8EE" x="266" y="57" />
-			<entity schema="dss_core" name="profile" color="C1D8EE" x="57" y="456" />
-			<entity schema="dss_core" name="profile_info" color="C1D8EE" x="266" y="380" />
-			<entity schema="dss_core" name="provider" color="C1D8EE" x="513" y="456" />
-			<entity schema="dss_core" name="workspace" color="C1D8EE" x="513" y="57" />
+			<entity schema="dss_core" name="cli_stat" color="1A0068" x="57" y="171" />
+			<entity schema="dss_core" name="client" color="996600" x="76" y="627" />
+			<entity schema="dss_core" name="client_keys" color="996600" x="76" y="836" />
+			<entity schema="dss_core" name="mod_gate" color="1A0068" x="513" y="247" />
+			<entity schema="dss_core" name="mod_stat" color="1A0068" x="266" y="95" />
+			<entity schema="dss_core" name="module" color="996600" x="323" y="627" />
+			<entity schema="dss_core" name="profile" color="996600" x="57" y="1026" />
+			<entity schema="dss_core" name="profile_info" color="996600" x="361" y="950" />
+			<entity schema="dss_core" name="provider" color="996600" x="665" y="1026" />
+			<entity schema="dss_core" name="workspace" color="996600" x="665" y="608" />
+			<entity schema="dss_core" name="ws_stat" color="1A0068" x="684" y="133" />
+			<group name="Core" color="996600" >
+				<entity schema="dss_core" name="client" />
+				<entity schema="dss_core" name="client_keys" />
+				<entity schema="dss_core" name="module" />
+				<entity schema="dss_core" name="profile" />
+				<entity schema="dss_core" name="profile_info" />
+				<entity schema="dss_core" name="provider" />
+				<entity schema="dss_core" name="workspace" />
+			</group>
+			<group name="stats" color="1A0068" >
+				<entity schema="dss_core" name="cli_stat" />
+				<entity schema="dss_core" name="mod_gate" />
+				<entity schema="dss_core" name="mod_stat" />
+				<entity schema="dss_core" name="ws_stat" />
+			</group>
 			<script name="SQL_Editor" id="f80e7f7d-fc4b-4812-a3fe-2074b7ae5f8a" language="SQL" >
 				<string><![CDATA[DROP TABLE dss_client.file_extension;
 

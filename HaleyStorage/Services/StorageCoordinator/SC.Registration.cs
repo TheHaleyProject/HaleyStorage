@@ -195,10 +195,12 @@ namespace Haley.Services {
                     if (string.IsNullOrWhiteSpace(source.Client)) continue;
                     var cliKey = source.Client.ToDBName();
                     if (!clients.Contains(cliKey)) {
-                        var clientResult = await RegisterClient(source.Client, source.Password);
-                        if (clientResult?.Status != true) {
-                            failures.Add(clientResult?.Message ?? $"Unable to register client '{source.Client}'.");
-                            continue;
+                        if (!string.IsNullOrWhiteSpace(source.Password)) {
+                            var clientResult = await RegisterClient(source.Client, source.Password);
+                            if (clientResult?.Status != true) {
+                                failures.Add(clientResult?.Message ?? $"Unable to register client '{source.Client}'.");
+                                continue;
+                            }
                         }
                         clients.Add(cliKey);
                     }

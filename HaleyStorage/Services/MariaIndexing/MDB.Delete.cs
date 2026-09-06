@@ -43,6 +43,7 @@ namespace Haley.Utils {
                 using (handler?.Begin()) {
                     var load = new DbExecutionLoad(default, handler);
                     var deletedAt = DateTime.UtcNow;
+                    await TryQueueVersionSoftDeleteStatsEvents(moduleCuid, documentId, versionId, versionNo, subVer, load);
 
                     if (subVer == 0) {
                         // Delete the content version and any thumbnails attached to the same content version.
@@ -89,6 +90,7 @@ namespace Haley.Utils {
                 using (handler?.Begin()) {
                     var load = new DbExecutionLoad(default, handler);
                     var deletedAt = DateTime.UtcNow;
+                    await TryQueueDocumentSoftDeleteStatsEvents(moduleCuid, documentId, load);
                     await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.SOFT_DELETE_BY_ID, load, (ID, documentId), (DELETED, deletedAt));
                     await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.SOFT_DELETE_BY_PARENT, load, (PARENT, documentId), (DELETED, deletedAt));
                 }
@@ -216,6 +218,7 @@ namespace Haley.Utils {
                 var handler = _agw.GetTransactionHandler(moduleCuid);
                 using (handler?.Begin()) {
                     var load = new DbExecutionLoad(default, handler);
+                    await TryQueueDocumentArchiveStatsEvents(moduleCuid, documentId, load);
                     await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.ARCHIVE_RENAME, load, (ID, documentId), (NAME, nameStore.id), (ORIGINAL_NAME, originalNameId));
                     await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.ARCHIVE_BY_PARENT, load, (PARENT, documentId));
                 }
@@ -237,6 +240,7 @@ namespace Haley.Utils {
                 var handler = _agw.GetTransactionHandler(moduleCuid);
                 using (handler?.Begin()) {
                     var load = new DbExecutionLoad(default, handler);
+                    await TryQueueVersionArchiveStatsEvents(moduleCuid, documentId, versionId, versionNo, subVersionNo, load);
                     if (subVersionNo == 0) {
                         await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.ARCHIVE_BY_VERSION, load, (PARENT, documentId), (VERSION, versionNo));
                     } else {
@@ -277,6 +281,7 @@ namespace Haley.Utils {
                 var handler = _agw.GetTransactionHandler(moduleCuid);
                 using (handler?.Begin()) {
                     var load = new DbExecutionLoad(default, handler);
+                    await TryQueueDocumentRestoreStatsEvents(moduleCuid, documentId, load);
                     await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.RESTORE_NAME, load, (ID, documentId));
                     await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.RESTORE_BY_ID, load, (ID, documentId));
                     await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.RESTORE_BY_PARENT, load, (PARENT, documentId));
@@ -312,6 +317,7 @@ namespace Haley.Utils {
                 var handler = _agw.GetTransactionHandler(moduleCuid);
                 using (handler?.Begin()) {
                     var load = new DbExecutionLoad(default, handler);
+                    await TryQueueVersionRestoreStatsEvents(moduleCuid, documentId, versionId, versionNo, subVersionNo, load);
                     if (subVersionNo == 0) {
                         await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.RESTORE_BY_VERSION, load, (PARENT, documentId), (VERSION, versionNo));
                     } else {
@@ -372,6 +378,7 @@ namespace Haley.Utils {
                 using (handler?.Begin()) {
                     var load = new DbExecutionLoad(default, handler);
                     var deletedAt = DateTime.UtcNow;
+                    await TryQueueDirectorySoftDeleteStatsEvents(moduleCuid, dirIds.Distinct().ToList(), docIds.Distinct().ToList(), load);
 
                     foreach (var documentId in docIds.Distinct()) {
                         await _agw.ExecAsync(moduleCuid, INSTANCE.DOCUMENT.SOFT_DELETE_BY_ID, load, (ID, documentId), (DELETED, deletedAt));
@@ -424,6 +431,7 @@ namespace Haley.Utils {
                     var handler = _agw.GetTransactionHandler(moduleCuid);
                     using (handler?.Begin()) {
                         var load = new DbExecutionLoad(default, handler);
+                        await TryQueueDirectoryRestoreStatsEvents(moduleCuid, new[] { targetRow }, Array.Empty<DeletedDocumentInfo>(), load);
                         await _agw.ExecAsync(moduleCuid, INSTANCE.DIRECTORY.RESTORE_BY_ID, load, (ID, targetRow.GetLong("id")));
                     }
                     return fb.SetStatus(true).SetMessage("Directory restored.");
@@ -441,6 +449,7 @@ namespace Haley.Utils {
                 var txnHandler = _agw.GetTransactionHandler(moduleCuid);
                 using (txnHandler?.Begin()) {
                     var load = new DbExecutionLoad(default, txnHandler);
+                    await TryQueueDirectoryRestoreStatsEvents(moduleCuid, directoryRows, documents, load);
 
                     foreach (var directoryRow in directoryRows) {
                         if (IsRestorableDeleteState(directoryRow.GetInt("delete_state")))
@@ -593,6 +602,7 @@ namespace Haley.Utils {
             var handler = _agw.GetTransactionHandler(moduleCuid);
             using (handler?.Begin()) {
                 var load = new DbExecutionLoad(default, handler);
+                await TryQueueDocumentRestoreStatsEvents(moduleCuid, documentId, load);
                 await _agw.ExecAsync(moduleCuid, INSTANCE.DOCVERSION.RESTORE_BY_PARENT, load, (PARENT, documentId));
             }
 

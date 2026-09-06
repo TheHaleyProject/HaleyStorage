@@ -133,5 +133,33 @@ namespace Haley.Abstractions {
         /// <see cref="IVaultFileWriteRequest.IsThumbnail"/> set to <c>true</c>.
         /// </summary>
         Task<IVaultStreamResponse> DownloadThumbnail(IVaultFileReadRequest request);
+
+        // ── Cached Stats / Move ──────────────────────────────────────────────
+
+        /// <summary>
+        /// Returns cached direct and recursive counts for a workspace or directory.
+        /// Stats are derived from DB rows, not filesystem scans.
+        /// </summary>
+        Task<IFeedback<VaultStatsSnapshot>> GetStats(IVaultReadRequest input, string extension = null);
+
+        /// <summary>
+        /// Processes queued stat events for the module identified by the request scope.
+        /// </summary>
+        Task<IFeedback> ProcessStatsEvents(IVaultReadRequest input, int batchSize = 1000);
+
+        /// <summary>
+        /// Rebuilds cached stats from the module DB source-of-truth tables.
+        /// </summary>
+        Task<IFeedback> RebuildStats(IVaultReadRequest input, long? workspaceId = null);
+
+        /// <summary>
+        /// Moves a logical document to a new directory in the same module.
+        /// </summary>
+        Task<IFeedback<VaultMoveResult>> MoveFile(IVaultFileReadRequest source, IVaultReadRequest target, bool rename = false);
+
+        /// <summary>
+        /// Moves a virtual directory subtree to a new parent in the same module.
+        /// </summary>
+        Task<IFeedback<VaultMoveResult>> MoveDirectory(IVaultReadRequest source, IVaultReadRequest target, bool rename = false);
     }
 }

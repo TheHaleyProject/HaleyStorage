@@ -62,16 +62,28 @@ namespace Haley.Utils {
             var dirDbName = dirName.ToDBName();
             var actor = request.Actor ?? 0L;
 
-            var dirInfo = await InsertAndFetchIDRead(dbid,
-                () => {
+            Func<(string query, (string key, object value)[] parameters)> checkDirectory = () => {
                     if (dirId < 1 && string.IsNullOrWhiteSpace(dirCuid))
                         return (INSTANCE.DIRECTORY.EXISTS, Consolidate((WSPACE, ws_id), (PARENT, dirParent), (NAME, dirDbName)));
                     var query = dirId < 1 ? INSTANCE.DIRECTORY.EXISTS_BY_CUID : INSTANCE.DIRECTORY.EXISTS_BY_ID;
                     return (query, Consolidate((VALUE, dirId < 1 ? (object)ToDbCuid(dirCuid) : dirId)));
-                },
-                () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws_id), (PARENT, dirParent), (NAME, dirDbName), (DNAME, dirName), (ACTOR, actor))),
+                };
+            Func<(string query, (string key, object value)[] parameters)> insertDirectory = () => (INSTANCE.DIRECTORY.INSERT, Consolidate((WSPACE, ws_id), (PARENT, dirParent), (NAME, dirDbName), (DNAME, dirName), (ACTOR, actor)));
+
+            var existing = await InsertAndFetchIDRead(dbid, checkDirectory, readOnly: true, callId: request.CallID);
+            var wasCreated = existing.id < 1 && !request.ReadOnlyMode;
+            var dirInfo = existing.id > 0
+                ? existing
+                : await InsertAndFetchIDRead(dbid,
+                checkDirectory,
+                insertDirectory,
                 readOnly: request.ReadOnlyMode,
-                $@"Unable to insert the directory {dirName} to the workspace : {ws_id}"); //Directory registration, same as the workspace doesn't need any transaction as it might be needed by other systems.
+                $@"Unable to insert the directory {dirName} to the workspace : {ws_id}",
+                false,
+                callId: request.CallID); //Directory registration, same as the workspace doesn't need any transaction as it might be needed by other systems.
+
+            if (wasCreated && dirInfo.id > 0)
+                await TryQueueFolderCreateStatsEvent(dbid, dirInfo.id, new DbExecutionLoad(default, GetTransactionHandlerCache(request.CallID, dbid)));
 
             return (true, (dirInfo.id, dirInfo.uid));
         }
