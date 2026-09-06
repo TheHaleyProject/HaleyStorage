@@ -157,12 +157,16 @@ namespace Haley.Utils {
         /// Ensures the name-store chain exists: extension → vault name → name_store composite row.
         /// Returns the <c>name_store</c> ID, which is used as the FK when inserting a document row.
         /// </summary>
-       async Task<(bool status, long id)> EnsureNameStore(IVaultReadRequest request) {
+        async Task<(bool status, long id)> EnsureNameStore(IVaultReadRequest request) {
             if (string.IsNullOrWhiteSpace(request.RequestedName)) return (false, 0);
-            return await EnsureNameStore(request.Scope.Module.Cuid.ToString("N"), request.RequestedName, request.ReadOnlyMode);
+            return await EnsureNameStore(
+                request.Scope.Module.Cuid.ToString("N"),
+                request.RequestedName,
+                request.ReadOnlyMode,
+                request.CallID);
         }
 
-        async Task<(bool status, long id)> EnsureNameStore(string dbid, string fileName, bool readOnly = false) {
+        async Task<(bool status, long id)> EnsureNameStore(string dbid, string fileName, bool readOnly = false, string callId = null) {
             if (string.IsNullOrWhiteSpace(fileName) || string.IsNullOrWhiteSpace(dbid)) return (false, 0);
             var name = Path.GetFileNameWithoutExtension(fileName)?.Trim();
             var ext = Path.GetExtension(fileName)?.Trim();
@@ -172,13 +176,13 @@ namespace Haley.Utils {
             ext = ext.ToDBName();
 
             //Extension Exists?
-            long extId = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.EXTENSION.EXISTS, Consolidate((NAME, ext))), () => (INSTANCE.EXTENSION.INSERT, Consolidate((NAME, ext))), readOnly: readOnly, $@"Unable to fetch extension id for {ext}");
+            long extId = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.EXTENSION.EXISTS, Consolidate((NAME, ext))), () => (INSTANCE.EXTENSION.INSERT, Consolidate((NAME, ext))), readOnly: readOnly, $@"Unable to fetch extension id for {ext}", callId: callId);
 
             // Name Exists ?
-            long nameId = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.VAULT.EXISTS, Consolidate((NAME, name))), () => (INSTANCE.VAULT.INSERT, Consolidate((NAME, name))), readOnly: readOnly, $@"Unable to fetch name id for {name}");
+            long nameId = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.VAULT.EXISTS, Consolidate((NAME, name))), () => (INSTANCE.VAULT.INSERT, Consolidate((NAME, name))), readOnly: readOnly, $@"Unable to fetch name id for {name}", callId: callId);
 
             //Namestore Exists?
-            long nsId = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.NAMESTORE.EXISTS, Consolidate((NAME, nameId), (EXT, extId))), () => (INSTANCE.NAMESTORE.INSERT, Consolidate((NAME, nameId), (EXT, extId))), readOnly: readOnly, $@"Unable to fetch name store id for name : {name} and extension : {ext}");
+            long nsId = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.NAMESTORE.EXISTS, Consolidate((NAME, nameId), (EXT, extId))), () => (INSTANCE.NAMESTORE.INSERT, Consolidate((NAME, nameId), (EXT, extId))), readOnly: readOnly, $@"Unable to fetch name store id for name : {name} and extension : {ext}", callId: callId);
 
             return (true, nsId);
         }

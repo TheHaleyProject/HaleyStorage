@@ -502,8 +502,12 @@ namespace Haley.Utils {
         }
 
         async Task RefreshCoreStats(string moduleCuid) {
-            var module = await _agw.RowAsync(_key, STATS_CORE.GET_MODULE_IDS, default, (CUID, ToDbCuid(moduleCuid)));
-            if (module == null || module.Count == 0) return;
+            var coreModuleCuid = Guid.TryParse(moduleCuid, out var parsedModuleCuid)
+                ? parsedModuleCuid.ToString("N")
+                : moduleCuid.Trim();
+            var module = await _agw.RowAsync(_key, STATS_CORE.GET_MODULE_IDS, default, (CUID, coreModuleCuid));
+            if (module == null || module.Count == 0)
+                throw new InvalidOperationException($"Module CUID '{coreModuleCuid}' was not found in the core registry while refreshing statistics.");
 
             var moduleId = module.GetLong("module_id");
             var clientId = module.GetLong("client_id");
