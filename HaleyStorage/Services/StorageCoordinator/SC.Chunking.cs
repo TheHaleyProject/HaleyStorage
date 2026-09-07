@@ -120,7 +120,7 @@ namespace Haley.Services {
                 if (Indexer is MariaDBIndexing indexer)
                     indexer.FinalizeTransaction(request.CallID, true);
 
-                var session = new ChunkSessionCache(chunkDir, meta);
+                var session = await ChunkSessionCache.CreateAsync(chunkDir, meta, cancellationToken).ConfigureAwait(false);
                 _chunkSessions[meta.VersionId] = session;
                 _chunkSessionsByCuid[meta.VersionCuid] = meta.VersionId;
 
@@ -270,7 +270,7 @@ namespace Haley.Services {
                     throw;
                 }
 
-                var session = new ChunkSessionCache(chunkDir, meta);
+                var session = await ChunkSessionCache.CreateAsync(chunkDir, meta, cancellationToken).ConfigureAwait(false);
                 _chunkSessions[meta.VersionId] = session;
                 _chunkSessionsByCuid[meta.VersionCuid] = meta.VersionId;
 
@@ -345,7 +345,7 @@ namespace Haley.Services {
 
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, session.Cancellation.Token);
             try {
-                var currentOffset = GetSequentialOffset(session);
+                var currentOffset = session.SequentialOffset;
                 if (currentOffset != expectedOffset)
                     return fb.SetMessage($"Offset mismatch. Server expects {currentOffset}, client sent {expectedOffset}.")
                         .SetResult(new ChunkAppendResult { Offset = currentOffset, TotalBytes = session.Meta.TotalLength });
@@ -373,39 +373,48 @@ namespace Haley.Services {
                             var read = await dataStream.ReadAsync(buffer.AsMemory(0, toRead), linked.Token).ConfigureAwait(false);
                             if (read == 0) {
                                 await pending.FlushAsync(linked.Token).ConfigureAwait(false);
+                                session.SetPendingBytes(pending.Length);
                                 await TouchSessionAsync(session, CancellationToken.None).ConfigureAwait(false);
                                 return fb.SetMessage($"Request body ended with {remaining} byte(s) still expected.");
                             }
 
                             await pending.WriteAsync(buffer.AsMemory(0, read), linked.Token).ConfigureAwait(false);
+                            session.AppendPendingHash(buffer.AsSpan(0, read));
                             remaining -= read;
                         }
 
                         await pending.FlushAsync(linked.Token).ConfigureAwait(false);
                         pendingLength = pending.Length;
+                        session.SetPendingBytes(pendingLength);
                     }
 
-                    var offsetAfterWrite = GetSequentialOffset(session);
+                    var offsetAfterWrite = session.SequentialOffset;
                     if (pendingLength == session.ChunkSizeBytes || offsetAfterWrite == session.Meta.TotalLength) {
-                        var nextPart = CountPartFiles(session.TempDir) + 1;
-                        var committed = await CommitPendingPartAsync(session, nextPart, pendingPath, linked.Token)
+                        var nextPart = session.NextSequentialPart;
+                        var pendingHash = session.CompletePendingHash();
+                        var committed = await CommitPendingPartAsync(session, nextPart, pendingPath, pendingHash, linked.Token)
                             .ConfigureAwait(false);
-                        if (!committed.Status) return fb.SetMessage(committed.Message);
+                        if (!committed.Status) {
+                            await session.RebuildPendingStateAsync(pendingPath, CancellationToken.None).ConfigureAwait(false);
+                            return fb.SetMessage(committed.Message);
+                        }
                     }
                 }
 
                 await TouchSessionAsync(session, linked.Token).ConfigureAwait(false);
-                var finalOffset = GetSequentialOffset(session);
+                var finalOffset = session.SequentialOffset;
                 return fb.SetStatus(true).SetResult(new ChunkAppendResult {
                     Offset = finalOffset,
                     TotalBytes = session.Meta.TotalLength,
                     ReadyToComplete = finalOffset == session.Meta.TotalLength,
-                    CompletedParts = CountPartFiles(session.TempDir)
+                    CompletedParts = session.CompletedParts
                 });
             } catch (OperationCanceledException) {
+                try { await session.RebuildPendingStateAsync(Path.Combine(session.TempDir, PendingPartFile), CancellationToken.None).ConfigureAwait(false); } catch { }
                 try { await TouchSessionAsync(session, CancellationToken.None).ConfigureAwait(false); } catch { }
                 return fb.SetMessage("Sequential upload was cancelled.");
             } catch (Exception ex) {
+                try { await session.RebuildPendingStateAsync(Path.Combine(session.TempDir, PendingPartFile), CancellationToken.None).ConfigureAwait(false); } catch { }
                 return fb.SetMessage(ex.Message);
             } finally {
                 session.EndWrite();
@@ -583,7 +592,7 @@ namespace Haley.Services {
                 return null;
 
             meta.Lifecycle = "active";
-            var session = new ChunkSessionCache(chunkDir, meta);
+            var session = await ChunkSessionCache.CreateAsync(chunkDir, meta, cancellationToken).ConfigureAwait(false);
             _chunkSessions[meta.VersionId] = session;
             _chunkSessionsByCuid[meta.VersionCuid] = meta.VersionId;
             return BuildStatus(session);
@@ -692,13 +701,14 @@ namespace Haley.Services {
                     if (existingSize != size || !string.Equals(existingHash, actualHash, StringComparison.OrdinalIgnoreCase))
                         return fb.SetMessage($"Part {partNumber} already exists with different content.");
 
+                    session.RegisterCommittedPart(partNumber, existingSize);
                     var reconciled = await PersistPartAsync(session, partNumber, size, actualHash).ConfigureAwait(false);
                     if (!reconciled.Status) return fb.SetMessage(reconciled.Message);
                     await TouchSessionAsync(session, cancellationToken).ConfigureAwait(false);
                     return fb.SetStatus(true).SetResult(new ChunkPartResult {
                         PartNumber = partNumber,
                         PartBytes = size,
-                        CommittedBytes = CountCommittedBytes(session.TempDir),
+                        CommittedBytes = session.CommittedBytes,
                         Hash = actualHash,
                         AlreadyPresent = true
                     });
@@ -706,6 +716,7 @@ namespace Haley.Services {
 
                 File.Move(candidate, finalPart, false);
                 candidate = string.Empty;
+                session.RegisterCommittedPart(partNumber, size);
 
                 var persisted = await PersistPartAsync(session, partNumber, size, actualHash).ConfigureAwait(false);
                 if (!persisted.Status)
@@ -717,7 +728,7 @@ namespace Haley.Services {
                     .SetResult(new ChunkPartResult {
                         PartNumber = partNumber,
                         PartBytes = size,
-                        CommittedBytes = CountCommittedBytes(session.TempDir),
+                        CommittedBytes = session.CommittedBytes,
                         Hash = actualHash,
                         AlreadyPresent = false
                     });
@@ -730,6 +741,7 @@ namespace Haley.Services {
             ChunkSessionCache session,
             int partNumber,
             string pendingPath,
+            string actualHash,
             CancellationToken cancellationToken) {
 
             var fb = new Feedback<ChunkPartResult>();
@@ -743,7 +755,6 @@ namespace Haley.Services {
             if (!expectedBytes.HasValue && size > session.ChunkSizeBytes)
                 return fb.SetMessage($"Part {partNumber} exceeds the configured chunk size of {session.ChunkSizeBytes} bytes.");
 
-            var actualHash = await ComputeHashAsync(pendingPath, cancellationToken).ConfigureAwait(false);
             var finalPart = PartPath(session.TempDir, partNumber);
             var alreadyPresent = File.Exists(finalPart);
             if (alreadyPresent) {
@@ -756,17 +767,17 @@ namespace Haley.Services {
                 File.Move(pendingPath, finalPart, false);
             }
 
+            session.RegisterCommittedPart(partNumber, size);
             var persisted = await PersistPartAsync(session, partNumber, size, actualHash).ConfigureAwait(false);
             if (!persisted.Status)
                 return fb.SetMessage($"Part is durable on disk but DB reconciliation failed: {persisted.Message}");
 
-            await TouchSessionAsync(session, cancellationToken).ConfigureAwait(false);
             return fb.SetStatus(true)
                 .SetMessage($"Part {partNumber}/{session.Meta.TotalParts} received ({size} bytes).")
                 .SetResult(new ChunkPartResult {
                     PartNumber = partNumber,
                     PartBytes = size,
-                    CommittedBytes = CountCommittedBytes(session.TempDir),
+                    CommittedBytes = session.CommittedBytes,
                     Hash = actualHash,
                     AlreadyPresent = alreadyPresent
                 });
@@ -899,8 +910,7 @@ namespace Haley.Services {
         };
 
         static ChunkUploadStatus BuildStatus(ChunkSessionCache session) {
-            var partFiles = GetPartFiles(session.TempDir);
-            var received = partFiles.Select(path => int.Parse(Path.GetFileName(path))).ToHashSet();
+            var received = session.ReceivedParts;
             var missing = Enumerable.Range(1, session.Meta.TotalParts).Where(part => !received.Contains(part)).ToArray();
             return new ChunkUploadStatus {
                 VersionId = session.Meta.VersionId,
@@ -911,8 +921,8 @@ namespace Haley.Services {
                 PendingParts = missing.Length,
                 MissingParts = missing,
                 TotalBytes = session.Meta.HasExactLength ? session.Meta.TotalLength : null,
-                CommittedBytes = CountCommittedBytes(session.TempDir),
-                SequentialOffset = GetSequentialOffset(session),
+                CommittedBytes = session.CommittedBytes,
+                SequentialOffset = session.SequentialOffset,
                 LastActivity = session.Meta.LastActivityUtc,
                 State = session.Meta.Lifecycle
             };
@@ -932,21 +942,6 @@ namespace Haley.Services {
             LastActivity = meta.LastActivityUtc,
             State = "completed"
         };
-
-        static int CountPartFiles(string directory) => GetPartFiles(directory).Count;
-        static long CountCommittedBytes(string directory) => GetPartFiles(directory).Sum(path => new FileInfo(path).Length);
-
-        static long GetSequentialOffset(ChunkSessionCache session) {
-            long offset = 0;
-            for (var part = 1; part <= session.Meta.TotalParts; part++) {
-                var path = PartPath(session.TempDir, part);
-                if (!File.Exists(path)) break;
-                offset += new FileInfo(path).Length;
-            }
-            var pending = Path.Combine(session.TempDir, PendingPartFile);
-            if (File.Exists(pending)) offset += new FileInfo(pending).Length;
-            return offset;
-        }
 
         static IReadOnlyList<string> GetPartFiles(string directory) {
             if (!Directory.Exists(directory)) return Array.Empty<string>();
@@ -995,21 +990,118 @@ namespace Haley.Services {
 
         sealed class ChunkSessionCache {
             readonly object _stateLock = new();
+            readonly ConcurrentDictionary<int, long> _partSizes = new();
+            IncrementalHash _pendingHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             int _activeWriters;
+            long _committedBytes;
+            long _pendingBytes;
+            long _sequentialOffset;
             TaskCompletionSource _writersDrained = CompletedSource();
 
-            public ChunkSessionCache(string tempDir, ChunkSessionMeta meta) {
+            ChunkSessionCache(string tempDir, ChunkSessionMeta meta) {
                 TempDir = tempDir;
                 Meta = meta;
+            }
+
+            public static async Task<ChunkSessionCache> CreateAsync(
+                string tempDir,
+                ChunkSessionMeta meta,
+                CancellationToken cancellationToken) {
+
+                var session = new ChunkSessionCache(tempDir, meta);
+                foreach (var path in GetPartFiles(tempDir)) {
+                    if (int.TryParse(Path.GetFileName(path), out var partNumber))
+                        session.RegisterCommittedPart(partNumber, new FileInfo(path).Length);
+                }
+                await session.RebuildPendingStateAsync(
+                    Path.Combine(tempDir, PendingPartFile), cancellationToken).ConfigureAwait(false);
+                return session;
             }
 
             public string TempDir { get; }
             public ChunkSessionMeta Meta { get; }
             public long ChunkSizeBytes => checked(Meta.ChunkSizeMb * 1024L * 1024L);
+            public int CompletedParts => _partSizes.Count;
+            public long CommittedBytes => Interlocked.Read(ref _committedBytes);
+            public HashSet<int> ReceivedParts => _partSizes.Keys.ToHashSet();
+            public int NextSequentialPart {
+                get {
+                    for (var part = 1; part <= Meta.TotalParts; part++) {
+                        if (!_partSizes.ContainsKey(part)) return part;
+                    }
+                    return Meta.TotalParts + 1;
+                }
+            }
+            public long SequentialOffset => Interlocked.Read(ref _sequentialOffset);
             public ConcurrentDictionary<int, SemaphoreSlim> PartGates { get; } = new();
             public SemaphoreSlim SequentialGate { get; } = new(1, 1);
             public SemaphoreSlim MetadataGate { get; } = new(1, 1);
             public CancellationTokenSource Cancellation { get; } = new();
+
+            public void RegisterCommittedPart(int partNumber, long size) {
+                if (_partSizes.TryAdd(partNumber, size)) {
+                    Interlocked.Add(ref _committedBytes, size);
+                    AdvanceSequentialOffset(CalculateSequentialOffset());
+                }
+            }
+
+            public void AppendPendingHash(ReadOnlySpan<byte> bytes) => _pendingHash.AppendData(bytes);
+
+            public void SetPendingBytes(long bytes) {
+                Interlocked.Exchange(ref _pendingBytes, bytes);
+                AdvanceSequentialOffset(CalculateSequentialOffset());
+            }
+
+            public string CompletePendingHash() {
+                var value = Convert.ToHexString(_pendingHash.GetHashAndReset()).ToLowerInvariant();
+                Interlocked.Exchange(ref _pendingBytes, 0);
+                return value;
+            }
+
+            public async Task RebuildPendingStateAsync(string pendingPath, CancellationToken cancellationToken) {
+                _pendingHash.Dispose();
+                _pendingHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+                Interlocked.Exchange(ref _pendingBytes, 0);
+                if (!File.Exists(pendingPath)) {
+                    Interlocked.Exchange(ref _sequentialOffset, CalculateSequentialOffset());
+                    return;
+                }
+
+                await using var stream = new FileStream(
+                    pendingPath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read,
+                    CopyBufferSize,
+                    FileOptions.Asynchronous | FileOptions.SequentialScan);
+                var buffer = new byte[CopyBufferSize];
+                long total = 0;
+                while (true) {
+                    var read = await stream.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
+                    if (read == 0) break;
+                    _pendingHash.AppendData(buffer, 0, read);
+                    total += read;
+                }
+                Interlocked.Exchange(ref _pendingBytes, total);
+                Interlocked.Exchange(ref _sequentialOffset, CalculateSequentialOffset());
+            }
+
+            long CalculateSequentialOffset() {
+                long offset = 0;
+                for (var part = 1; part <= Meta.TotalParts; part++) {
+                    if (!_partSizes.TryGetValue(part, out var size)) break;
+                    offset += size;
+                }
+                return offset + Interlocked.Read(ref _pendingBytes);
+            }
+
+            void AdvanceSequentialOffset(long value) {
+                while (true) {
+                    var current = Interlocked.Read(ref _sequentialOffset);
+                    if (current >= value) return;
+                    if (Interlocked.CompareExchange(ref _sequentialOffset, value, current) == current) return;
+                }
+            }
 
             public bool TryBeginWrite(out string message) {
                 lock (_stateLock) {
