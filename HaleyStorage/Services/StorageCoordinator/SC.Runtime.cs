@@ -19,6 +19,8 @@ namespace Haley.Services {
                 Registered = registered,
                 AdapterLoaded = adapterLoaded,
                 Hydrated = registered && adapterLoaded,
+                Platform = OperatingSystem.IsWindows() ? "windows" : "linux",
+                PathSeparator = Path.DirectorySeparatorChar.ToString(),
                 Message = adapterLoaded
                     ? "Module adapter is loaded in this Storage API process."
                     : "Module adapter is not loaded in this Storage API process."

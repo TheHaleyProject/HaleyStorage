@@ -8,6 +8,8 @@ namespace Haley.Models {
         public bool Registered { get; set; }
         public bool AdapterLoaded { get; set; }
         public bool Hydrated { get; set; }
+        public string Platform { get; set; } = string.Empty;
+        public string PathSeparator { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
     }
 }
