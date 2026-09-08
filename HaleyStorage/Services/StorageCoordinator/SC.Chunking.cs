@@ -33,9 +33,10 @@ namespace Haley.Services {
 
             var fb = new Feedback<ChunkUploadSessionInfo>();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
-                if (request.ReadOnlyMode) return fb.SetMessage("Request is in Read-Only mode.");
+                var rootCuid = (request.File as StorageFileRoute)?.RootCuid;
+                var access = await CheckTargetWriteAccessAsync(request, request.File?.Id, request.File?.Cuid, rootCuid);
+                if (!access.Status) return fb.SetMessage(access.Message);
                 if (string.IsNullOrWhiteSpace(request.OriginalName))
                     return fb.SetMessage("FileName is required for chunked upload initiation.");
                 if (chunkSizeMb < 1) return fb.SetMessage("ChunkSizeMb must be >= 1.");
@@ -79,6 +80,7 @@ namespace Haley.Services {
                     StorageRef = file.StorageRef ?? string.Empty,
                     StorageName = file.StorageName ?? string.Empty,
                     ModuleCuid = request.Scope?.Module?.Cuid.ToString("N") ?? string.Empty,
+                    WorkspaceCuid = request.Scope?.Workspace?.Cuid.ToString("N") ?? string.Empty,
                     ProfileInfoId = file.ProfileInfoId,
                     ChunkSizeMb = chunkSizeMb,
                     TotalParts = totalParts,
@@ -140,12 +142,12 @@ namespace Haley.Services {
 
             var fb = new Feedback<ChunkUploadSessionInfo>();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
-                if (request.ReadOnlyMode) return fb.SetMessage("Request is in Read-Only mode.");
                 if (Indexer == null) return fb.SetMessage("An indexer is required to create a chunk session.");
                 if (!Guid.TryParse(versionCuid, out var parsedCuid))
                     return fb.SetMessage("A valid placeholder version CUID is required.");
+                var access = await CheckTargetWriteAccessAsync(request, versionCuid: versionCuid);
+                if (!access.Status) return fb.SetMessage(access.Message);
                 if (chunkSizeMb < 1) return fb.SetMessage("ChunkSizeMb must be >= 1.");
                 if (totalParts < 1) return fb.SetMessage("TotalParts must be >= 1.");
                 if (totalBytes.HasValue && totalBytes.Value < 1)
@@ -238,6 +240,7 @@ namespace Haley.Services {
                     StorageRef = file.StorageRef ?? string.Empty,
                     StorageName = file.StorageName ?? string.Empty,
                     ModuleCuid = moduleCuid,
+                    WorkspaceCuid = request.Scope?.Workspace?.Cuid.ToString("N") ?? string.Empty,
                     ProfileInfoId = file.ProfileInfoId,
                     ChunkSizeMb = chunkSizeMb,
                     TotalParts = totalParts,
@@ -288,9 +291,10 @@ namespace Haley.Services {
             CancellationToken cancellationToken = default) {
 
             var fb = new Feedback<ChunkPartResult>();
-            if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return fb.SetMessage($"No active chunk session for versionId {versionId}. Rehydrate the session first.");
+            var access = await CheckTargetWriteAccessAsync(session.Meta.ModuleCuid, session.Meta.WorkspaceCuid, versionId);
+            if (!access.Status) return fb.SetMessage(access.Message);
             if (partNumber < 1 || partNumber > session.Meta.TotalParts)
                 return fb.SetMessage($"partNumber must be between 1 and {session.Meta.TotalParts}.");
             if (chunkStream == null || !chunkStream.CanRead)
@@ -327,9 +331,10 @@ namespace Haley.Services {
             CancellationToken cancellationToken = default) {
 
             var fb = new Feedback<ChunkAppendResult>();
-            if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return fb.SetMessage($"No active chunk session for versionId {versionId}. Rehydrate the session first.");
+            var access = await CheckTargetWriteAccessAsync(session.Meta.ModuleCuid, session.Meta.WorkspaceCuid, versionId);
+            if (!access.Status) return fb.SetMessage(access.Message);
             if (!session.Meta.HasExactLength)
                 return fb.SetMessage("Sequential append requires an exact total byte length.");
             if (dataStream == null || !dataStream.CanRead)
@@ -428,9 +433,10 @@ namespace Haley.Services {
             CancellationToken cancellationToken = default) {
 
             var fb = new Feedback<ChunkUploadStatus>();
-            if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return fb.SetMessage($"No active chunk session for versionId {versionId}.");
+            var access = await CheckTargetWriteAccessAsync(session.Meta.ModuleCuid, session.Meta.WorkspaceCuid, versionId);
+            if (!access.Status) return fb.SetMessage(access.Message);
             if (!session.TryBeginExclusive("assembling", out var writersDrained, out var stateMessage))
                 return fb.SetMessage(stateMessage);
 
@@ -520,9 +526,10 @@ namespace Haley.Services {
 
         public async Task<IFeedback> AbortChunkedUpload(long versionId, CancellationToken cancellationToken = default) {
             var fb = new Feedback();
-            if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
             if (!_chunkSessions.TryGetValue(versionId, out var session))
                 return fb.SetStatus(true).SetMessage("No active session found; nothing to abort.");
+            var access = await CheckTargetWriteAccessAsync(session.Meta.ModuleCuid, session.Meta.WorkspaceCuid, versionId);
+            if (!access.Status) return fb.SetMessage(access.Message);
             if (!session.TryBeginExclusive("aborting", out var writersDrained, out var stateMessage))
                 return fb.SetMessage(stateMessage);
 
@@ -659,6 +666,8 @@ namespace Haley.Services {
                 cancellationToken.ThrowIfCancellationRequested();
                 var meta = await ReadMetadataAsync(directory, cancellationToken).ConfigureAwait(false);
                 if (meta == null) continue;
+                var access = await CheckTargetWriteAccessAsync(meta.ModuleCuid, meta.WorkspaceCuid, meta.VersionId);
+                if (!access.Status) continue;
                 if (string.Equals(meta.Lifecycle, "completed", StringComparison.OrdinalIgnoreCase)) {
                     if (TryDeleteDirectory(directory)) cleaned++;
                     continue;
@@ -1160,6 +1169,7 @@ namespace Haley.Services {
             public string StorageRef { get; set; } = string.Empty;
             public string StorageName { get; set; } = string.Empty;
             public string ModuleCuid { get; set; } = string.Empty;
+            public string WorkspaceCuid { get; set; } = string.Empty;
             public long ProfileInfoId { get; set; }
             public long ChunkSizeMb { get; set; }
             public int TotalParts { get; set; }

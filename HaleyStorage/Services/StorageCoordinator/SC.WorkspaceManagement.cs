@@ -15,8 +15,6 @@ namespace Haley.Services {
             string module_name,
             bool is_virtual,
             bool force = false) {
-            if (!WriteMode)
-                return new Feedback(false, "Workspace type cannot be changed while the coordinator is read-only.");
             if (Indexer == null)
                 return new Feedback(false, "Workspace type cannot be changed without a registry indexer.");
             if (string.IsNullOrWhiteSpace(client_name))
@@ -26,8 +24,11 @@ namespace Haley.Services {
             if (string.IsNullOrWhiteSpace(workspace_name))
                 return new Feedback(false, "Workspace name is mandatory.");
 
-            await Initialize();
             var request = new StorageReadRequest(client_name, module_name, workspace_name);
+            var access = CheckWriteAccess(request);
+            if (!access.Status) return access;
+
+            await Initialize();
             var workspaceCuid = request.Scope.Workspace.Cuid.ToString("N");
             if (!await Indexer.HydrateWorkspaceAsync(workspaceCuid)
                 || !Indexer.TryGetComponentInfo(workspaceCuid, out VaultWorkSpace current))

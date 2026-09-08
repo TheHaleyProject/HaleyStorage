@@ -131,7 +131,8 @@ namespace Haley.Services {
             var clientDir = caseSensitive ? client.DisplayName : client.Name.ToDBName();
             var moduleDir = caseSensitive ? module.DisplayName : module.Name.ToDBName();
             var baseDir = Path.GetFullPath(Path.Combine(BasePath, clientDir, moduleDir));
-            if (isFs && WriteMode) {
+            var canProvision = IsWriteAllowed(client.Name, module.Name, wspace.Name);
+            if (isFs && canProvision) {
                 // Always create client/module base dirs for any named workspace on FS.
                 if (!Directory.Exists(baseDir)) Directory.CreateDirectory(baseDir);
             }
@@ -141,7 +142,7 @@ namespace Haley.Services {
                 var wsCarrier = new VaultStorable(wspace.DisplayName, VaultNameMode.Guid, VaultNameParseMode.Generate);
                 wsSegment = GenerateBasePath(wsCarrier, VaultObjectType.WorkSpace).path;
                 wsPath = wsSegment; // only the workspace segment is stored in DB
-                if (isFs && WriteMode) {
+                if (isFs && canProvision) {
                     var wsFullPath = Path.GetFullPath(Path.Combine(baseDir, wsSegment));
                     if (!Directory.Exists(wsFullPath)) Directory.CreateDirectory(wsFullPath);
                 }
@@ -152,7 +153,7 @@ namespace Haley.Services {
             var result = new Feedback(true, $"Workspace {wspace.DisplayName} is registered");
             if (Indexer == null)
                 return result.SetStatus(false).SetMessage("Storage registry indexer is not configured; workspace registration cannot be persisted.");
-            if (WriteMode && !isVirtual && hasRealName && isFs && !Directory.Exists(Path.GetFullPath(Path.Combine(baseDir, wsSegment))))
+            if (canProvision && !isVirtual && hasRealName && isFs && !Directory.Exists(Path.GetFullPath(Path.Combine(baseDir, wsSegment))))
                 result.SetStatus(false).SetMessage("Directory is not created. Please ensure if the WriteMode is turned ON or proper access is available.");
 
             if (!result.Status) return result;
@@ -179,6 +180,7 @@ namespace Haley.Services {
                 var sources = section.AsDictionaryList();
                 var sourceList = sources.Where(p => p.Count > 0 && p.First().Value is Dictionary<string, object>).Select(q => ((Dictionary<string, object>)q.First().Value).Map<DSSRegInfo>()).ToList();
                 if (sourceList == null || sourceList.Count < 0) return result.SetMessage("Unable to parse registration info from the given configuration section.");
+                ReplaceWritePolicies(sourceList);
 
                 var clients = new List<string>();
                 var modules = new List<string>();

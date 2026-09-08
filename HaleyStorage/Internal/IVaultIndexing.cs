@@ -29,6 +29,7 @@ namespace Haley.Services {
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, long id);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, string cuid);
         Task<IFeedback> GetDocVersionInfoByStorageName(string moduleCuid, string storageName);
+        Task<long> GetTargetWorkspaceId(string moduleCuid, long? versionId = null, string versionCuid = null, string documentCuid = null);
         /// <summary>Resolves a document CUID (ruid) to the latest version's full info row.</summary>
         Task<IFeedback> GetDocVersionInfoByDocCuid(string moduleCuid, string documentCuid);
         Task<IFeedback> GetDocVersionInfo(string moduleCuid, string wsCuid, string file_name, string dir_name = VaultConstants.DEFAULT_NAME, long dir_parent_id = 0);

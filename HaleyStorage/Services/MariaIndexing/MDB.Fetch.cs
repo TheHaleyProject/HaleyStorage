@@ -45,6 +45,32 @@ namespace Haley.Utils {
         public Task<IFeedback> GetDocVersionInfo(string moduleCuid, string cuid) {
             return GetDocVersionInfoInternal(moduleCuid, 0, cuid);
         }
+
+        public async Task<long> GetTargetWorkspaceId(
+            string moduleCuid,
+            long? versionId = null,
+            string versionCuid = null,
+            string documentCuid = null) {
+
+            if (string.IsNullOrWhiteSpace(moduleCuid) || !_agw.ContainsKey(moduleCuid)) return 0;
+
+            string query;
+            object value;
+            if (versionId.HasValue && versionId.Value > 0) {
+                query = INSTANCE.DOCVERSION.GET_WORKSPACE_BY_VERSION_ID;
+                value = versionId.Value;
+            } else if (!string.IsNullOrWhiteSpace(versionCuid)) {
+                query = INSTANCE.DOCVERSION.GET_WORKSPACE_BY_VERSION_CUID;
+                value = ToDbCuid(versionCuid);
+            } else if (!string.IsNullOrWhiteSpace(documentCuid)) {
+                query = INSTANCE.DOCUMENT.GET_WORKSPACE_BY_CUID;
+                value = ToDbCuid(documentCuid);
+            } else {
+                return 0;
+            }
+
+            return await _agw.ScalarAsync<long?>(moduleCuid, query, default, (VALUE, value)) ?? 0;
+        }
         /// <summary>
         /// Fetches the full active version row by its provider-level <c>storage_name</c>.
         /// Unlike the filesystem fast path, this stays DB-backed so deleted versions are not exposed.

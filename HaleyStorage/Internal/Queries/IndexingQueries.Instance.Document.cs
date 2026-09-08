@@ -4,6 +4,8 @@ namespace Haley.Internal {
     internal partial class IndexingQueries {
         public partial class INSTANCE {
             public class DOCUMENT {
+                public const string GET_WORKSPACE_BY_CUID =
+                    $@"select d.workspace from document as d where d.cuid = {VALUE} limit 1;";
                 public const string EXISTS = $@"select doc.id , doc.cuid as uid from document as doc where doc.parent = {PARENT} and doc.name = {NAME} and doc.delete_state = 0;";
                 public const string EXISTS_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.delete_state = 0;";
                 public const string EXISTS_DELETED = $@"select doc.id, doc.cuid as uid from document as doc where doc.parent = {PARENT} and doc.name = {NAME} and doc.delete_state > 0;";

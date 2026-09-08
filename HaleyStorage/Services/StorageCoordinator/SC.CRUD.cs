@@ -27,9 +27,10 @@ namespace Haley.Services {
         public async Task<IVaultResponse> Upload(IVaultFileWriteRequest input) {
             var result = new VaultResponse() { Status = false, OriginalName = input?.OriginalName };
             try {
-                if (!WriteMode) { result.Message = "Application is in Read-Only mode."; return result; }
                 if (input == null) { result.Message = "Input cannot be empty or null."; return result; }
-                if (input.ReadOnlyMode) { result.Message = "Request is in Read-Only mode."; return result; }
+                var rootCuid = (input.File as StorageFileRoute)?.RootCuid;
+                var access = await CheckTargetWriteAccessAsync(input, input.File?.Id, input.File?.Cuid, rootCuid);
+                if (!access.Status) { result.Message = access.Message; return result; }
 
                 input.GenerateCallId();
 
@@ -225,10 +226,13 @@ namespace Haley.Services {
         /// </summary>
         public async Task<IFeedback> Delete(IVaultFileReadRequest input, bool hardDelete = false) {
             var feedback = new Feedback() { Status = false };
-            if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
-            if (input.ReadOnlyMode) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
+            if (input == null) { feedback.Message = "Input cannot be empty or null."; return feedback; }
             if (Indexer == null) { feedback.Message = "Delete requires an indexer."; return feedback; }
             if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
+
+            var rootCuid = (input.File as StorageFileRoute)?.RootCuid;
+            var access = await CheckTargetWriteAccessAsync(input, input.File?.Id, input.File?.Cuid, rootCuid);
+            if (!access.Status) { feedback.Message = access.Message; return feedback; }
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
 
@@ -265,10 +269,13 @@ namespace Haley.Services {
         /// </summary>
         public async Task<IFeedback> Restore(IVaultFileReadRequest input, bool force = false) {
             var feedback = new Feedback() { Status = false };
-            if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
-            if (input?.ReadOnlyMode == true) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
+            if (input == null) { feedback.Message = "Input cannot be empty or null."; return feedback; }
             if (Indexer == null) { feedback.Message = "Restore requires an indexer."; return feedback; }
             if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
+
+            var rootCuid = (input.File as StorageFileRoute)?.RootCuid;
+            var access = await CheckTargetWriteAccessAsync(input, input.File?.Id, input.File?.Cuid, rootCuid);
+            if (!access.Status) { feedback.Message = access.Message; return feedback; }
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
             await EnsureWorkspaceContextAsync(input, forceRefresh: true);
@@ -384,7 +391,8 @@ namespace Haley.Services {
         public async Task<IVaultResponse> CreateDirectory(IVaultReadRequest input, string rawname) {
             var result = new VaultResponse { Status = false, OriginalName = rawname };
             if (Indexer == null) { result.Message = "No indexer is configured. Directory creation requires a DB indexer."; return result; }
-            if (!WriteMode) { result.Message = "Application is in Read-Only mode."; return result; }
+            var access = CheckWriteAccess(input);
+            if (!access.Status) { result.Message = access.Message; return result; }
             if (string.IsNullOrWhiteSpace(rawname)) { result.Message = "Folder name cannot be empty."; return result; }
 
             var fb = await Indexer.RegisterDirectory(input, rawname);
@@ -399,10 +407,10 @@ namespace Haley.Services {
         /// </summary>
         public async Task<IFeedback> DeleteDirectory(IVaultReadRequest input, bool recursive) {
             var feedback = new Feedback() { Status = false };
-            if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
-            if (input?.ReadOnlyMode == true) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
             if (Indexer == null) { feedback.Message = "DeleteDirectory requires an indexer."; return feedback; }
             if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
+            var access = CheckWriteAccess(input);
+            if (!access.Status) { feedback.Message = access.Message; return feedback; }
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
             return await Indexer.SoftDeleteDirectory(input, recursive);
@@ -414,10 +422,10 @@ namespace Haley.Services {
         /// </summary>
         public async Task<IFeedback> RestoreDirectory(IVaultReadRequest input, bool force = false) {
             var feedback = new Feedback() { Status = false };
-            if (!WriteMode) { feedback.Message = "Application is in Read-Only mode."; return feedback; }
-            if (input?.ReadOnlyMode == true) { feedback.Message = "Request is in Read-Only mode."; return feedback; }
             if (Indexer == null) { feedback.Message = "RestoreDirectory requires an indexer."; return feedback; }
             if (input?.Scope?.Workspace == null) { feedback.Message = "Workspace information is required."; return feedback; }
+            var access = CheckWriteAccess(input);
+            if (!access.Status) { feedback.Message = access.Message; return feedback; }
 
             input.Scope.Workspace.SetCuid(StorageUtils.GenerateCuid(input, Enums.VaultObjectType.WorkSpace));
             await EnsureWorkspaceContextAsync(input, forceRefresh: true);

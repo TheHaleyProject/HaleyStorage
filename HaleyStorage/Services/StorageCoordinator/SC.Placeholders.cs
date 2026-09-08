@@ -36,9 +36,9 @@ namespace Haley.Services {
 
             var fb = new Feedback<PlaceholderInfo>();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
-                if (request.ReadOnlyMode) return fb.SetMessage("Request is in Read-Only mode.");
+                var access = CheckWriteAccess(request);
+                if (!access.Status) return fb.SetMessage(access.Message);
                 if (string.IsNullOrWhiteSpace(fileName)) return fb.SetMessage("fileName is required.");
                 if (Indexer == null) return fb.SetMessage("An indexer is required to create a placeholder.");
 
@@ -122,10 +122,10 @@ namespace Haley.Services {
 
             var fb = new Feedback();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
-                if (request.ReadOnlyMode) return fb.SetMessage("Request is in Read-Only mode.");
                 if (versionId < 1) return fb.SetMessage("A valid versionId is required.");
+                var access = await CheckTargetWriteAccessAsync(request, versionId: versionId);
+                if (!access.Status) return fb.SetMessage(access.Message);
                 if (Indexer == null) return fb.SetMessage("An indexer is required to finalize a placeholder.");
 
                 PrepareRequestContext(request);

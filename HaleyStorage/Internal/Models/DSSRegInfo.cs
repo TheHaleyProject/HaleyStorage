@@ -32,5 +32,7 @@ namespace Haley.Models {
         public bool CaseSensitive { get; set; }
         [JsonPropertyName("provider")]
         public string ProviderKey { get; set; }
+        [JsonPropertyName("write")]
+        public bool? Write { get; set; }
     }
 }

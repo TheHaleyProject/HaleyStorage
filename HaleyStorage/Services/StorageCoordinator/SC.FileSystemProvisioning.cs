@@ -10,12 +10,13 @@ namespace Haley.Services {
         /// Virtual workspaces create no workspace directory; non-filesystem workspace overrides are skipped.
         /// </summary>
         public async Task<IFeedback> EnsureFileSystemPaths(string client_name, string module_name) {
-            if (!WriteMode)
-                return new Feedback(false, "Filesystem paths cannot be ensured while the coordinator is read-only.");
             if (Indexer == null)
                 return new Feedback(false, "Filesystem paths cannot be ensured without a registry indexer.");
 
             var request = new StorageReadRequest(client_name, module_name);
+            request.Scope.Workspace = null;
+            var access = CheckWriteAccess(request);
+            if (!access.Status) return access;
             var moduleCuid = request.Scope.Module.Cuid.ToString("N");
             await Initialize();
 
@@ -36,10 +37,16 @@ namespace Haley.Services {
             };
             var virtualWorkspaces = new List<string>();
             var skippedProviders = new List<string>();
+            var readOnlyWorkspaces = new List<string>();
 
             foreach (var workspaceCuid in workspaceCuids) {
                 if (!Indexer.TryGetComponentInfo(workspaceCuid, out VaultWorkSpace workspace))
                     continue;
+
+                if (!IsWriteAllowed(client_name, module_name, workspace.DisplayName)) {
+                    readOnlyWorkspaces.Add(workspace.Name);
+                    continue;
+                }
 
                 var workspaceRequest = new StorageReadRequest(client_name, module_name, workspace.DisplayName);
                 workspaceRequest.Scope.Workspace.SetCuid(workspace.Cuid);
@@ -84,7 +91,8 @@ namespace Haley.Services {
                     createdPaths = created,
                     existingPaths = existing,
                     virtualWorkspaces,
-                    skippedProviders
+                    skippedProviders,
+                    readOnlyWorkspaces
                 }
             };
         }

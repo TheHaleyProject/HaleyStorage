@@ -31,9 +31,10 @@ namespace Haley.Services {
         public async Task<IFeedback> SetVersionMetadata(IVaultReadRequest request, string versionCuid, string metadata) {
             var fb = new Feedback();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
                 if (string.IsNullOrWhiteSpace(versionCuid)) return fb.SetMessage("Version CUID (uid) is required.");
+                var access = await CheckTargetWriteAccessAsync(request, versionCuid: versionCuid);
+                if (!access.Status) return fb.SetMessage(access.Message);
                 var moduleCuid = StorageUtils.GenerateCuid(request, VaultObjectType.Module);
                 if (!Config.AllowMetadataOnOldVersions) {
                     var isLatest = await Indexer.IsLatestVersion(moduleCuid, versionCuid);
@@ -67,9 +68,10 @@ namespace Haley.Services {
         public async Task<IFeedback> SetDocumentMetadata(IVaultReadRequest request, string documentCuid, string metadata) {
             var fb = new Feedback();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (request == null) return fb.SetMessage("Request cannot be null.");
                 if (string.IsNullOrWhiteSpace(documentCuid)) return fb.SetMessage("Document CUID (ruid) is required.");
+                var access = await CheckTargetWriteAccessAsync(request, documentCuid: documentCuid);
+                if (!access.Status) return fb.SetMessage(access.Message);
                 var moduleCuid = StorageUtils.GenerateCuid(request, VaultObjectType.Module);
                 return await Indexer.SetDocumentMetadata(moduleCuid, documentCuid, metadata);
             } catch (Exception ex) {

@@ -162,7 +162,8 @@ namespace Haley.Services {
             var ossConfig = cfgRoot.GetSection($@"Seed:{VaultConstants.OSS_CONFIG}")?.Get<StorageRegistryConfig>();
             if (ossConfig != null) dss.SetConfig(ossConfig);
             if (registerConfiguredSources) {
-                var registration = dss.RegisterFromSource().GetAwaiter().GetResult();
+                var sourceSection = cfgRoot.GetSection($@"Seed:{VaultConstants.CONFIG_SOURCE}");
+                var registration = dss.RegisterFromSource(sourceSection).GetAwaiter().GetResult();
                 if (registration?.Status != true && throwExceptions)
                     throw new InvalidOperationException(registration?.Message ?? "Storage registry initialization failed.");
             } else {

@@ -9,8 +9,12 @@ namespace Haley.Services {
         public async Task<IFeedback<VaultMoveResult>> MoveFile(IVaultFileReadRequest source, IVaultReadRequest target, bool rename = false) {
             var fb = new Feedback<VaultMoveResult>();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (source == null || target == null) return fb.SetMessage("Source and target are required.");
+                var sourceRootCuid = (source.File as StorageFileRoute)?.RootCuid;
+                var sourceAccess = await CheckTargetWriteAccessAsync(source, source.File?.Id, source.File?.Cuid, sourceRootCuid);
+                if (!sourceAccess.Status) return fb.SetMessage(sourceAccess.Message);
+                var targetAccess = CheckWriteAccess(target);
+                if (!targetAccess.Status) return fb.SetMessage(targetAccess.Message);
                 if (Indexer == null) return fb.SetMessage("MoveFile requires an indexer.");
                 if (source.Scope?.Workspace == null || target.Scope?.Workspace == null)
                     return fb.SetMessage("Source and target workspace information is required.");
@@ -26,8 +30,11 @@ namespace Haley.Services {
         public async Task<IFeedback<VaultMoveResult>> MoveDirectory(IVaultReadRequest source, IVaultReadRequest target, bool rename = false) {
             var fb = new Feedback<VaultMoveResult>();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (source == null || target == null) return fb.SetMessage("Source and target are required.");
+                var sourceAccess = CheckWriteAccess(source);
+                if (!sourceAccess.Status) return fb.SetMessage(sourceAccess.Message);
+                var targetAccess = CheckWriteAccess(target);
+                if (!targetAccess.Status) return fb.SetMessage(targetAccess.Message);
                 if (Indexer == null) return fb.SetMessage("MoveDirectory requires an indexer.");
                 if (source.Scope?.Workspace == null || target.Scope?.Workspace == null)
                     return fb.SetMessage("Source and target workspace information is required.");

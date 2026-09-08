@@ -13,6 +13,10 @@ namespace Haley.Internal {
                 public const string FIND_MAX_CONTENT_VERSION = $@"select MAX(dv.ver) from doc_version as dv where dv.parent = {PARENT} and dv.sub_ver = 0;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_ID = $@"select dv.parent from doc_version as dv where dv.id = {VALUE} limit 1;";
                 public const string GET_DOCUMENT_ID_BY_VERSION_CUID = $@"select dv.parent from doc_version as dv where dv.cuid = {VALUE} limit 1;";
+                public const string GET_WORKSPACE_BY_VERSION_ID =
+                    $@"select d.workspace from doc_version as dv inner join document as d on d.id = dv.parent where dv.id = {VALUE} limit 1;";
+                public const string GET_WORKSPACE_BY_VERSION_CUID =
+                    $@"select d.workspace from doc_version as dv inner join document as d on d.id = dv.parent where dv.cuid = {VALUE} limit 1;";
                 /// <summary>Returns 1 if the given version CUID is the latest version of its document, 0 otherwise.</summary>
                 public const string IS_LATEST_BY_CUID =
                     $@"select case when dv.ver = (select max(dvi.ver) from doc_version as dvi where dvi.parent = dv.parent and dvi.sub_ver = 0 and dvi.delete_state = 0) then 1 else 0 end as is_latest

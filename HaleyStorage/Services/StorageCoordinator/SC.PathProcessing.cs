@@ -543,7 +543,7 @@ namespace Haley.Services {
                     _pathCache.TryRemove(workspaceCuid, out _);
                     _workspaceRegistryRefresh.AddOrUpdate(workspaceCuid, now, (_, _) => now);
 
-                    if (WriteMode
+                    if (CheckWriteAccess(input).Status
                         && Indexer.TryGetComponentInfo(workspaceCuid, out VaultWorkSpace workspace)
                         && !workspace.IsVirtual
                         && ResolveProvider(input) is FileSystemStorageProvider)

@@ -23,8 +23,9 @@ namespace Haley.Services {
         public async Task<IFeedback> ProcessStatsEvents(IVaultReadRequest input, int batchSize = 1000) {
             var fb = new Feedback();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (input == null) return fb.SetMessage("Input request cannot be empty.");
+                var access = CheckModuleWideWriteAccess(input);
+                if (!access.Status) return fb.SetMessage(access.Message);
                 if (Indexer == null) return fb.SetMessage("ProcessStatsEvents requires an indexer.");
                 if (input.Scope?.Module == null) return fb.SetMessage("Module information is required.");
 
@@ -37,8 +38,11 @@ namespace Haley.Services {
         public async Task<IFeedback> RebuildStats(IVaultReadRequest input, long? workspaceId = null) {
             var fb = new Feedback();
             try {
-                if (!WriteMode) return fb.SetMessage("Application is in Read-Only mode.");
                 if (input == null) return fb.SetMessage("Input request cannot be empty.");
+                var access = workspaceId.HasValue
+                    ? CheckWorkspaceWriteAccess(input, workspaceId.Value)
+                    : CheckModuleWideWriteAccess(input);
+                if (!access.Status) return fb.SetMessage(access.Message);
                 if (Indexer == null) return fb.SetMessage("RebuildStats requires an indexer.");
                 if (input.Scope?.Module == null) return fb.SetMessage("Module information is required.");
 

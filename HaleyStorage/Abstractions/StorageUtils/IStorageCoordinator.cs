@@ -10,6 +10,27 @@ namespace Haley.Abstractions {
         bool ThrowExceptions { get; }
         string GetStorageRoot();
         bool WriteMode { get; }
+        /// <summary>
+        /// Evaluates the global and configured module/workspace write policy for a request.
+        /// A successful response means mutation may proceed; reads are never restricted by this policy.
+        /// </summary>
+        IFeedback CheckWriteAccess(IVaultReadRequest request);
+        /// <summary>Returns the configured and effective runtime write state for a module or workspace.</summary>
+        StorageWritePolicyStatus GetWritePolicy(IVaultReadRequest request);
+        /// <summary>
+        /// Changes a module or workspace runtime write policy. A null value removes the explicit
+        /// setting and restores inherited behavior. This does not alter startup configuration.
+        /// </summary>
+        StorageWritePolicyStatus SetWritePolicy(IVaultReadRequest request, bool? write);
+        /// <summary>
+        /// Evaluates write access against both the declared request scope and the workspace that owns
+        /// an existing version or document. Use this before direct provider writes.
+        /// </summary>
+        Task<IFeedback> CheckTargetWriteAccessAsync(
+            IVaultReadRequest request,
+            long? versionId = null,
+            string versionCuid = null,
+            string documentCuid = null);
         // ── Provider / profile configuration ─────────────────────────────────
         /// <summary>
         /// Sets the runtime provider routing for a registered module without requiring a
