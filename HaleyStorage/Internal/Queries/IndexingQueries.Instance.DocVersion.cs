@@ -79,8 +79,13 @@ namespace Haley.Internal {
                     $@"select dv.id, dv.cuid as uid, d.cuid as ruid, dv.created, dv.ver, dv.actor, vi.storage_ref as path, vi.size, vi.storage_name as saveas_name, vi.staging_ref as staging_path, vi.hash, vi.synced_at, vi.flags, vi.metadata, vi.profile_info_id, di.display_name as dname
                        from doc_version as dv
                        inner join document as d on d.id = dv.parent and d.delete_state = 0
-                       inner join (select max(dvi.ver) as ver from doc_version as dvi where dvi.parent = {PARENT} and dvi.sub_ver = 0 and dvi.delete_state = 0) as dvo on dvo.ver = dv.ver
-                       inner join version_info as vi on vi.id = dv.id
+                       inner join (
+                           select max(dvi.ver) as ver
+                             from doc_version as dvi
+                             inner join version_info as vii on vii.id = dvi.id and (vii.flags & 64) > 0
+                            where dvi.parent = {PARENT} and dvi.sub_ver = 0 and dvi.delete_state = 0
+                       ) as dvo on dvo.ver = dv.ver
+                       inner join version_info as vi on vi.id = dv.id and (vi.flags & 64) > 0
                        left join doc_info as di on di.file = {PARENT}
                        where dv.parent = {PARENT} and dv.sub_ver = 0 and dv.delete_state = 0;";
 
@@ -88,13 +93,13 @@ namespace Haley.Internal {
                 public const string GET_ALL_BY_PARENT =
                     $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.actor as actor_id, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata
                        from doc_version as dv
-                       left join version_info as vi on vi.id = dv.id
+                       inner join version_info as vi on vi.id = dv.id and (vi.flags & 64) > 0
                        where dv.parent = {PARENT} and dv.sub_ver = 0 and dv.delete_state = 0
                        order by dv.ver desc;";
                 public const string GET_ALL_CONTENT_BY_PARENT_ALL =
                     $@"select dv.id as version_id, dv.cuid as version_cuid, dv.ver as version_no, dv.actor as actor_id, dv.delete_state, dv.deleted, dv.created as version_created, vi.size, vi.storage_name, vi.storage_ref, vi.staging_ref, vi.flags, vi.hash, vi.synced_at, vi.metadata
                        from doc_version as dv
-                       left join version_info as vi on vi.id = dv.id
+                       inner join version_info as vi on vi.id = dv.id and (vi.flags & 64) > 0
                        where dv.parent = {PARENT} and dv.sub_ver = 0
                        order by dv.ver desc;";
                 public const string GET_ALL_BY_PARENT_ALL =

@@ -32,6 +32,10 @@ namespace Haley.Services {
             CancellationToken cancellationToken = default) {
 
             var fb = new Feedback<ChunkUploadSessionInfo>();
+            string callId = null;
+            string chunkDir = null;
+            var transactionFinalized = false;
+            var registrationCommitted = false;
             try {
                 if (request == null) return fb.SetMessage("Request cannot be null.");
                 var rootCuid = (request.File as StorageFileRoute)?.RootCuid;
@@ -58,6 +62,7 @@ namespace Haley.Services {
                     return fb.SetMessage("Chunked uploads currently support only DirectSave profiles.");
 
                 request.GenerateCallId();
+                callId = request.CallID;
                 ProcessAndBuildStoragePath(request, true);
 
                 if (request.File is not StorageFileRoute file || file.Id < 1 || string.IsNullOrWhiteSpace(file.Cuid))
@@ -68,7 +73,7 @@ namespace Haley.Services {
                     return fb.SetMessage("The generated chunk destination is outside the storage root.");
 
                 var versionCuid = file.Cuid;
-                var chunkDir = Path.Combine(ChunkRoot, versionCuid);
+                chunkDir = Path.Combine(ChunkRoot, versionCuid);
                 Directory.CreateDirectory(chunkDir);
 
                 var now = DateTimeOffset.UtcNow;
@@ -105,6 +110,7 @@ namespace Haley.Services {
                     if (!chunkResult.Status) {
                         if (Indexer is MariaDBIndexing failedIndexer)
                             failedIndexer.FinalizeTransaction(request.CallID, false);
+                        transactionFinalized = true;
                         TryDeleteDirectory(chunkDir);
                         return fb.SetMessage($"Failed to create chunk session in DB: {chunkResult.Message}");
                     }
@@ -115,20 +121,34 @@ namespace Haley.Services {
                 } catch {
                     if (Indexer is MariaDBIndexing failedIndexer)
                         failedIndexer.FinalizeTransaction(request.CallID, false);
+                    transactionFinalized = true;
                     TryDeleteDirectory(chunkDir);
                     throw;
                 }
 
-                if (Indexer is MariaDBIndexing indexer)
-                    indexer.FinalizeTransaction(request.CallID, true);
-
+                // Verify the durable marker can be loaded before committing its DB registration.
                 var session = await ChunkSessionCache.CreateAsync(chunkDir, meta, cancellationToken).ConfigureAwait(false);
+
+                if (Indexer is MariaDBIndexing indexer) {
+                    var finalized = indexer.FinalizeTransaction(request.CallID, true);
+                    transactionFinalized = true;
+                    if (!finalized.Status) {
+                        TryDeleteDirectory(chunkDir);
+                        return fb.SetMessage($"Unable to commit chunk session registration: {finalized.Message}");
+                    }
+                }
+                registrationCommitted = true;
+
                 _chunkSessions[meta.VersionId] = session;
                 _chunkSessionsByCuid[meta.VersionCuid] = meta.VersionId;
 
                 return fb.SetStatus(true).SetResult(ToSessionInfo(meta));
             } catch (Exception ex) {
+                if (!registrationCommitted && !string.IsNullOrWhiteSpace(chunkDir)) TryDeleteDirectory(chunkDir);
                 return fb.SetMessage(ex.Message);
+            } finally {
+                if (!transactionFinalized && Indexer is MariaDBIndexing indexer && !string.IsNullOrWhiteSpace(callId))
+                    indexer.FinalizeTransaction(callId, false);
             }
         }
 
@@ -495,6 +515,9 @@ namespace Haley.Services {
 
                 session.Meta.Lifecycle = "completed";
                 session.Meta.LastActivityUtc = DateTimeOffset.UtcNow;
+                session.Meta.TotalLength = totalSize;
+                session.Meta.HasExactLength = true;
+                session.Meta.FinalHash = actualHash;
                 // Once the final file and DB state are committed, a disconnected HTTP client
                 // must not leave the durable session looking incomplete.
                 await WriteMetadataAsync(session.TempDir, session.Meta, CancellationToken.None).ConfigureAwait(false);
@@ -502,10 +525,9 @@ namespace Haley.Services {
                 var chunksDeleted = TryDeleteDirectory(session.TempDir);
                 if (chunksDeleted && Indexer != null && !string.IsNullOrWhiteSpace(session.Meta.ModuleCuid)) {
                     route.Flags = (int)(VersionFlags.ChunkedMode | VersionFlags.ChunkArea | VersionFlags.InStorage | VersionFlags.ChunksDeleted | VersionFlags.Completed);
-                    var cleanupCall = Guid.NewGuid().ToString("N");
-                    var cleanupUpdate = await Indexer.UpdateDocVersionInfo(session.Meta.ModuleCuid, route, cleanupCall).ConfigureAwait(false);
-                    if (Indexer is MariaDBIndexing cleanupIndexer)
-                        cleanupIndexer.FinalizeTransaction(cleanupCall, cleanupUpdate.Status);
+                    var cleanup = await CleanupChunkRecordsTransactionally(session.Meta, removeIncompleteVersion: false, route).ConfigureAwait(false);
+                    if (!cleanup.Status)
+                        await WriteMetadataAsync(session.TempDir, session.Meta, CancellationToken.None).ConfigureAwait(false);
                 }
 
                 _chunkSessions.TryRemove(versionId, out _);
@@ -545,11 +567,13 @@ namespace Haley.Services {
 
             session.Cancellation.Cancel();
             try {
-                await writersDrained.WaitAsync(cancellationToken).ConfigureAwait(false);
+                // Once an explicit abort is accepted, complete cleanup even if the caller disconnects.
+                await writersDrained.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+                IFeedback aborted = new Feedback(true, "Chunk version marked as aborted.");
                 if (Indexer != null && !string.IsNullOrWhiteSpace(session.Meta.ModuleCuid)) {
-                    var aborted = await Indexer.AbortChunkVersion(session.Meta.ModuleCuid, versionId, abortCallId).ConfigureAwait(false);
-                    if (Indexer is MariaDBIndexing indexer) indexer.FinalizeTransaction(abortCallId, aborted.Status);
+                    aborted = await Indexer.AbortChunkVersion(session.Meta.ModuleCuid, versionId, abortCallId).ConfigureAwait(false);
                     if (!aborted.Status) {
+                        if (Indexer is MariaDBIndexing failedIndexer) failedIndexer.FinalizeTransaction(abortCallId, false);
                         _chunkSessions.TryRemove(versionId, out _);
                         _chunkSessionsByCuid.TryRemove(session.Meta.VersionCuid, out _);
                         return fb.SetMessage($"Unable to soft-delete incomplete version: {aborted.Message}");
@@ -558,11 +582,30 @@ namespace Haley.Services {
 
                 session.Meta.Lifecycle = "cancelled";
                 session.Meta.LastActivityUtc = DateTimeOffset.UtcNow;
-                await WriteMetadataAsync(session.TempDir, session.Meta, cancellationToken).ConfigureAwait(false);
-                TryDeleteDirectory(session.TempDir);
+                await WriteMetadataAsync(session.TempDir, session.Meta, CancellationToken.None).ConfigureAwait(false);
+                var chunksDeleted = TryDeleteDirectory(session.TempDir);
+                if (chunksDeleted && Indexer != null && !string.IsNullOrWhiteSpace(session.Meta.ModuleCuid)) {
+                    var cleanup = await Indexer.CleanupChunkVersion(
+                        session.Meta.ModuleCuid,
+                        versionId,
+                        removeIncompleteVersion: true,
+                        abortCallId).ConfigureAwait(false);
+                    if (!cleanup.Status) {
+                        if (Indexer is MariaDBIndexing failedIndexer) failedIndexer.FinalizeTransaction(abortCallId, false);
+                        await Indexer.AbortChunkVersion(session.Meta.ModuleCuid, versionId).ConfigureAwait(false);
+                        // Preserve a marker for the background sweeper after the byte directory was removed.
+                        await WriteMetadataAsync(session.TempDir, session.Meta, CancellationToken.None).ConfigureAwait(false);
+                        _chunkSessions.TryRemove(versionId, out _);
+                        _chunkSessionsByCuid.TryRemove(session.Meta.VersionCuid, out _);
+                        return fb.SetMessage($"Chunk bytes were removed, but incomplete version cleanup failed: {cleanup.Message}");
+                    }
+                }
+                if (Indexer is MariaDBIndexing indexer) indexer.FinalizeTransaction(abortCallId, aborted.Status);
                 _chunkSessions.TryRemove(versionId, out _);
                 _chunkSessionsByCuid.TryRemove(session.Meta.VersionCuid, out _);
-                return fb.SetStatus(true).SetMessage($"Chunk session {versionId} aborted.");
+                return fb.SetStatus(true).SetMessage(chunksDeleted
+                    ? $"Chunk session {versionId} aborted and incomplete storage records removed."
+                    : $"Chunk session {versionId} aborted; storage records remain hidden until chunk cleanup succeeds.");
             } catch (Exception ex) {
                 if (Indexer is MariaDBIndexing indexer && !string.IsNullOrWhiteSpace(abortCallId))
                     indexer.FinalizeTransaction(abortCallId, false);
@@ -669,7 +712,36 @@ namespace Haley.Services {
                 var access = await CheckTargetWriteAccessAsync(meta.ModuleCuid, meta.WorkspaceCuid, meta.VersionId);
                 if (!access.Status) continue;
                 if (string.Equals(meta.Lifecycle, "completed", StringComparison.OrdinalIgnoreCase)) {
-                    if (TryDeleteDirectory(directory)) cleaned++;
+                    if (!TryDeleteDirectory(directory)) continue;
+                    var route = BuildCompletedRoute(
+                        meta,
+                        File.Exists(meta.FinalPath) ? new FileInfo(meta.FinalPath).Length : meta.TotalLength,
+                        meta.FinalHash,
+                        chunksDeleted: true);
+                    var completedCleanup = await CleanupChunkRecordsTransactionally(meta, removeIncompleteVersion: false, route).ConfigureAwait(false);
+                    if (!completedCleanup.Status) {
+                        await WriteMetadataAsync(directory, meta, CancellationToken.None).ConfigureAwait(false);
+                        continue;
+                    }
+                    _chunkSessions.TryRemove(meta.VersionId, out _);
+                    _chunkSessionsByCuid.TryRemove(meta.VersionCuid, out _);
+                    cleaned++;
+                    continue;
+                }
+                if (string.Equals(meta.Lifecycle, "cancelled", StringComparison.OrdinalIgnoreCase)) {
+                    if (!TryDeleteDirectory(directory)) continue;
+                    if (Indexer == null || string.IsNullOrWhiteSpace(meta.ModuleCuid)) {
+                        await WriteMetadataAsync(directory, meta, CancellationToken.None).ConfigureAwait(false);
+                        continue;
+                    }
+                    var cancelledCleanup = await CleanupChunkRecordsTransactionally(meta, removeIncompleteVersion: true).ConfigureAwait(false);
+                    if (!cancelledCleanup.Status) {
+                        await WriteMetadataAsync(directory, meta, CancellationToken.None).ConfigureAwait(false);
+                        continue;
+                    }
+                    _chunkSessions.TryRemove(meta.VersionId, out _);
+                    _chunkSessionsByCuid.TryRemove(meta.VersionCuid, out _);
+                    cleaned++;
                     continue;
                 }
                 if (meta.LastActivityUtc > cutoff) continue;
@@ -679,6 +751,44 @@ namespace Haley.Services {
                 if (result.Status) cleaned++;
             }
             return cleaned;
+        }
+
+        async Task<IFeedback> CleanupChunkRecordsTransactionally(
+            ChunkSessionMeta meta,
+            bool removeIncompleteVersion,
+            StorageFileRoute completedRoute = null) {
+
+            if (Indexer == null || string.IsNullOrWhiteSpace(meta?.ModuleCuid))
+                return new Feedback(true, "No chunk database cleanup is required.");
+
+            var callId = Guid.NewGuid().ToString("N");
+            var transaction = Indexer.BeginTransaction(meta.ModuleCuid, callId);
+            if (!transaction.Status) return transaction;
+
+            try {
+                IFeedback update = new Feedback(true, "No version update is required.");
+                if (completedRoute != null)
+                    update = await Indexer.UpdateDocVersionInfo(meta.ModuleCuid, completedRoute, callId).ConfigureAwait(false);
+
+                var cleanup = update.Status
+                    ? await Indexer.CleanupChunkVersion(meta.ModuleCuid, meta.VersionId, removeIncompleteVersion, callId).ConfigureAwait(false)
+                    : new Feedback(false, update.Message);
+                var succeeded = update.Status && cleanup.Status;
+                if (Indexer is MariaDBIndexing indexer) {
+                    var finalized = indexer.FinalizeTransaction(callId, succeeded);
+                    succeeded = succeeded && finalized.Status;
+                    if (!finalized.Status)
+                        return new Feedback(false, $"Unable to finalize chunk cleanup transaction: {finalized.Message}");
+                }
+
+                return succeeded
+                    ? cleanup
+                    : new Feedback(false, $"Chunk database cleanup failed: {update.Message} / {cleanup.Message}");
+            } catch (Exception ex) {
+                if (Indexer is MariaDBIndexing indexer)
+                    indexer.FinalizeTransaction(callId, false);
+                return new Feedback(false, ex.Message);
+            }
         }
 
         async Task<IFeedback<ChunkPartResult>> WritePartCoreAsync(
@@ -1175,6 +1285,7 @@ namespace Haley.Services {
             public int TotalParts { get; set; }
             public long TotalLength { get; set; }
             public bool HasExactLength { get; set; }
+            public string FinalHash { get; set; } = string.Empty;
             public DateTimeOffset CreatedUtc { get; set; }
             public DateTimeOffset LastActivityUtc { get; set; }
             public string Lifecycle { get; set; } = "active";

@@ -42,7 +42,7 @@ namespace Haley.Utils {
             var wspace = _cache[wsCuidKey];
             //Check if workspace exists in the database.
             var ws = await InsertAndFetchIDScalar(dbid, () => (INSTANCE.WORKSPACE.EXISTS, Consolidate((ID, wspace.Id))), () => (INSTANCE.WORKSPACE.INSERT, Consolidate((ID, wspace.Id))), readOnly:request.ReadOnlyMode, $@"Unable to insert the workspace  {wspace.Id}"); //Workspace registration can happen without transaction, as it might be needed for other items later.
-            return (true, wspace.Id);
+            return (ws > 0, ws);
         }
 
         /// <summary>

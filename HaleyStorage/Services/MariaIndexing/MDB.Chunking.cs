@@ -114,6 +114,56 @@ namespace Haley.Utils {
             }
         }
 
+        /// <summary>
+        /// Removes durable chunk tracking after the temporary chunk directory has been deleted.
+        /// For an aborted upload, also removes the incomplete version and its document when that
+        /// document has no remaining versions. Completed versions are never removable here.
+        /// </summary>
+        public async Task<IFeedback> CleanupChunkVersion(string moduleCuid, long versionId, bool removeIncompleteVersion, string callId = null) {
+            var fb = new Feedback();
+            try {
+                if (string.IsNullOrWhiteSpace(moduleCuid)) return fb.SetMessage("Module CUID is mandatory.");
+                if (!_agw.ContainsKey(moduleCuid)) return fb.SetMessage($@"No adapter found for the key {moduleCuid}");
+                if (versionId < 1) return fb.SetMessage("versionId must be > 0");
+
+                var handler = GetTransactionHandlerCache(callId, moduleCuid);
+                var load = new DbExecutionLoad(default, handler, false);
+                var target = await _agw.RowAsync(moduleCuid, INSTANCE.CHUNK.GET_CLEANUP_TARGET, load, (ID, versionId));
+                if (target == null || target.Count < 1)
+                    return fb.SetStatus(true).SetMessage("Chunk version was already removed.");
+
+                var flags = target.GetInt("flags");
+                if (removeIncompleteVersion && (flags & (int)VersionFlags.Completed) != 0)
+                    return fb.SetMessage("Completed versions cannot be removed by chunk cleanup.");
+
+                await _agw.ExecAsync(moduleCuid, INSTANCE.CHUNK.DELETE_FILES, load, (ID, versionId));
+                await _agw.ExecAsync(moduleCuid, INSTANCE.CHUNK.DELETE_INFO, load, (ID, versionId));
+
+                if (!removeIncompleteVersion)
+                    return fb.SetStatus(true).SetMessage("Chunk tracking removed.");
+
+                var documentId = target.GetLong("document_id");
+                await _agw.ExecAsync(moduleCuid, INSTANCE.CHUNK.DELETE_VERSION_INFO, load, (ID, versionId));
+                await _agw.ExecAsync(moduleCuid, INSTANCE.CHUNK.DELETE_VERSION, load, (ID, versionId));
+
+                var remainingVersions = await _agw.ScalarAsync<long?>(
+                    moduleCuid,
+                    INSTANCE.CHUNK.COUNT_DOCUMENT_VERSIONS,
+                    load,
+                    (PARENT, documentId)) ?? 0;
+                if (remainingVersions == 0) {
+                    await _agw.ExecAsync(moduleCuid, INSTANCE.CHUNK.DELETE_DOCUMENT_INFO, load, (ID, documentId));
+                    await _agw.ExecAsync(moduleCuid, INSTANCE.CHUNK.DELETE_DOCUMENT, load, (ID, documentId));
+                }
+
+                return fb.SetStatus(true).SetMessage(remainingVersions == 0
+                    ? "Incomplete chunk version and empty document removed."
+                    : "Incomplete chunk version removed.");
+            } catch (Exception ex) {
+                return fb.SetMessage(ex.Message + Environment.NewLine + ex.StackTrace);
+            }
+        }
+
         public async Task<IFeedback<ChunkUploadBrowseResponse>> ListActiveChunkUploads(string moduleCuid, int page = 1, int pageSize = 20) {
             var fb = new Feedback<ChunkUploadBrowseResponse>();
             try {

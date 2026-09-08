@@ -14,8 +14,34 @@ namespace Haley.Internal {
                 public const string INSERT_INFO = $@"insert into doc_info (file,display_name,actor) values ({PARENT}, {DNAME}, {ACTOR}) ON DUPLICATE KEY UPDATE display_name = VALUES(display_name);";
                 public const string GET_BY_PARENT = $@"select doc.id from document as doc where doc.parent= {PARENT} and doc.name = {NAME} and doc.delete_state = 0;";
                 public const string GET_BY_CUID = $@"select doc.id from document as doc where doc.cuid = {CUID} and doc.delete_state = 0;";
-                public const string COUNT_BY_DIRECTORY = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT} and doc.delete_state = 0;";
-                public const string COUNT_BY_DIRECTORY_ALL = $@"select count(*) from document as doc where doc.workspace = {WSPACE} and doc.parent = {PARENT};";
+                public const string COUNT_BY_DIRECTORY =
+                    $@"select count(*)
+                         from document as doc
+                        where doc.workspace = {WSPACE}
+                          and doc.parent = {PARENT}
+                          and doc.delete_state = 0
+                          and exists (
+                              select 1
+                                from doc_version dv
+                                inner join version_info vi on vi.id = dv.id
+                               where dv.parent = doc.id
+                                 and dv.sub_ver = 0
+                                 and dv.delete_state = 0
+                                 and (vi.flags & 64) > 0
+                          );";
+                public const string COUNT_BY_DIRECTORY_ALL =
+                    $@"select count(*)
+                         from document as doc
+                        where doc.workspace = {WSPACE}
+                          and doc.parent = {PARENT}
+                          and exists (
+                              select 1
+                                from doc_version dv
+                                inner join version_info vi on vi.id = dv.id
+                               where dv.parent = doc.id
+                                 and dv.sub_ver = 0
+                                 and (vi.flags & 64) > 0
+                          );";
                 public const string GET_DETAILS_BY_ID =
                     $@"select d.id as document_id, d.cuid as document_cuid, d.workspace as workspace_id, d.delete_state, d.deleted, dir.id as directory_id, dir.cuid as directory_cuid, dir.display_name as directory_name, dir.actor as directory_actor_id, dir.parent as directory_parent_id, coalesce(di.display_name, '') as display_name, di.metadata as doc_metadata, di.actor as document_actor_id
                        from document as d

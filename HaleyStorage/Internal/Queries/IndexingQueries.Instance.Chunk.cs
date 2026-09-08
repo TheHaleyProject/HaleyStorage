@@ -83,6 +83,35 @@ namespace Haley.Internal {
                                  and active_version.sub_ver = 0
                                  and active_version.delete_state = 0
                           );";
+
+                public const string GET_CLEANUP_TARGET =
+                    $@"select dv.parent as document_id,
+                              coalesce(vi.flags, 0) as flags
+                         from doc_version dv
+                          left join version_info vi on vi.id = dv.id
+                        where dv.id = {ID}
+                        limit 1;";
+
+                public const string DELETE_FILES =
+                    $@"delete from chunked_files where id = {ID};";
+
+                public const string DELETE_INFO =
+                    $@"delete from chunk_info where id = {ID};";
+
+                public const string DELETE_VERSION_INFO =
+                    $@"delete from version_info where id = {ID};";
+
+                public const string DELETE_VERSION =
+                    $@"delete from doc_version where id = {ID};";
+
+                public const string COUNT_DOCUMENT_VERSIONS =
+                    $@"select count(*) from doc_version where parent = {PARENT};";
+
+                public const string DELETE_DOCUMENT_INFO =
+                    $@"delete from doc_info where file = {ID};";
+
+                public const string DELETE_DOCUMENT =
+                    $@"delete from document where id = {ID};";
             }
         }
     }

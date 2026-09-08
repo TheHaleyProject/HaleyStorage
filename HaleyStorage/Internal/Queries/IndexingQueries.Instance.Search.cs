@@ -12,11 +12,12 @@ namespace Haley.Internal {
                        inner join (
                            select dvi.parent, max(dvi.ver) as max_ver, count(*) as version_count
                            from doc_version as dvi
+                           inner join version_info as vii on vii.id = dvi.id and (vii.flags & 64) > 0
                            where dvi.sub_ver = 0 and dvi.delete_state = 0
                            group by dvi.parent
                        ) as latest on latest.parent = d.id
                        inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver and dv.sub_ver = 0 and dv.delete_state = 0
-                       left join version_info as vi on vi.id = dv.id
+                       inner join version_info as vi on vi.id = dv.id and (vi.flags & 64) > 0
                        inner join name_store as ns on ns.id = d.name
                        inner join vault as v on v.id = ns.name
                        left join extension as ext on ext.id = ns.extension";
@@ -25,11 +26,12 @@ namespace Haley.Internal {
                        inner join (
                            select dvi.parent, coalesce(max(case when dvi.delete_state = 0 then dvi.ver end), max(dvi.ver)) as max_ver, count(*) as version_count
                            from doc_version as dvi
+                           inner join version_info as vii on vii.id = dvi.id and (vii.flags & 64) > 0
                            where dvi.sub_ver = 0
                            group by dvi.parent
                        ) as latest on latest.parent = d.id
                        inner join doc_version as dv on dv.parent = d.id and dv.ver = latest.max_ver and dv.sub_ver = 0
-                       left join version_info as vi on vi.id = dv.id
+                       inner join version_info as vi on vi.id = dv.id and (vi.flags & 64) > 0
                        inner join name_store as ns on ns.id = d.name
                        inner join vault as v on v.id = ns.name
                        left join extension as ext on ext.id = ns.extension";

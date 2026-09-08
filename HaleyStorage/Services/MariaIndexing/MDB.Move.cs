@@ -34,6 +34,13 @@ namespace Haley.Utils {
                 var targetWorkspaceId = await ResolveWorkspaceId(target.Scope.Workspace.Cuid.ToString("N"));
                 if (sourceWorkspaceId < 1 || targetWorkspaceId < 1) return fb.SetMessage("Source and target workspaces must be registered.");
 
+                // A workspace is registered in the core registry first and is copied into a
+                // module database only when that module first uses it. A move into a brand-new
+                // workspace must establish that local FK row before creating its default folder.
+                var localTargetWorkspace = await EnsureWorkSpace(target);
+                if (!localTargetWorkspace.status || localTargetWorkspace.id != targetWorkspaceId)
+                    return fb.SetMessage("Unable to register the target workspace in the module database.");
+
                 var documentId = await ResolveDocumentId(moduleCuid, source, includeAll: false);
                 if (documentId < 1) return fb.SetMessage("Unable to resolve the active source file.");
 
@@ -111,6 +118,10 @@ namespace Haley.Utils {
                 var sourceWorkspaceId = await ResolveWorkspaceId(source.Scope.Workspace.Cuid.ToString("N"));
                 var targetWorkspaceId = await ResolveWorkspaceId(target.Scope.Workspace.Cuid.ToString("N"));
                 if (sourceWorkspaceId < 1 || targetWorkspaceId < 1) return fb.SetMessage("Source and target workspaces must be registered.");
+
+                var localTargetWorkspace = await EnsureWorkSpace(target);
+                if (!localTargetWorkspace.status || localTargetWorkspace.id != targetWorkspaceId)
+                    return fb.SetMessage("Unable to register the target workspace in the module database.");
 
                 var sourceFolder = await ResolveFolderInfo(moduleCuid, source, sourceWorkspaceId);
                 if (!sourceFolder.status) return fb.SetMessage(sourceFolder.message);
